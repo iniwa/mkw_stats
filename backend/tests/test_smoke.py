@@ -132,3 +132,14 @@ def test_seed_has_lounge_12p_banned_route():
 
     banned = [r for r in ROUTES if r.get("is_lounge_12p_banned")]
     assert len(banned) >= 1, "No 12p-banned route in seed data"
+
+
+def test_seed_map_points_all_reference_valid_courses():
+    """Every MAP_POINTS entry references a course_id that exists in COURSES."""
+    from app.seed.initial_data import COURSES, MAP_POINTS
+
+    course_ids = {c["id"] for c in COURSES}
+    for mp in MAP_POINTS:
+        assert mp["course_id"] in course_ids, (
+            f"map_point {mp['id']} references unknown course {mp['course_id']}"
+        )

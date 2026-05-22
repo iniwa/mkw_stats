@@ -12,6 +12,8 @@ Seed real Mario Kart World course masters before implementing course notes or ma
 
 Use stable string IDs for `courses.id`, `map_points.id`, and `routes.id`. Once an ID has been used by race records, notes, or annotations, treat it as immutable.
 
+Use the user-provided reference page as the source of truth for Japanese course display names. Internal IDs may preserve older English-derived names when existing records already reference them.
+
 In this phase, seed all real course masters and one map point per course. Coordinates may remain placeholders until the actual map image and point placement are chosen.
 
 ## Reason
