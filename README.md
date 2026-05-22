@@ -31,11 +31,15 @@ This project has separate backend and frontend services, so two GHCR images are 
 
 ## Raspberry Pi Deployment (Portainer Stack)
 
-1. Set `DATA_DIR=/home/iniwa/docker/mkw-stats` in the Portainer stack environment.
-2. Paste `docker-compose.yml` into the Portainer Stack Web Editor.
-3. The images are pulled from GHCR automatically on push to `main`.
+1. Open Portainer Stack Web Editor.
+2. Paste `deploy/portainer-stack.yml`.
+3. Set `DATA_DIR=/home/iniwa/docker/mkw-stats` in the Portainer stack environment.
+4. Set a real `POSTGRES_PASSWORD` value.
+5. Deploy the stack.
 
 Data is persisted to `$DATA_DIR/postgres/` and `$DATA_DIR/uploads/` on the Pi.
+
+See `docs/design/deployment.md` for the Portainer workflow, migration, seed, and smoke test steps.
 
 ## Database Migrations & Seed
 
