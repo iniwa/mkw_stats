@@ -29,6 +29,17 @@ BACKEND_PORT=8001
 
 The Raspberry Pi already uses host ports `3000` and `8000` for other services. Keep the MKW stack defaults on `3030` and `8001` unless those ports become unavailable.
 
+## Container Names
+
+The Portainer stack uses fixed container names for easier verification and
+maintenance commands:
+
+```text
+mkw-postgres
+mkw-backend
+mkw-frontend
+```
+
 ## Images
 
 The stack uses image-only deployment:
@@ -62,7 +73,7 @@ python -m app.seed.initial_data
 
 Preferred path is the backend container console in Portainer.
 
-SSH `docker exec` against the Portainer-created backend container is also acceptable for verification and maintenance when Portainer console access is inconvenient. Do not use SSH to run `docker compose up` or otherwise manage the stack outside Portainer.
+SSH `docker exec` against the Portainer-created backend container is also acceptable for verification and maintenance when Portainer console access is inconvenient. The backend container name is `mkw-backend`. Do not use SSH to run `docker compose up` or otherwise manage the stack outside Portainer.
 
 The seed command is idempotent.
 

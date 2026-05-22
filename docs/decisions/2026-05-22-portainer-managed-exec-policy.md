@@ -9,8 +9,8 @@ Raspberry Pi deployment is managed through Portainer Stack Web Editor. During de
 Allow SSH `docker exec` against containers created by the Portainer-managed `mkw-stats` stack for verification and maintenance commands such as:
 
 ```sh
-alembic upgrade head
-python -m app.seed.initial_data
+docker exec mkw-backend alembic upgrade head
+docker exec mkw-backend python -m app.seed.initial_data
 ```
 
 Do not use SSH to run `docker compose up`, recreate the stack, or otherwise bypass Portainer stack management.
@@ -23,6 +23,7 @@ The ownership boundary is stack management, not every container console command.
 
 - Stack creation, updates, environment variables, image changes, and port mappings must remain Portainer-managed.
 - SSH `docker exec` is acceptable only for commands inside existing Portainer-created containers.
+- Use the fixed container names `mkw-postgres`, `mkw-backend`, and `mkw-frontend` for verification and maintenance commands.
 - Do not create parallel containers or compose projects from SSH for this app.
 
 ## Do Not Change Casually

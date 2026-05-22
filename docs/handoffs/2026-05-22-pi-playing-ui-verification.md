@@ -77,9 +77,9 @@ If the latest commit has not reached GHCR yet, report the block and wait for/ret
 The stack should be named `mkw-stats` and should expose:
 
 ```text
-frontend: 0.0.0.0:3030->80
-backend:  0.0.0.0:8001->8000
-postgres: internal only
+mkw-frontend: 0.0.0.0:3030->80
+mkw-backend:  0.0.0.0:8001->8000
+mkw-postgres: internal only
 ```
 
 Use Portainer-managed deployment boundaries:
@@ -96,8 +96,8 @@ No schema migration is expected beyond the existing head, but verify the backend
 If needed, run inside the Portainer-managed backend container:
 
 ```sh
-alembic upgrade head
-python -m app.seed.initial_data
+docker exec mkw-backend alembic upgrade head
+docker exec mkw-backend python -m app.seed.initial_data
 ```
 
 The seed command is idempotent.

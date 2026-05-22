@@ -1,5 +1,6 @@
 services:
   postgres:
+    container_name: mkw-postgres
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
@@ -11,6 +12,7 @@ services:
       - ${DATA_DIR:-/home/iniwa/docker/mkw-stats}/postgres:/var/lib/postgresql/data
 
   backend:
+    container_name: mkw-backend
     image: ghcr.io/iniwa/mkw-stats-backend:latest
     restart: unless-stopped
     environment:
@@ -22,6 +24,7 @@ services:
       - postgres
 
   frontend:
+    container_name: mkw-frontend
     image: ghcr.io/iniwa/mkw-stats-frontend:latest
     restart: unless-stopped
     environment:
