@@ -53,12 +53,16 @@ Portainer verification is blocked until both GHCR images exist and are pullable.
 
 ## Migration And Seed
 
-After first deployment or after schema changes, run these commands from the backend container console in Portainer:
+After first deployment or after schema changes, run these commands against the Portainer-managed backend container:
 
 ```sh
 alembic upgrade head
 python -m app.seed.initial_data
 ```
+
+Preferred path is the backend container console in Portainer.
+
+SSH `docker exec` against the Portainer-created backend container is also acceptable for verification and maintenance when Portainer console access is inconvenient. Do not use SSH to run `docker compose up` or otherwise manage the stack outside Portainer.
 
 The seed command is idempotent.
 
