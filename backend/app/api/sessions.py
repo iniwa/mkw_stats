@@ -1,6 +1,6 @@
 import uuid
 
-from fastapi import APIRouter, Depends, status
+from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
@@ -31,6 +31,17 @@ def list_active_play_sessions(db: Session = Depends(get_db)):
 @router.get("/play-sessions/{session_id}", response_model=PlaySessionRead)
 def get_play_session(session_id: uuid.UUID, db: Session = Depends(get_db)):
     return race_flow.get_session(db, session_id)
+
+
+@router.get(
+    "/play-sessions/{session_id}/races", response_model=list[RaceRecordRead]
+)
+def list_play_session_races(
+    session_id: uuid.UUID,
+    include_cancelled: bool = Query(False),
+    db: Session = Depends(get_db),
+):
+    return race_flow.list_session_races(db, session_id, include_cancelled)
 
 
 @router.post("/play-sessions/{session_id}/finish", response_model=PlaySessionRead)

@@ -245,3 +245,55 @@ def test_course_search(seeded_client):
     body = resp.json()
     course_ids = {c["id"] for c in body["courses"]}
     assert "dk_pass" in course_ids
+
+
+def _record_lounge_races(seeded_client, session_id, count):
+    for _ in range(count):
+        resp = seeded_client.post(
+            f"/api/v1/play-sessions/{session_id}/races/draft",
+            json={"course_id": "dk_pass"},
+        )
+        assert resp.status_code == 201
+
+
+def test_session_race_list_in_race_order(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    _record_lounge_races(seeded_client, session["id"], 3)
+
+    resp = seeded_client.get(f"/api/v1/play-sessions/{session['id']}/races")
+    assert resp.status_code == 200
+    assert [r["race_no"] for r in resp.json()] == [1, 2, 3]
+
+
+def test_session_race_list_excludes_cancelled_by_default(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    _record_lounge_races(seeded_client, session["id"], 2)
+    seeded_client.post(f"/api/v1/play-sessions/{session['id']}/undo-last-race")
+
+    body = seeded_client.get(f"/api/v1/play-sessions/{session['id']}/races").json()
+    assert len(body) == 1
+    assert all(r["status"] != "cancelled" for r in body)
+
+
+def test_session_race_list_include_cancelled(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    _record_lounge_races(seeded_client, session["id"], 2)
+    seeded_client.post(f"/api/v1/play-sessions/{session['id']}/undo-last-race")
+
+    body = seeded_client.get(
+        f"/api/v1/play-sessions/{session['id']}/races",
+        params={"include_cancelled": "true"},
+    ).json()
+    assert len(body) == 2
+    assert any(r["status"] == "cancelled" for r in body)
+
+
+def test_session_race_list_unknown_session_404(client):
+    resp = client.get(f"/api/v1/play-sessions/{uuid.uuid4()}/races")
+    assert resp.status_code == 404

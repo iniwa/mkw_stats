@@ -114,6 +114,11 @@ export default function PlayingView() {
     }
   }, [])
 
+  // Persisted race history is authoritative — refetch instead of patching local state.
+  const reloadRaces = useCallback(async (sessionId: string) => {
+    setRecordedRaces(await api.getSessionRaces(sessionId))
+  }, [])
+
   const resetSessionState = useCallback(() => {
     setResolved(null)
     setDraftRace(null)
@@ -130,10 +135,12 @@ export default function PlayingView() {
       setSession(created)
     })
 
-  const resumeSession = (target: PlaySession) => {
-    resetSessionState()
-    setSession(target)
-  }
+  const resumeSession = (target: PlaySession) =>
+    runAction('resume', async () => {
+      resetSessionState()
+      setSession(target)
+      await reloadRaces(target.id)
+    })
 
   const finishSession = () =>
     runAction('finish', async () => {
@@ -172,8 +179,8 @@ export default function PlayingView() {
         setDraftRace(response.race)
         setLastWarnings([])
       } else {
-        setRecordedRaces(prev => [...prev, response.race])
         setLastWarnings(response.warnings)
+        await reloadRaces(session.id)
         setSession(await api.getSession(session.id))
       }
     })
@@ -181,10 +188,10 @@ export default function PlayingView() {
   // -- Ranked result -------------------------------------------------------
   const completeRanked = (body: CompleteRankedBody) =>
     runAction('complete-ranked', async () => {
-      if (!draftRace) return
-      const completed = await api.completeRanked(draftRace.id, body)
-      setRecordedRaces(prev => [...prev, completed])
+      if (!draftRace || !session) return
+      await api.completeRanked(draftRace.id, body)
       setDraftRace(null)
+      await reloadRaces(session.id)
       await refreshAccounts()
     })
 
@@ -193,10 +200,10 @@ export default function PlayingView() {
     runAction('undo', async () => {
       if (!session) return
       await api.undoLastRace(session.id)
-      setRecordedRaces(prev => prev.slice(0, -1))
       setLastWarnings([])
       setResolved(null)
       setDraftRace(null)
+      await reloadRaces(session.id)
       setSession(await api.getSession(session.id))
       await refreshAccounts()
     })
@@ -379,7 +386,11 @@ function SessionStart({
                     {s.format ?? ''}
                   </span>
                 </span>
-                <button className="btn" onClick={() => onResume(s)}>
+                <button
+                  className="btn"
+                  disabled={busy === 'resume'}
+                  onClick={() => onResume(s)}
+                >
                   再開
                 </button>
               </li>

@@ -106,6 +106,17 @@ def finish_session(db: Session, session_id: uuid.UUID) -> PlaySession:
     return session
 
 
+def list_session_races(
+    db: Session, session_id: uuid.UUID, include_cancelled: bool = False
+) -> list[RaceRecord]:
+    get_session(db, session_id)  # 404 if the session does not exist
+    stmt = select(RaceRecord).where(RaceRecord.session_id == session_id)
+    if not include_cancelled:
+        stmt = stmt.where(RaceRecord.status != RaceStatus.cancelled)
+    stmt = stmt.order_by(RaceRecord.race_no, RaceRecord.created_at)
+    return list(db.scalars(stmt))
+
+
 # --------------------------------------------------------------------------
 # Races
 # --------------------------------------------------------------------------

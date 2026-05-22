@@ -160,6 +160,10 @@ export const api = {
   getCourses: () => request<Course[]>('/courses'),
   getRoutes: () => request<Route[]>('/routes'),
   getSession: (id: string) => request<PlaySession>(`/play-sessions/${id}`),
+  getSessionRaces: (sessionId: string, includeCancelled = false) =>
+    request<RaceRecord[]>(
+      `/play-sessions/${sessionId}/races${includeCancelled ? '?include_cancelled=true' : ''}`,
+    ),
   createSession: (body: CreateSessionBody) =>
     request<PlaySession>('/play-sessions', { method: 'POST', body: JSON.stringify(body) }),
   resolveSelection: (fromMapPointId: string, toMapPointId: string) =>

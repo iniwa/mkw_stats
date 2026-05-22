@@ -75,7 +75,7 @@ All endpoints are served under `/api/v1` and return JSON.
 | VR accounts | `GET/POST /vr-accounts`, `PATCH/DELETE /vr-accounts/{id}`, `POST /vr-accounts/{id}/activate` |
 | Courses | `GET /courses`, `GET /routes`, `GET /map-points`, `GET /course-search?q=`, `POST /course-selection/resolve` |
 | Play sessions | `POST /play-sessions`, `GET /play-sessions/active`, `GET /play-sessions/{id}`, `POST /play-sessions/{id}/finish` |
-| Race records | `POST /play-sessions/{id}/races/draft`, `PATCH /race-records/{id}/complete-ranked`, `PATCH /race-records/{id}`, `POST /race-records/{id}/cancel`, `POST /play-sessions/{id}/undo-last-race` |
+| Race records | `POST /play-sessions/{id}/races/draft`, `GET /play-sessions/{id}/races`, `PATCH /race-records/{id}/complete-ranked`, `PATCH /race-records/{id}`, `POST /race-records/{id}/cancel`, `POST /play-sessions/{id}/undo-last-race` |
 
 Ranked races are drafted on course selection and finished via `complete-ranked`.
 Lounge races complete immediately, the session auto-finishes after race 12, and
