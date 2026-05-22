@@ -88,7 +88,8 @@ If runtime behavior depends on PC vs Raspberry Pi, state the target explicitly i
 - GHCR image convention:
   - Backend: `ghcr.io/iniwa/mkw-stats-backend:latest`
   - Frontend: `ghcr.io/iniwa/mkw-stats-frontend:latest`
-- Deploy flow: push to `main` -> GitHub Actions -> GHCR -> Portainer Stack.
+- Source repo may live on Gitea, but GHCR publishing requires a GitHub mirror or GitHub remote where `.github/workflows/docker-publish.yml` runs.
+- Deploy flow: push to `main` on Gitea -> mirror/push to GitHub `main` -> GitHub Actions -> GHCR -> Portainer Stack.
 - Containers should use `restart: unless-stopped`.
 - Containers should set `TZ=Asia/Tokyo`.
 - Container data and DB should live under `/home/iniwa/docker/mkw-stats/`.
@@ -287,3 +288,29 @@ Constraints Introduced:
 Do Not Change Casually:
 
 - Do not return to a single image unless the deployment architecture changes.
+
+### 2026-05-22: GHCR requires GitHub mirror
+
+Context:
+
+- Portainer verification found that GHCR images do not exist because the only configured remote is Gitea.
+- GitHub Actions does not run from the Gitea remote.
+
+Decision:
+
+- Keep Gitea as the primary source repository if desired, but add a GitHub mirror or GitHub remote for the purpose of running GitHub Actions and publishing GHCR images.
+- Do not switch the project to ad hoc local image builds for Raspberry Pi deployment.
+
+Reason:
+
+- The project already targets GHCR image names and Portainer image-only deployment.
+- A GitHub mirror preserves that deployment model with the least change to app code and stack files.
+
+Constraints Introduced:
+
+- GHCR verification is blocked until GitHub `main` receives the repository and runs `.github/workflows/docker-publish.yml`.
+- Portainer deployment verification should resume only after `ghcr.io/iniwa/mkw-stats-backend:latest` and `ghcr.io/iniwa/mkw-stats-frontend:latest` exist.
+
+Do Not Change Casually:
+
+- Do not replace GHCR with another registry unless GitHub mirror/GHCR publication is explicitly rejected.

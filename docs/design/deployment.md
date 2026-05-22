@@ -37,6 +37,18 @@ ghcr.io/iniwa/mkw-stats-frontend:latest
 postgres:16-alpine
 ```
 
+## Repository And GHCR Publishing
+
+The source repository may be managed in Gitea, but GHCR publication requires GitHub Actions to run on GitHub.
+
+Required publishing path:
+
+```text
+Gitea main -> GitHub mirror/main -> GitHub Actions -> GHCR
+```
+
+Portainer verification is blocked until both GHCR images exist and are pullable.
+
 ## Migration And Seed
 
 After first deployment or after schema changes, run these commands from the backend container console in Portainer:

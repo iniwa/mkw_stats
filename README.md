@@ -29,6 +29,8 @@ This project has separate backend and frontend services, so two GHCR images are 
 | `ghcr.io/iniwa/mkw-stats-backend` | `latest` |
 | `ghcr.io/iniwa/mkw-stats-frontend` | `latest` |
 
+The source repository may be hosted on Gitea, but GHCR publication requires a GitHub mirror or GitHub remote where `.github/workflows/docker-publish.yml` can run.
+
 ## Raspberry Pi Deployment (Portainer Stack)
 
 1. Open Portainer Stack Web Editor.
