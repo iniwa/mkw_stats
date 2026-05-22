@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import PlayingView from './PlayingView'
+import SettingsView from './SettingsView'
 
 const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'Analytics', 'Courses', 'Lounge', 'Settings']
 
@@ -38,6 +39,8 @@ export default function App() {
       <main className="main">
         {active === 'Playing' ? (
           <PlayingView />
+        ) : active === 'Settings' ? (
+          <SettingsView />
         ) : (
           <p className="placeholder">{active} はこのスライスでは未実装です。</p>
         )}

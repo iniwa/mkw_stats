@@ -104,6 +104,27 @@ export interface RaceResponse {
   warnings: string[]
 }
 
+export interface SettingsUpdateBody {
+  selected_vr_account_id?: string | null
+  lounge_player_id?: string | null
+  lounge_auto_sync?: boolean | null
+}
+
+export interface VrAccountCreateBody {
+  name: string
+  display_name: string
+  initial_vr: number
+  current_vr?: number | null
+  sort_order?: number
+}
+
+export interface VrAccountUpdateBody {
+  display_name?: string
+  initial_vr?: number
+  current_vr?: number
+  sort_order?: number
+}
+
 export interface CreateSessionBody {
   source: SourceType
   player_count?: number
@@ -154,7 +175,17 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 export const api = {
   health: () => request<{ status: string; service: string }>('/health'),
   getSettings: () => request<Settings>('/settings'),
+  updateSettings: (body: SettingsUpdateBody) =>
+    request<Settings>('/settings', { method: 'PATCH', body: JSON.stringify(body) }),
   getVrAccounts: () => request<VrAccount[]>('/vr-accounts'),
+  createVrAccount: (body: VrAccountCreateBody) =>
+    request<VrAccount>('/vr-accounts', { method: 'POST', body: JSON.stringify(body) }),
+  updateVrAccount: (id: string, body: VrAccountUpdateBody) =>
+    request<VrAccount>(`/vr-accounts/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  activateVrAccount: (id: string) =>
+    request<VrAccount>(`/vr-accounts/${id}/activate`, { method: 'POST' }),
+  deleteVrAccount: (id: string) =>
+    request<void>(`/vr-accounts/${id}`, { method: 'DELETE' }),
   getActiveSessions: () => request<PlaySession[]>('/play-sessions/active'),
   getMapPoints: () => request<MapPoint[]>('/map-points'),
   getCourses: () => request<Course[]>('/courses'),
