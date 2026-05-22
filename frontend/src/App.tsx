@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import './App.css'
 import PlayingView from './PlayingView'
+import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 
 const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'Analytics', 'Courses', 'Lounge', 'Settings']
@@ -39,6 +40,8 @@ export default function App() {
       <main className="main">
         {active === 'Playing' ? (
           <PlayingView />
+        ) : active === 'Records' ? (
+          <RecordsView />
         ) : active === 'Settings' ? (
           <SettingsView />
         ) : (

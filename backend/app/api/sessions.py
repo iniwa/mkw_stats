@@ -4,6 +4,7 @@ from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
 
 from app.core.database import get_db
+from app.models.enums import SessionStatus, SourceType
 from app.schemas import (
     PlaySessionCreate,
     PlaySessionRead,
@@ -21,6 +22,16 @@ def create_play_session(
     payload: PlaySessionCreate, db: Session = Depends(get_db)
 ):
     return race_flow.create_session(db, payload)
+
+
+@router.get("/play-sessions", response_model=list[PlaySessionRead])
+def list_play_sessions(
+    limit: int = Query(50, ge=1, le=200),
+    status: SessionStatus | None = Query(None),
+    source: SourceType | None = Query(None),
+    db: Session = Depends(get_db),
+):
+    return race_flow.list_sessions(db, limit=limit, status=status, source=source)
 
 
 @router.get("/play-sessions/active", response_model=list[PlaySessionRead])

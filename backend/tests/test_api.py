@@ -297,3 +297,54 @@ def test_session_race_list_include_cancelled(seeded_client):
 def test_session_race_list_unknown_session_404(client):
     resp = client.get(f"/api/v1/play-sessions/{uuid.uuid4()}/races")
     assert resp.status_code == 404
+
+
+def test_list_sessions_newest_first(seeded_client):
+    seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"})
+    seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    )
+
+    resp = seeded_client.get("/api/v1/play-sessions")
+    assert resp.status_code == 200
+    times = [s["started_at"] for s in resp.json()]
+    # Each entry must be >= the next (newest first)
+    for i in range(len(times) - 1):
+        assert times[i] >= times[i + 1]
+
+
+def test_list_sessions_status_filter(seeded_client):
+    s1 = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    )
+    seeded_client.post(f"/api/v1/play-sessions/{s1['id']}/finish")
+
+    resp = seeded_client.get("/api/v1/play-sessions", params={"status": "completed"})
+    assert resp.status_code == 200
+    sessions = resp.json()
+    assert all(s["status"] == "completed" for s in sessions)
+    assert any(s["id"] == s1["id"] for s in sessions)
+
+
+def test_list_sessions_source_filter(seeded_client):
+    seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"})
+    seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    )
+
+    resp = seeded_client.get("/api/v1/play-sessions", params={"source": "ranked"})
+    assert resp.status_code == 200
+    sessions = resp.json()
+    assert all(s["source"] == "ranked" for s in sessions)
+
+
+def test_list_sessions_limit(seeded_client):
+    for _ in range(3):
+        seeded_client.post(
+            "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+        )
+
+    resp = seeded_client.get("/api/v1/play-sessions", params={"limit": 2})
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2

@@ -85,6 +85,21 @@ def get_session(db: Session, session_id: uuid.UUID) -> PlaySession:
     return session
 
 
+def list_sessions(
+    db: Session,
+    limit: int = 50,
+    status: SessionStatus | None = None,
+    source: SourceType | None = None,
+) -> list[PlaySession]:
+    stmt = select(PlaySession).order_by(PlaySession.started_at.desc())
+    if status is not None:
+        stmt = stmt.where(PlaySession.status == status)
+    if source is not None:
+        stmt = stmt.where(PlaySession.source == source)
+    stmt = stmt.limit(limit)
+    return list(db.scalars(stmt))
+
+
 def list_active_sessions(db: Session) -> list[PlaySession]:
     return list(
         db.scalars(

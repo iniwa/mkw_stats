@@ -248,3 +248,44 @@ textarea.input { resize: vertical; font-family: inherit; }
 .toggle-row label { font-size: 0.88rem; cursor: pointer; color: var(--text); }
 .toggle-row input[type="checkbox"] { accent-color: var(--accent); width: 1rem; height: 1rem; cursor: pointer; }
 .lounge-form__ok { font-size: 0.88rem; color: var(--ok); align-self: center; }
+
+/* -- records --------------------------------------------------------------- */
+.records { display: flex; flex-direction: column; gap: 0.85rem; }
+.records__head {
+  display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;
+}
+.records__title { font-size: 1.1rem; font-weight: 600; }
+.records__filters { display: flex; flex-wrap: wrap; gap: 0.4rem 1rem; align-items: center; }
+.records__filter-group { display: flex; align-items: center; gap: 0.4rem; }
+.records__filter-label { font-size: 0.78rem; color: var(--text-dim); }
+.records__body {
+  display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr);
+  gap: 0.85rem; align-items: start;
+}
+@media (max-width: 720px) {
+  .records__body { grid-template-columns: 1fr; }
+}
+
+.records__session-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.records__session-item {
+  padding: 0.45rem 0.6rem; border: 1px solid var(--border);
+  border-radius: 4px; background: var(--bg-input); cursor: pointer;
+  display: flex; flex-direction: column; gap: 0.2rem;
+}
+.records__session-item:hover { border-color: var(--border-strong); }
+.records__session-item--selected { border-color: var(--accent); background: var(--accent-dim); }
+.records__session-row1 { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.records__session-time { font-size: 0.82rem; color: var(--text-dim); }
+.records__session-row2 {
+  display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;
+  font-size: 0.78rem; color: var(--text-faint);
+}
+
+.records__race-item { flex-direction: column; align-items: flex-start; }
+.records__race-row { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; width: 100%; }
+.records__race-item--cancelled { opacity: 0.55; }
+.records__race-warnings { font-size: 0.76rem; color: var(--warn); padding-left: 0.1rem; }
+.records__memo { font-size: 0.78rem; color: var(--text-dim); font-style: italic; padding-left: 0.1rem; }
+.records__delta--pos { color: var(--ok); font-variant-numeric: tabular-nums; }
+.records__delta--neg { color: var(--danger); font-variant-numeric: tabular-nums; }
+.records__vr-range { font-size: 0.78rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }

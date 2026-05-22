@@ -186,6 +186,14 @@ export const api = {
     request<VrAccount>(`/vr-accounts/${id}/activate`, { method: 'POST' }),
   deleteVrAccount: (id: string) =>
     request<void>(`/vr-accounts/${id}`, { method: 'DELETE' }),
+  getSessions: (options?: { limit?: number; status?: SessionStatus; source?: SourceType }) => {
+    const params = new URLSearchParams()
+    if (options?.limit !== undefined) params.set('limit', String(options.limit))
+    if (options?.status) params.set('status', options.status)
+    if (options?.source) params.set('source', options.source)
+    const qs = params.toString()
+    return request<PlaySession[]>(`/play-sessions${qs ? '?' + qs : ''}`)
+  },
   getActiveSessions: () => request<PlaySession[]>('/play-sessions/active'),
   getMapPoints: () => request<MapPoint[]>('/map-points'),
   getCourses: () => request<Course[]>('/courses'),
