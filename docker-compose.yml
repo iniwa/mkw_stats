@@ -1,0 +1,38 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+      POSTGRES_DB: ${POSTGRES_DB:-mkw_stats}
+      POSTGRES_USER: ${POSTGRES_USER:-mkw}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-changeme}
+    volumes:
+      - ${DATA_DIR:-./data}/postgres:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  backend:
+    image: ghcr.io/iniwa/mkw-stats-backend:latest
+    build:
+      context: ./backend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+      DATABASE_URL: postgresql://${POSTGRES_USER:-mkw}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-mkw_stats}
+    ports:
+      - "8000:8000"
+    depends_on:
+      - postgres
+
+  frontend:
+    image: ghcr.io/iniwa/mkw-stats-frontend:latest
+    build:
+      context: ./frontend
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Tokyo
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend

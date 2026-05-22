@@ -1,0 +1,15 @@
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: sans-serif; background: #111; color: #eee; }
+.app { display: flex; flex-direction: column; height: 100vh; }
+.header { display: flex; align-items: center; justify-content: space-between; padding: 0.5rem 1rem; background: #1a1a2e; border-bottom: 1px solid #333; }
+.title { font-weight: bold; font-size: 1.1rem; }
+.health { font-size: 0.8rem; padding: 0.2rem 0.5rem; border-radius: 4px; }
+.health--checking { background: #444; color: #aaa; }
+.health--ok { background: #1a4a1a; color: #6f6; }
+.health--error { background: #4a1a1a; color: #f66; }
+.nav { display: flex; flex-wrap: wrap; gap: 0.25rem; padding: 0.5rem; background: #161625; border-bottom: 1px solid #333; }
+.nav-btn { padding: 0.4rem 0.8rem; background: none; color: #aaa; border: 1px solid transparent; border-radius: 4px; cursor: pointer; font-size: 0.9rem; }
+.nav-btn:hover { border-color: #555; color: #eee; }
+.nav-btn--active { background: #2a2a4a; border-color: #556; color: #eee; }
+.main { flex: 1; padding: 1rem; }
+.placeholder { color: #555; }

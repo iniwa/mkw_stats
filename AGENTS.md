@@ -84,11 +84,14 @@ If runtime behavior depends on PC vs Raspberry Pi, state the target explicitly i
 ## Docker / Raspberry Pi Guidance
 
 - Target architecture: `linux/arm64`.
-- GHCR image convention: `ghcr.io/iniwa/mkw-stats:latest` unless the repository/tool name is explicitly changed.
+- GHCR image convention:
+  - Backend: `ghcr.io/iniwa/mkw-stats-backend:latest`
+  - Frontend: `ghcr.io/iniwa/mkw-stats-frontend:latest`
 - Deploy flow: push to `main` -> GitHub Actions -> GHCR -> Portainer Stack.
 - Containers should use `restart: unless-stopped`.
 - Containers should set `TZ=Asia/Tokyo`.
 - Container data and DB should live under `/home/iniwa/docker/mkw-stats/`.
+- Portainer Stack should set `DATA_DIR=/home/iniwa/docker/mkw-stats`; compose should persist PostgreSQL under `$DATA_DIR/postgres`.
 - Use NAS mounts only for large data, shared media, backups, or Git/LFS data.
 - Do not change external exposure or Cloudflare Tunnel behavior unless explicitly requested.
 
@@ -256,3 +259,29 @@ Constraints Introduced:
 Do Not Change Casually:
 
 - Do not collapse active handoffs, decisions, and design drafts into a single directory.
+
+### 2026-05-22: Split service images for scaffold
+
+Context:
+
+- The initial scaffold has separate backend and frontend services with separate Docker build contexts.
+
+Decision:
+
+- Publish separate GHCR images for backend and frontend instead of a single `mkw-stats` image.
+- Use `DATA_DIR=/home/iniwa/docker/mkw-stats` in Portainer Stack for persistent service data.
+
+Reason:
+
+- Separate images match the current service boundaries and keep each container build simple.
+- `DATA_DIR` keeps Pi persistence explicit while preserving local compose defaults.
+
+Constraints Introduced:
+
+- Backend image: `ghcr.io/iniwa/mkw-stats-backend:latest`.
+- Frontend image: `ghcr.io/iniwa/mkw-stats-frontend:latest`.
+- PostgreSQL data should persist under `$DATA_DIR/postgres` on Raspberry Pi.
+
+Do Not Change Casually:
+
+- Do not return to a single image unless the deployment architecture changes.

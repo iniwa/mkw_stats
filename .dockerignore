@@ -1,0 +1,12 @@
+.git
+.github
+docs
+mkworld_stats_manager_docs_v0_1
+*.md
+data
+backups
+.env
+.env.*
+.claudeignore
+.serena
+.claude
