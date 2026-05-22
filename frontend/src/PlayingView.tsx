@@ -138,8 +138,21 @@ export default function PlayingView() {
   const resumeSession = (target: PlaySession) =>
     runAction('resume', async () => {
       resetSessionState()
+      const races = await api.getSessionRaces(target.id)
+      const completed = races.filter(r => r.status === 'completed')
+      setRecordedRaces(completed)
+      if (target.source === 'ranked') {
+        const drafts = races.filter(r => r.status === 'draft')
+        const draft = drafts.length > 0 ? drafts[drafts.length - 1] : null
+        setDraftRace(draft)
+      }
+      const latestWithWarnings = [...completed].reverse().find(
+        r => r.warning_flags && r.warning_flags.length > 0,
+      )
+      if (latestWithWarnings?.warning_flags) {
+        setLastWarnings(latestWithWarnings.warning_flags)
+      }
       setSession(target)
-      await reloadRaces(target.id)
     })
 
   const finishSession = () =>
