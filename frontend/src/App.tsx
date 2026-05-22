@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import PlayingView from './PlayingView'
 
 const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'Analytics', 'Courses', 'Lounge', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
 export default function App() {
-  const [active, setActive] = useState('Dashboard')
+  const [active, setActive] = useState('Playing')
   const [health, setHealth] = useState<HealthStatus>('checking')
 
   useEffect(() => {
@@ -35,7 +36,11 @@ export default function App() {
         ))}
       </nav>
       <main className="main">
-        <p className="placeholder">{active}</p>
+        {active === 'Playing' ? (
+          <PlayingView />
+        ) : (
+          <p className="placeholder">{active} はこのスライスでは未実装です。</p>
+        )}
       </main>
     </div>
   )
