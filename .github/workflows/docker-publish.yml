@@ -35,10 +35,19 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ matrix.image }}
+          tags: |
+            type=raw,value=latest
+            type=sha,prefix=sha-,format=short
+
       - name: Build and push ${{ matrix.service }}
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
           platforms: linux/arm64
           push: true
-          tags: ${{ matrix.image }}:latest
+          tags: ${{ steps.meta.outputs.tags }}
