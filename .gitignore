@@ -2,6 +2,7 @@
 .env
 .claude/
 .serena/
+.playwright-mcp/
 
 # Python
 __pycache__/
