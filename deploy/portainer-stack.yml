@@ -17,7 +17,7 @@ services:
       TZ: Asia/Tokyo
       DATABASE_URL: postgresql://${POSTGRES_USER:-mkw}:${POSTGRES_PASSWORD:-changeme}@postgres:5432/${POSTGRES_DB:-mkw_stats}
     ports:
-      - "${BACKEND_PORT:-8000}:8000"
+      - "${BACKEND_PORT:-8001}:8000"
     depends_on:
       - postgres
 
@@ -27,6 +27,6 @@ services:
     environment:
       TZ: Asia/Tokyo
     ports:
-      - "${FRONTEND_PORT:-3000}:80"
+      - "${FRONTEND_PORT:-3030}:80"
     depends_on:
       - backend

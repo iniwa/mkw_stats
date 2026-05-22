@@ -40,6 +40,7 @@ The source repository may be hosted on Gitea, but GHCR publication requires a Gi
 5. Deploy the stack.
 
 Data is persisted to `$DATA_DIR/postgres/` and `$DATA_DIR/uploads/` on the Pi.
+The Pi deployment defaults to frontend port `3030` and backend port `8001` to avoid existing services on `3000` and `8000`.
 
 See `docs/design/deployment.md` for the Portainer workflow, migration, seed, and smoke test steps.
 

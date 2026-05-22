@@ -21,11 +21,13 @@ DATA_DIR=/home/iniwa/docker/mkw-stats
 POSTGRES_DB=mkw_stats
 POSTGRES_USER=mkw
 POSTGRES_PASSWORD=<set a real password>
-FRONTEND_PORT=3000
-BACKEND_PORT=8000
+FRONTEND_PORT=3030
+BACKEND_PORT=8001
 ```
 
 `POSTGRES_PASSWORD=changeme` is only a local default. Use a real value on Raspberry Pi.
+
+The Raspberry Pi already uses host ports `3000` and `8000` for other services. Keep the MKW stack defaults on `3030` and `8001` unless those ports become unavailable.
 
 ## Images
 
@@ -65,8 +67,8 @@ The seed command is idempotent.
 After the stack is running:
 
 ```text
-http://<pi-host>:8000/api/v1/health
-http://<pi-host>:3000
+http://<pi-host>:8001/api/v1/health
+http://<pi-host>:3030
 ```
 
 Expected backend health response:

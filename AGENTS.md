@@ -95,6 +95,7 @@ If runtime behavior depends on PC vs Raspberry Pi, state the target explicitly i
 - Container data and DB should live under `/home/iniwa/docker/mkw-stats/`.
 - Portainer Stack should set `DATA_DIR=/home/iniwa/docker/mkw-stats`; compose should persist PostgreSQL under `$DATA_DIR/postgres`.
 - Use `deploy/portainer-stack.yml` for Raspberry Pi Portainer deployment. The root `docker-compose.yml` is for local development and may include `build:` entries.
+- Raspberry Pi host ports `3000` and `8000` are already used by existing services. MKW Portainer defaults should use frontend `3030` and backend `8001`.
 - Use NAS mounts only for large data, shared media, backups, or Git/LFS data.
 - Do not change external exposure or Cloudflare Tunnel behavior unless explicitly requested.
 

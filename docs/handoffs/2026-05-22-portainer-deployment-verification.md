@@ -95,8 +95,8 @@ DATA_DIR=/home/iniwa/docker/mkw-stats
 POSTGRES_DB=mkw_stats
 POSTGRES_USER=mkw
 POSTGRES_PASSWORD=<real test password>
-FRONTEND_PORT=3000
-BACKEND_PORT=8000
+FRONTEND_PORT=3030
+BACKEND_PORT=8001
 ```
 
 Do not commit or report the actual password.
@@ -133,8 +133,8 @@ Report exact success/failure output, excluding secrets.
 Confirm:
 
 ```text
-http://<pi-host>:8000/api/v1/health
-http://<pi-host>:3000
+http://<pi-host>:8001/api/v1/health
+http://<pi-host>:3030
 ```
 
 Expected health response:
