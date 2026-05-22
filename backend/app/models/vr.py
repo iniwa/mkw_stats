@@ -23,8 +23,15 @@ class VrAccount(Base):
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
     __table_args__ = (
-        # Only one active account at a time
-        Index("uq_vr_accounts_single_active", "is_active", unique=True, postgresql_where=text("is_active = true")),
+        # Only one active account at a time. The dialect-specific WHERE keeps the
+        # uniqueness scoped to active rows so multiple inactive accounts coexist.
+        Index(
+            "uq_vr_accounts_single_active",
+            "is_active",
+            unique=True,
+            postgresql_where=text("is_active = true"),
+            sqlite_where=text("is_active = 1"),
+        ),
     )
 
 

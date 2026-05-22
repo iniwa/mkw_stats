@@ -64,6 +64,25 @@ For local development the default `.env` values work with `docker compose up`:
 export DATABASE_URL=postgresql+psycopg://mkw:changeme@localhost:5432/mkw_stats
 ```
 
+## API
+
+All endpoints are served under `/api/v1` and return JSON.
+
+| Area | Endpoints |
+|------|-----------|
+| Health | `GET /health` |
+| Settings | `GET /settings`, `PATCH /settings` |
+| VR accounts | `GET/POST /vr-accounts`, `PATCH/DELETE /vr-accounts/{id}`, `POST /vr-accounts/{id}/activate` |
+| Courses | `GET /courses`, `GET /routes`, `GET /map-points`, `GET /course-search?q=`, `POST /course-selection/resolve` |
+| Play sessions | `POST /play-sessions`, `GET /play-sessions/active`, `GET /play-sessions/{id}`, `POST /play-sessions/{id}/finish` |
+| Race records | `POST /play-sessions/{id}/races/draft`, `PATCH /race-records/{id}/complete-ranked`, `PATCH /race-records/{id}`, `POST /race-records/{id}/cancel`, `POST /play-sessions/{id}/undo-last-race` |
+
+Ranked races are drafted on course selection and finished via `complete-ranked`.
+Lounge races complete immediately, the session auto-finishes after race 12, and
+repick / 12p-banned warnings are returned but never block recording.
+
+Interactive docs are available at `/docs` when the backend is running.
+
 ## Backend Tests
 
 ```sh
@@ -72,5 +91,7 @@ pip install -r requirements.txt
 pytest
 ```
 
-Tests that do not require a live PostgreSQL connection run without any setup.
+The default suite runs without any setup: pure smoke tests plus API tests that
+run against in-memory SQLite (the two PostgreSQL-only column types are taught to
+compile on SQLite in `tests/conftest.py`).
 DB-level migration tests require a running PostgreSQL instance and are not included in the default suite.
