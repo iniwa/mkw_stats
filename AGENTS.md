@@ -1,66 +1,117 @@
 # AGENTS.md
 
 ## Purpose
-This file is the Codex-side base document for new projects.
+This file is the Codex-side operating document for MKWorld Stats Manager.
 
-Use it together with one of the base `CLAUDE.md` files in this directory:
-- Windows / local tools: `_base/CLAUDE_windows.md`
-- Windows detailed Japanese reference: `_base/CLAUDE_windows_ja.md`
-- Raspberry Pi Docker tools: `_base/CLAUDE_docker.md`
-- Raspberry Pi Docker detailed Japanese reference: `_base/CLAUDE_docker_ja.md`
-
-`AGENTS.md` records design intent, handoff rules, and review criteria for Codex.
-`CLAUDE.md` records execution rules for Claude Code.
-
-When creating a new project, copy this file to the project root and replace the placeholder sections with project-specific information.
+`AGENTS.md` records durable design intent, directory rules, handoff workflow, and review criteria for Codex. `CLAUDE.md` records Claude Code execution rules. When they conflict, preserve the project-specific intent in this file and stop to clarify before changing implementation direction.
 
 ## Project Summary
-Fill this in for each project.
 
-- Project name:
-- Purpose:
-- Primary users:
-- Runtime target:
-- Repository path:
-- Public/private:
-- Deployment target:
+- Project name: MKWorld Stats Manager
+- Purpose: Personal Mario Kart World stats and play-assist web tool for VR records, Lounge match history, course notes, and lightweight analysis.
+- Primary users: Single personal user on LAN.
+- Runtime target: Raspberry Pi 4, Docker, `linux/arm64`.
+- Development location: `D:\Git\mkw_stats` on Home Sub PC.
+- Repository path: `D:\Git\mkw_stats`
+- Public/private: Private unless explicitly changed.
+- Deployment target: Raspberry Pi via Portainer Stack, using GHCR images.
+
+## Current Design Sources
+
+- `mkworld_stats_manager_docs_v0_1/` is the initial design proposal snapshot.
+- Treat those files as the v0.1 source material until the design is promoted into `docs/design/`.
+- Do not edit the snapshot casually. If the living design changes, record the updated rule in `docs/design/` or `docs/decisions/`.
+
+## Directory Management
+
+Use these directories consistently:
+
+| Path | Purpose |
+|---|---|
+| `docs/README.md` | Directory map and document lifecycle rules. |
+| `docs/design/` | Living design docs that future implementation should follow. |
+| `docs/decisions/` | Active durable decisions with context and constraints. |
+| `docs/decisions/archive/` | Decisions that are fully implemented or no longer active. |
+| `docs/handoffs/` | Active Claude Code handoff files awaiting implementation or review. |
+| `docs/handoffs/archive/` | Completed handoffs after Codex review. |
+| `mkworld_stats_manager_docs_v0_1/` | Original v0.1 planning snapshot. |
+
+Handoff files must be named:
+
+```text
+docs/handoffs/YYYY-MM-DD-<short-task>.md
+```
+
+Move a handoff to `docs/handoffs/archive/` only after Claude Code has reported back and Codex has reviewed the result. Do not archive a handoff just because implementation started.
 
 ## Environment Selection
+
 Codex must identify the working environment before preparing implementation instructions.
 
-### Work Location Detection
 - `D:/Git/` -> Home Sub PC
 - `C:/Git/` -> Home Main PC
 - `C:/Users/**/Documents/git/` -> Remote PC
 
-### Home Main PC
-- CPU: AMD Ryzen 7 9800X3D
-- GPU: NVIDIA RTX 4080, CUDA available
-- RAM: 48GB
-- OS: Windows 11
-- IP: 192.168.1.210
+Home Sub PC is the current development environment:
 
-### Home Sub PC
 - CPU: AMD Ryzen 9 5950X
 - GPU: NVIDIA RTX 5060 Ti, 16GB VRAM, CUDA Compute 8.9 / sm_89
 - RAM: 64GB
 - OS: Windows 11
 - IP: 192.168.1.211
 
-### Remote PC
-- Limited environment.
-- Focus on code and content editing.
-- Do not assume local AI/ML runtimes such as ollama are available.
+Raspberry Pi deployment target:
 
-### Raspberry Pi
-- Accessible via `ssh iniwapi` for reading code or logs.
-- Docker target: Raspberry Pi 4, 8GB RAM, `linux/arm64`.
-- Docker management: Portainer Stack Web Editor.
+- Raspberry Pi 4, 8GB RAM, `linux/arm64`
+- Docker management: Portainer Stack Web Editor
+- Accessible via `ssh iniwapi` for reading code or logs when needed
 
-If the target PC or runtime is unclear, Codex should clarify it before preparing a handoff that requires execution or environment-specific behavior.
+If runtime behavior depends on PC vs Raspberry Pi, state the target explicitly in the handoff.
+
+## Project-Specific Design Principles
+
+- Keep the MVP practical and small. Build a working vertical slice before broad feature coverage.
+- Preserve the shared Playing UI model for ranked VR and Lounge.
+- Keep ranked VR and Lounge data separated by `source`; do not merge VR and MMR semantics.
+- VR is manual input. Do not assume an official ranked VR API exists.
+- Lounge API sync is table/player oriented. Race-level course history is manually recorded in the Playing UI.
+- Course selection is map-point based: start point -> destination point, with confirmation before recording.
+- Lounge records 12 races per match and warns on repicks, but warnings must not block recording.
+- Initial operation is LAN-only. Do not add external exposure or Cloudflare Tunnel changes unless explicitly requested.
+- Avoid OCR, video analysis, Discord bot integration, multi-user support, and heavy media processing in the MVP.
+- Do not add installers, packaging beyond Docker, or CI/CD behavior beyond the agreed GHCR build flow.
+
+## Docker / Raspberry Pi Guidance
+
+- Target architecture: `linux/arm64`.
+- GHCR image convention: `ghcr.io/iniwa/mkw-stats:latest` unless the repository/tool name is explicitly changed.
+- Deploy flow: push to `main` -> GitHub Actions -> GHCR -> Portainer Stack.
+- Containers should use `restart: unless-stopped`.
+- Containers should set `TZ=Asia/Tokyo`.
+- Container data and DB should live under `/home/iniwa/docker/mkw-stats/`.
+- Use NAS mounts only for large data, shared media, backups, or Git/LFS data.
+- Do not change external exposure or Cloudflare Tunnel behavior unless explicitly requested.
+
+## Storage Guidance
+
+| Data | Path | Backend |
+|---|---|---|
+| Container data / DB | `/home/iniwa/docker/mkw-stats/` | SSD |
+| Git repo / LFS | `/mnt/nas/git-data/` | NFS |
+| Photos | `/mnt/nas/photo/` | SMB |
+| Videos | `/mnt/nas/video/` | SMB |
+| Pi backups | `/mnt/nas/pi_backup/` | SMB |
+| Network backups | `/mnt/nas/NetBackup/` | NFS |
+
+NAS device:
+
+- Synology DS420j
+- IP: 192.168.1.190
 
 ## Role Split
+
 Codex is responsible for:
+
 - clarifying requirements and success criteria
 - identifying the change type and risk level
 - preserving design intent and responsibility boundaries
@@ -70,18 +121,19 @@ Codex is responsible for:
 - recording durable decisions in this file or `docs/*.md`
 
 Claude Code is responsible for:
+
 - executing clear, scoped handoffs
 - following the project `CLAUDE.md`
 - staying inside allowed files and constraints
 - running requested verification where possible
 - reporting changed files, summary, verification results, blocked checks, and design questions
 
-Do not treat this as a rigid split where Codex only designs and Claude Code only edits.
-Codex may implement small or design-sensitive changes directly.
-Use Claude Code when the task is clear, scoped, repetitive, execution-heavy, or benefits from Claude Code tooling.
+Codex may implement small or design-sensitive changes directly. Use Claude Code when the task is clear, scoped, repetitive, execution-heavy, or benefits from Claude Code tooling.
 
 ## Decision Rule
+
 Keep the task in Codex when:
+
 - requirements are ambiguous
 - design intent is still being negotiated
 - responsibility boundaries may change
@@ -89,197 +141,118 @@ Keep the task in Codex when:
 - the main value is review, synthesis, or documentation consistency
 
 Hand off to Claude Code when:
+
 - goal, files, constraints, non-goals, and verification are clear
 - the task is mostly implementation or mechanical editing
 - the allowed edit scope can be stated explicitly
 - the project already has a suitable `CLAUDE.md`
-- Claude Code-specific workflow, hooks, or subagents would be useful
 
-## Project-Specific Design Principles
-Fill this in for each project.
-
-Examples:
-- Keep the implementation lightweight.
-- Prefer minimal dependencies.
-- Do not introduce packaging, installers, CI/CD, or deployment changes unless explicitly requested.
-- Preserve public APIs unless the user approves a design change.
-- Keep business logic out of UI code unless the existing project already follows that pattern.
-- Do not silently encode durable design decisions only in code.
-
-## Windows / Local Tool Guidance
-Use this for normal Windows projects, utility tools, AI/ML tools, static sites, and local automation.
-
-- Prefer the simplest language and stack that fits the task.
-- Python is the default for AI/ML tasks.
-- Use GPU acceleration when it materially helps and the target PC has CUDA available.
-- Prefer global Python packages unless dependency conflicts require `uv` or `venv`.
-- Never use conda unless a dependency strictly requires it.
-- Avoid installers, packaging, and CI/CD unless explicitly requested.
-- For GUI tools, prefer lightweight options first. Escalate to heavier GUI frameworks only when needed.
-
-## Docker / Raspberry Pi Guidance
-Use this for tools deployed to Raspberry Pi via Docker.
-
-- Target architecture: `linux/arm64`.
-- Prefer arm64-compatible base images.
-- GHCR image convention: `ghcr.io/iniwa/{tool-name}:latest`.
-- Deploy flow: push to `main` -> GitHub Actions -> GHCR -> Portainer Stack.
-- Containers should use `restart: unless-stopped`.
-- Containers should set `TZ=Asia/Tokyo`.
-- Consider memory limits because Raspberry Pi 4 has 8GB RAM shared by all containers.
-- Container data and DB should usually live under `/home/iniwa/docker/{tool-name}/`.
-- Use NAS mounts only for large data, shared media, backups, or Git/LFS data.
-- Do not change external exposure or Cloudflare Tunnel behavior unless explicitly requested.
-
-## Storage Guidance
-For Raspberry Pi / NAS projects:
-
-| Data | Path | Backend |
-|------|------|---------|
-| Container data / DB | `/home/iniwa/docker/{tool-name}/` | SSD |
-| Git repo / LFS | `/mnt/nas/git-data/` | NFS |
-| Photos | `/mnt/nas/photo/` | SMB |
-| Videos | `/mnt/nas/video/` | SMB |
-| Pi backups | `/mnt/nas/pi_backup/` | SMB |
-| Network backups | `/mnt/nas/NetBackup/` | NFS |
-
-NAS device:
-- Synology DS420j
-- IP: 192.168.1.190
-
-## Design Record Scope
-Keep `AGENTS.md` focused on short, durable rules that future Codex and Claude Code sessions must follow.
-
-Do not add `Alternatives Considered` as a default Decision Log heading. When rejected options or longer background matter, summarize only the durable rule in `AGENTS.md` and put the detail under `docs/decisions/`.
 ## Handoff Workflow
+
 When the user wants the "Codex specifies, Claude Code executes" flow:
 
-1. Codex reads project context, `AGENTS.md`, `CLAUDE.md`, and relevant files.
+1. Codex reads project context, `AGENTS.md`, `CLAUDE.md`, `docs/`, and relevant files.
 2. Codex decides whether the task is ready for handoff.
 3. Codex writes a concrete handoff file under `docs/handoffs/`.
 4. Codex reports the handoff file path to the user.
 5. The user gives that file path to Claude Code.
 6. Claude Code reads the handoff file, implements, and reports back.
 7. Codex reviews the report and/or diff.
+8. After review, Codex moves the handoff to `docs/handoffs/archive/` if it is complete.
 
-Codex should not hand off vague requests.
-Before handing off, reduce the work to known files, constraints, non-goals, and verification.
+Codex should not hand off vague requests. Before handing off, reduce the work to known files, constraints, non-goals, and verification.
 
 ## Codex Output Format For Claude Code
-When preparing a handoff, create `docs/handoffs/YYYY-MM-DD-<short-task>.md`. Create the `docs/handoffs/` directory if it does not exist. The file should contain this block.
+
+When preparing a handoff, create `docs/handoffs/YYYY-MM-DD-<short-task>.md`. The file should contain this block:
+
+```md
+Read AGENTS.md, CLAUDE.md, and this handoff file before implementation.
+If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
+
+## Goal
+...
+
+## Background
+...
+
+## Files To Inspect
+- ...
+
+## Files To Edit
+- ...
+
+## Constraints
+- ...
+
+## Non Goals
+- ...
+
+## Verification
+- ...
+
+## Expected Report
+- Changed files
+- Summary
+- Verification results
+- Blocked checks
+- Design questions for Codex
+```
 
 Handoff quality rules:
-- When a task depends on existing page/API state, name the concrete source to use instead of referring vaguely to "a helper if available".
-- For dense UI work, state which columns/controls are mandatory and which may move into a detail panel or selected-item stats area.
 
-```md
-Read AGENTS.md, CLAUDE.md, and this handoff file before implementation.
-If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
-
-## Goal
-...
-
-## Background
-...
-
-## Files To Inspect
-- ...
-
-## Files To Edit
-- ...
-
-## Constraints
-- ...
-
-## Non Goals
-- ...
-
-## Verification
-- ...
-
-## Expected Report
-- Changed files
-- Summary
-- Verification results
-- Blocked checks
-- Design questions for Codex
-```
-
-## Claude Code Handoff Template
-
-```md
-Read AGENTS.md, CLAUDE.md, and this handoff file before implementation.
-If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
-
-## Goal
-Describe the concrete implementation goal.
-
-## Background
-Summarize the Codex-side decision and why this change is being made.
-
-## Files To Inspect
-- path/to/file
-
-## Files To Edit
-- path/to/file
-
-## Constraints
-- Preserve existing design intent.
-- Keep changes scoped to the listed files unless wiring changes are necessary.
-- Do not add dependencies, build tooling, packaging, CI/CD, or deployment changes unless listed.
-- Do not touch secrets, credentials, `.env`, or local settings.
-- Do not commit automatically.
-
-## Non Goals
-- List anything that must stay out of scope.
-
-## Verification
-- List commands or manual checks.
-
-## Expected Report
-- Changed files
-- Summary
-- Verification results
-- Blocked checks
-- Design questions for Codex
-```
+- Name concrete source documents and files.
+- Keep each handoff small enough to review.
+- For UI work, state mandatory controls and states.
+- For API work, state endpoint names, expected behavior, and tests.
+- For Docker/deploy work, state the target architecture and whether Portainer/GHCR behavior may change.
 
 ## Codex Review Checklist
+
 After Claude Code returns, Codex should review:
 
 - Did the diff stay inside the handoff?
 - Did any file outside `Files To Edit` change? If yes, was it necessary?
-- If unexpected unrelated diffs appear, treat authorship as unknown unless confirmed. State neutrally that they should be excluded from the current task/commit rather than attributing them to Claude Code or the user.
+- If unexpected unrelated diffs appear, treat authorship as unknown unless confirmed. State neutrally that they should be excluded from the current task/commit.
 - Did the implementation preserve stated constraints and non-goals?
 - Did it introduce dependencies, build tooling, packaging, CI/CD, or deployment behavior unexpectedly?
 - Did it touch secrets, credentials, `.env`, or local settings?
 - Did verification run, and are blocked checks explained?
-- Does any discovery need to become a new `AGENTS.md` or `docs/*.md` decision?
+- Does any discovery need to become a new `AGENTS.md`, `docs/design/`, or `docs/decisions/` entry?
 
 ## Knowledge Persistence
-Use `AGENTS.md` for durable workflow and design decisions.
-Use `docs/*.md` for reusable technical notes, architecture details, procedures, and project-specific knowledge.
 
-Before starting meaningful work, Codex should check whether `docs/` contains relevant context.
-After implementation, Codex should decide whether new knowledge should be recorded.
-When a `docs/decisions/` note describes work that has been fully implemented and no longer needs to stay in the active decisions list, move it to `docs/decisions/archive/`.
+Use `AGENTS.md` for short durable workflow and design rules.
+
+Use `docs/design/` for living technical design, API notes, schema notes, and implementation guidance.
+
+Use `docs/decisions/` for decisions that need context, reason, constraints, and review warnings.
+
+Before starting meaningful work, Codex should check whether `docs/` contains relevant context. After implementation, Codex should decide whether new knowledge should be recorded.
 
 ## Decision Log
 
-### YYYY-MM-DD: Decision title
+### 2026-05-22: Project document structure
 
 Context:
-- What problem or requirement caused this decision?
+
+- MKWorld Stats Manager has a v0.1 design snapshot and needs a repeatable Codex-to-Claude implementation workflow.
 
 Decision:
-- What did we decide?
 
+- Keep `mkworld_stats_manager_docs_v0_1/` as the original design snapshot.
+- Use `docs/design/` for living design docs, `docs/decisions/` for active decisions, and `docs/handoffs/` for active Claude Code handoffs.
+- Archive completed handoffs under `docs/handoffs/archive/` after Codex review.
 
 Reason:
-- Why is this the right tradeoff now?
+
+- This separates source planning material, active implementation instructions, and reviewed historical work.
 
 Constraints Introduced:
-- What should future implementation preserve?
+
+- New handoffs must be written under `docs/handoffs/`.
+- Do not place active handoffs in the design snapshot directory.
 
 Do Not Change Casually:
-- What would cause design drift if changed without review?
+
+- Do not collapse active handoffs, decisions, and design drafts into a single directory.
