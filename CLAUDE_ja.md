@@ -1,4 +1,4 @@
-# CLAUDE_docker_ja.md - Docker Tool Development on Raspberry Pi 4（詳細版）
+# CLAUDE_ja.md - Docker Tool Development on Raspberry Pi 4（詳細版）
 
 > AI が実際に読む指示書は `CLAUDE.md`（英語・簡潔版）です。このファイルは人間向けの詳細リファレンスです。
 

@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-> Detailed notes (Japanese): CLAUDE_docker_ja.md
+> Detailed notes (Japanese): CLAUDE_ja.md
 
 ## Coding Style
 - If the user writes in Japanese, respond in Japanese.
