@@ -476,6 +476,92 @@ function SessionStart({
 }
 
 // ---------------------------------------------------------------------------
+function mapPointLabel(mp: MapPoint): string {
+  return mp.label_ja
+}
+
+function matchesMapPoint(mp: MapPoint, query: string): boolean {
+  const q = query.toLowerCase()
+  return (
+    mp.label_ja.toLowerCase().includes(q) ||
+    (mp.label_en?.toLowerCase().includes(q) ?? false) ||
+    mp.id.toLowerCase().includes(q) ||
+    (mp.course_id?.toLowerCase().includes(q) ?? false)
+  )
+}
+
+function MapPointPicker({
+  id,
+  label,
+  mapPoints,
+  selectedId,
+  onSelect,
+}: {
+  id: string
+  label: string
+  mapPoints: MapPoint[]
+  selectedId: string
+  onSelect: (id: string) => void
+}) {
+  const [query, setQuery] = useState('')
+
+  const filtered = useMemo(
+    () => (query ? mapPoints.filter(mp => matchesMapPoint(mp, query)) : mapPoints),
+    [mapPoints, query],
+  )
+
+  return (
+    <div className="mp-picker">
+      <label className="field__label" htmlFor={`${id}-search`}>
+        {label}
+      </label>
+      <div className="mp-picker__search">
+        <input
+          id={`${id}-search`}
+          className="input mp-picker__input"
+          type="text"
+          placeholder="絞り込み…"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+        />
+        {selectedId && (
+          <button
+            className="btn mp-picker__clear"
+            onClick={() => { onSelect(''); setQuery('') }}
+            aria-label="選択を解除"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+      <div className="mp-picker__list">
+        {filtered.length === 0 ? (
+          <p className="mp-picker__empty hint">該当なし</p>
+        ) : (
+          filtered.map(mp => {
+            const selected = mp.id === selectedId
+            return (
+              <button
+                key={mp.id}
+                className={`mp-picker__item${selected ? ' mp-picker__item--selected' : ''}`}
+                onClick={() => onSelect(mp.id)}
+                aria-pressed={selected}
+              >
+                {selected && <span className="mp-picker__badge">選択中</span>}
+                <span className="mp-picker__item-ja">{mp.label_ja}</span>
+                {mp.label_en && (
+                  <span className="mp-picker__item-en">{mp.label_en}</span>
+                )}
+              </button>
+            )
+          })
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
 function CourseSelector({
   mapPoints,
   busy,
@@ -489,6 +575,16 @@ function CourseSelector({
   const [toId, setToId] = useState('')
   const resolving = busy === 'resolve'
 
+  const fromMp = mapPoints.find(mp => mp.id === fromId)
+  const toMp = mapPoints.find(mp => mp.id === toId)
+  const samePoint = fromId !== '' && fromId === toId
+
+  const swap = () => {
+    const t = fromId
+    setFromId(toId)
+    setToId(t)
+  }
+
   return (
     <div className="selector">
       <h3 className="panel__title">コース選択</h3>
@@ -496,41 +592,35 @@ function CourseSelector({
         出発地点と到着地点を選びます。同じ地点を選ぶと通常3周コース、異なる地点を選ぶと道中コースになります。
       </p>
       <div className="field">
-        <label className="field__label" htmlFor="from-mp">
-          出発地点
-        </label>
-        <select
+        <MapPointPicker
           id="from-mp"
-          className="input"
-          value={fromId}
-          onChange={e => setFromId(e.target.value)}
-        >
-          <option value="">— 選択 —</option>
-          {mapPoints.map(mp => (
-            <option key={mp.id} value={mp.id}>
-              {mp.label_ja}
-            </option>
-          ))}
-        </select>
+          label="出発地点"
+          mapPoints={mapPoints}
+          selectedId={fromId}
+          onSelect={setFromId}
+        />
       </div>
       <div className="field">
-        <label className="field__label" htmlFor="to-mp">
-          到着地点
-        </label>
-        <select
+        <MapPointPicker
           id="to-mp"
-          className="input"
-          value={toId}
-          onChange={e => setToId(e.target.value)}
-        >
-          <option value="">— 選択 —</option>
-          {mapPoints.map(mp => (
-            <option key={mp.id} value={mp.id}>
-              {mp.label_ja}
-            </option>
-          ))}
-        </select>
+          label="到着地点"
+          mapPoints={mapPoints}
+          selectedId={toId}
+          onSelect={setToId}
+        />
       </div>
+      {(fromId || toId) && (
+        <div className="selector__summary">
+          <span>{fromMp ? mapPointLabel(fromMp) : '—'}</span>
+          <span className="selector__arrow">→</span>
+          <span>{toMp ? mapPointLabel(toMp) : '—'}</span>
+          {fromId && toId && (
+            <span className={`tag tag--${samePoint ? 'course' : 'route'}`}>
+              {samePoint ? '通常コース' : '道中コース'}
+            </span>
+          )}
+        </div>
+      )}
       <div className="btn-row">
         <button
           className="btn"
@@ -538,6 +628,13 @@ function CourseSelector({
           onClick={() => setToId(fromId)}
         >
           到着を出発と同じにする
+        </button>
+        <button
+          className="btn"
+          disabled={!fromId || !toId}
+          onClick={swap}
+        >
+          ⇄ 入れ替え
         </button>
         <button
           className="btn btn--primary"

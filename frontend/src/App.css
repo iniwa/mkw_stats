@@ -289,3 +289,59 @@ textarea.input { resize: vertical; font-family: inherit; }
 .records__delta--pos { color: var(--ok); font-variant-numeric: tabular-nums; }
 .records__delta--neg { color: var(--danger); font-variant-numeric: tabular-nums; }
 .records__vr-range { font-size: 0.78rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+
+/* -- map point picker ------------------------------------------------------ */
+.mp-picker { display: flex; flex-direction: column; gap: 0.3rem; }
+
+.mp-picker__search { display: flex; gap: 0.3rem; align-items: center; }
+.mp-picker__input { flex: 1; }
+.mp-picker__clear {
+  flex-shrink: 0; min-width: 2rem; padding: 0.4rem 0.5rem;
+  font-size: 0.8rem; line-height: 1;
+}
+
+.mp-picker__list {
+  max-height: 10rem; overflow-y: auto;
+  border: 1px solid var(--border); border-radius: 4px;
+  background: var(--bg-input);
+  display: flex; flex-direction: column;
+}
+.mp-picker__item {
+  display: flex; align-items: center; gap: 0.4rem;
+  width: 100%; text-align: left; padding: 0.35rem 0.5rem;
+  font-size: 0.85rem; background: none; color: var(--text);
+  border: none; border-bottom: 1px solid var(--border); cursor: pointer;
+  min-width: 0;
+}
+.mp-picker__item:last-child { border-bottom: none; }
+.mp-picker__item:hover { background: var(--bg-panel); }
+.mp-picker__item--selected {
+  background: var(--accent-dim); border-left: 3px solid var(--accent);
+}
+.mp-picker__item--selected:hover { background: var(--accent-dim); }
+.mp-picker__badge {
+  font-size: 0.68rem; font-weight: 600; padding: 0.1rem 0.35rem;
+  background: var(--accent); color: #0c1424; border-radius: 3px;
+  flex-shrink: 0;
+}
+.mp-picker__item-ja,
+.mp-picker__item-en {
+  min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.mp-picker__item-ja { flex: 1 1 auto; }
+.mp-picker__item-en {
+  flex: 0 1 45%; font-size: 0.78rem; color: var(--text-faint);
+}
+.mp-picker__empty { padding: 0.4rem 0.5rem; }
+
+/* -- selector summary ------------------------------------------------------ */
+.selector__summary {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  font-size: 0.85rem; padding: 0.4rem 0.5rem;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 4px; margin-bottom: 0.5rem;
+}
+.selector__summary > span:not(.tag) {
+  min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
+}
+.selector__arrow { color: var(--text-faint); }
