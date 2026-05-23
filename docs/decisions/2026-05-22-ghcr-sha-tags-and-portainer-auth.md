@@ -35,6 +35,7 @@ The stale credential failure mode is easy to misdiagnose as a missing image or b
 - GHCR package visibility should remain compatible with the chosen Portainer pull mode.
 - Do not add GHCR credentials to Portainer unless private package pulls are intentionally required.
 - When verifying a deployment, compare the running container image digest or SHA tag against the expected GitHub Actions commit when possible.
+- After a frontend redeploy, force a hard browser reload if the Web GUI still serves an older hashed JS bundle. Route detail verification observed the browser using the previous asset until a hard reload was performed.
 
 ## Do Not Change Casually
 
