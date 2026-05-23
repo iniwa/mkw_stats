@@ -345,3 +345,27 @@ textarea.input { resize: vertical; font-family: inherit; }
   min-width: 0; max-width: 100%; overflow: hidden; text-overflow: ellipsis;
 }
 .selector__arrow { color: var(--text-faint); }
+
+/* -- route detail ---------------------------------------------------------- */
+.route-detail {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  font-size: 0.82rem; padding: 0.5rem 0;
+  border-top: 1px solid var(--border); margin-top: 0.5rem;
+}
+.route-detail__row { display: flex; gap: 0.5rem; align-items: baseline; flex-wrap: wrap; }
+.route-detail__label {
+  flex-shrink: 0; min-width: 5rem;
+  color: var(--text-faint); font-size: 0.78rem;
+}
+.route-detail__text { color: var(--text); word-break: break-word; }
+.route-detail__text--pre { white-space: pre-wrap; }
+.route-detail__chips { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.route-detail__chip {
+  font-size: 0.72rem; padding: 0.1rem 0.4rem;
+  background: var(--bg-input); border: 1px solid var(--border-strong);
+  border-radius: 3px; color: var(--text-dim);
+}
+.route-detail__link { color: var(--accent); text-decoration: none; font-size: 0.78rem; }
+.route-detail__link:hover { text-decoration: underline; }
+.route-detail--compact { font-size: 0.78rem; padding: 0.3rem 0; margin-top: 0.3rem; }
+.route-detail--compact .route-detail__label { min-width: 4rem; font-size: 0.72rem; }

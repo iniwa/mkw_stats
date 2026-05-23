@@ -15,6 +15,7 @@ import {
   type Settings,
   type VrAccount,
 } from './api'
+import { RouteDetail } from './RouteDetail'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -671,6 +672,9 @@ function SelectionConfirm({
         <span className="confirm__name">{resolved.display_name}</span>
       </p>
       <p className="confirm__msg">{resolved.confirm_message}</p>
+      {resolved.kind === 'route' && resolved.route && (
+        <RouteDetail route={resolved.route} />
+      )}
       <div className="btn-row">
         <button className="btn" disabled={recording} onClick={onReselect}>
           選び直す

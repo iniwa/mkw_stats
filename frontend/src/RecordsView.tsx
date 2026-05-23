@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { api, Course, PlaySession, RaceRecord, Route, SessionStatus, SourceType, WARNING_LABELS } from './api'
+import { RouteDetail } from './RouteDetail'
 
 type SourceFilter = SourceType | 'all'
 type StatusFilter = SessionStatus | 'all'
@@ -190,7 +191,9 @@ export default function RecordsView() {
               )}
               {!racesLoading && !racesError && races.length > 0 && (
                 <ul className="race-history">
-                  {races.map(r => (
+                  {races.map(r => {
+                    const routeForDetail = r.route_id ? (routes.find(rt => rt.id === r.route_id) ?? null) : null
+                    return (
                     <li key={r.id}
                       className={`race-history__item records__race-item${r.status === 'cancelled' ? ' records__race-item--cancelled' : ''}`}
                     >
@@ -233,8 +236,10 @@ export default function RecordsView() {
                         </div>
                       )}
                       {r.memo && <div className="records__memo">{r.memo}</div>}
+                      {routeForDetail && <RouteDetail route={routeForDetail} compact />}
                     </li>
-                  ))}
+                    )
+                  })}
                 </ul>
               )}
             </div>
