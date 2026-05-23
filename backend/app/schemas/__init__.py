@@ -74,7 +74,7 @@ class CourseRead(BaseModel):
     name_ja: str
     name_en: str | None
     short_name: str | None
-    tags: list | None
+    tags: list | dict | None
     sort_order: int
     is_active: bool
 
@@ -90,7 +90,7 @@ class RouteRead(BaseModel):
     short_name: str | None
     is_lounge_12p_banned: bool
     repick_group_key: str | None
-    tags: list | None
+    tags: list | dict | None
     sort_order: int
     is_active: bool
 

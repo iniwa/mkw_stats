@@ -29,7 +29,7 @@ export interface Course {
   name_ja: string
   name_en: string | null
   short_name: string | null
-  tags: unknown[] | null
+  tags: unknown[] | Record<string, unknown> | null
   sort_order: number
   is_active: boolean
 }
@@ -43,7 +43,7 @@ export interface Route {
   short_name: string | null
   is_lounge_12p_banned: boolean
   repick_group_key: string | null
-  tags: unknown[] | null
+  tags: unknown[] | Record<string, unknown> | null
   sort_order: number
   is_active: boolean
 }

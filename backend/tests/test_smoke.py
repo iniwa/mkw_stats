@@ -143,3 +143,53 @@ def test_seed_map_points_all_reference_valid_courses():
         assert mp["course_id"] in course_ids, (
             f"map_point {mp['id']} references unknown course {mp['course_id']}"
         )
+
+
+def test_seed_routes_all_reference_valid_courses():
+    """Every ROUTES entry references from/to course_ids that exist in COURSES."""
+    from app.seed.initial_data import COURSES, ROUTES
+
+    course_ids = {c["id"] for c in COURSES}
+    for r in ROUTES:
+        assert r["from_course_id"] in course_ids, (
+            f"route {r['id']} from_course_id {r['from_course_id']} not in COURSES"
+        )
+        assert r["to_course_id"] in course_ids, (
+            f"route {r['id']} to_course_id {r['to_course_id']} not in COURSES"
+        )
+
+
+def test_seed_route_count():
+    """Seed contains the expected number of routes (202 reference + 1 fixture)."""
+    from app.seed.initial_data import ROUTES
+
+    assert len(ROUTES) == 203, f"Expected 203 routes, got {len(ROUTES)}"
+
+
+def test_seed_routes_tags_have_required_fields():
+    """Reference routes have source, source_key, sections in tags."""
+    from app.seed.initial_data import ROUTES
+
+    for r in ROUTES:
+        tags = r.get("tags")
+        if tags is None:
+            continue
+        assert isinstance(tags, dict), f"route {r['id']} tags should be dict, got {type(tags)}"
+        assert "source" in tags, f"route {r['id']} tags missing 'source'"
+        assert "source_key" in tags, f"route {r['id']} tags missing 'source_key'"
+        assert "sections" in tags, f"route {r['id']} tags missing 'sections'"
+
+
+def test_seed_sync_fields_updates_existing_master_records():
+    """Seed master data can refresh existing course/route rows by stable ID."""
+    from app.seed.initial_data import _sync_seed_fields
+
+    class Existing:
+        name_ja = "old"
+        tags = None
+
+    existing = Existing()
+    _sync_seed_fields(existing, {"name_ja": "new", "tags": {"source": "test"}})
+
+    assert existing.name_ja == "new"
+    assert existing.tags == {"source": "test"}

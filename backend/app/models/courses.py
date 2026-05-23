@@ -28,7 +28,7 @@ class Course(Base):
     name_ja: Mapped[str] = mapped_column(String(128), nullable=False)
     name_en: Mapped[str | None] = mapped_column(String(128), nullable=True)
     short_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
-    tags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    tags: Mapped[list | dict | None] = mapped_column(JSONB, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
@@ -44,7 +44,7 @@ class Route(Base):
     short_name: Mapped[str | None] = mapped_column(String(32), nullable=True)
     is_lounge_12p_banned: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     repick_group_key: Mapped[str | None] = mapped_column(String(64), nullable=True)
-    tags: Mapped[list | None] = mapped_column(JSONB, nullable=True)
+    tags: Mapped[list | dict | None] = mapped_column(JSONB, nullable=True)
     sort_order: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     is_active: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
 
