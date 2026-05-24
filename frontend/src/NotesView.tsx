@@ -7,6 +7,7 @@ import {
   type CourseNoteUpdateBody,
   type Route,
 } from './api'
+import AnnotationEditor from './AnnotationEditor'
 import { RouteDetail } from './RouteDetail'
 
 type FilterType = 'all' | 'course' | 'route'
@@ -276,7 +277,7 @@ export default function NotesView() {
         <p className="placeholder">ノートはありません。</p>
       ) : (
         <ul className="notes__list">
-          {filteredNotes.map(note => {
+          {filteredNotes.map((note) => {
             const isEditing = editingId === note.id
             const routeForDetail = note.route_id ? (routeMap.get(note.route_id) ?? null) : null
             const isRoute = note.route_id !== null
@@ -382,6 +383,13 @@ export default function NotesView() {
           })}
         </ul>
       )}
+
+      <AnnotationEditor
+        courses={courses}
+        routes={routes}
+        notes={notes}
+        courseMap={courseMap}
+      />
     </div>
   )
 }

@@ -3,11 +3,11 @@ from __future__ import annotations
 
 import uuid
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, ConfigDict, model_validator
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.enums import PlacementBand, RaceStatus, SessionStatus, SourceType
+from app.models.enums import AnnotationType, PlacementBand, RaceStatus, SessionStatus, SourceType
 
 _orm = ConfigDict(from_attributes=True)
 
@@ -254,3 +254,67 @@ class CourseNoteUpdate(BaseModel):
     priority: int | None = None
     tags: list | None = None
     is_pinned: bool | None = None
+
+
+# --------------------------------------------------------------------------
+# Map annotations
+# --------------------------------------------------------------------------
+_normalized_float = Annotated[float, Field(ge=0.0, le=1.0)]
+
+
+class MapAnnotationRead(BaseModel):
+    model_config = _orm
+
+    id: uuid.UUID
+    course_id: str | None
+    route_id: str | None
+    note_id: uuid.UUID | None
+    type: AnnotationType
+    icon_type: str | None
+    x: float | None
+    y: float | None
+    width: float | None
+    height: float | None
+    rotation: float | None
+    label: str | None
+    hover_text: str | None
+    priority: int
+    style: dict | None
+
+
+class MapAnnotationCreate(BaseModel):
+    course_id: str | None = None
+    route_id: str | None = None
+    note_id: uuid.UUID | None = None
+    type: AnnotationType = AnnotationType.pin
+    icon_type: str | None = None
+    x: _normalized_float | None = None
+    y: _normalized_float | None = None
+    width: _normalized_float | None = None
+    height: _normalized_float | None = None
+    rotation: float | None = None
+    label: str | None = None
+    hover_text: str | None = None
+    priority: int = 0
+    style: dict | None = None
+
+    @model_validator(mode="after")
+    def _exactly_one_target(self) -> MapAnnotationCreate:
+        if bool(self.course_id) == bool(self.route_id):
+            raise ValueError("course_id か route_id のどちらか一方が必要です")
+        return self
+
+
+class MapAnnotationUpdate(BaseModel):
+    note_id: uuid.UUID | None = None
+    type: AnnotationType | None = None
+    icon_type: str | None = None
+    x: _normalized_float | None = None
+    y: _normalized_float | None = None
+    width: _normalized_float | None = None
+    height: _normalized_float | None = None
+    rotation: float | None = None
+    label: str | None = None
+    hover_text: str | None = None
+    priority: int | None = None
+    style: dict | None = None

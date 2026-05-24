@@ -238,6 +238,20 @@ export const api = {
     request<CourseNote>(`/notes/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteNote: (id: string) =>
     request<void>(`/notes/${id}`, { method: 'DELETE' }),
+  getMapAnnotations: (options?: { course_id?: string; route_id?: string; note_id?: string }) => {
+    const params = new URLSearchParams()
+    if (options?.course_id) params.set('course_id', options.course_id)
+    if (options?.route_id) params.set('route_id', options.route_id)
+    if (options?.note_id) params.set('note_id', options.note_id)
+    const qs = params.toString()
+    return request<MapAnnotation[]>(`/map-annotations${qs ? '?' + qs : ''}`)
+  },
+  createMapAnnotation: (body: MapAnnotationCreateBody) =>
+    request<MapAnnotation>('/map-annotations', { method: 'POST', body: JSON.stringify(body) }),
+  updateMapAnnotation: (id: string, body: MapAnnotationUpdateBody) =>
+    request<MapAnnotation>(`/map-annotations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteMapAnnotation: (id: string) =>
+    request<void>(`/map-annotations/${id}`, { method: 'DELETE' }),
 }
 
 export interface CourseNote {
@@ -274,4 +288,56 @@ export interface CourseNoteUpdateBody {
 export const WARNING_LABELS: Record<string, string> = {
   repick: 'リピック（走行済みのコース）',
   route_banned_12p: '12人ラウンジでは道中コース禁止',
+}
+
+export type AnnotationType = 'pin' | 'icon' | 'arrow' | 'text' | 'area'
+
+export interface MapAnnotation {
+  id: string
+  course_id: string | null
+  route_id: string | null
+  note_id: string | null
+  type: AnnotationType
+  icon_type: string | null
+  x: number | null
+  y: number | null
+  width: number | null
+  height: number | null
+  rotation: number | null
+  label: string | null
+  hover_text: string | null
+  priority: number
+  style: Record<string, unknown> | null
+}
+
+export interface MapAnnotationCreateBody {
+  course_id?: string
+  route_id?: string
+  note_id?: string | null
+  type?: AnnotationType
+  icon_type?: string | null
+  x?: number | null
+  y?: number | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
+  label?: string | null
+  hover_text?: string | null
+  priority?: number
+  style?: Record<string, unknown> | null
+}
+
+export interface MapAnnotationUpdateBody {
+  note_id?: string | null
+  type?: AnnotationType
+  icon_type?: string | null
+  x?: number | null
+  y?: number | null
+  width?: number | null
+  height?: number | null
+  rotation?: number | null
+  label?: string | null
+  hover_text?: string | null
+  priority?: number
+  style?: Record<string, unknown> | null
 }

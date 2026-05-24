@@ -479,3 +479,170 @@ def test_include_inactive_shows_deleted(seeded_client):
     assert resp.status_code == 200
     ids = [n["id"] for n in resp.json()]
     assert created["id"] in ids
+
+
+# ---------------------------------------------------------------------------
+# Map Annotations
+# ---------------------------------------------------------------------------
+
+def test_create_course_annotation(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "label": "DKポイント", "x": 0.5, "y": 0.3},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["course_id"] == "dk_pass"
+    assert body["label"] == "DKポイント"
+    assert body["x"] == 0.5
+    assert body["y"] == 0.3
+    assert body["type"] == "pin"
+    assert body["priority"] == 0
+
+
+def test_create_route_annotation(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": "rt_peach_to_rainbow", "type": "text", "label": "ルートメモ"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["route_id"] == "rt_peach_to_rainbow"
+    assert body["type"] == "text"
+
+
+def test_create_annotation_both_targets_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "route_id": "rt_peach_to_rainbow"},
+    )
+    assert resp.status_code == 422
+
+
+def test_create_annotation_no_target_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"label": "タイトルのみ"},
+    )
+    assert resp.status_code == 422
+
+
+def test_create_annotation_unknown_course_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "no_such_course"},
+    )
+    assert resp.status_code == 404
+
+
+def test_create_annotation_unknown_route_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": "no_such_route"},
+    )
+    assert resp.status_code == 404
+
+
+def test_create_annotation_xy_out_of_range_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "x": 1.5, "y": 0.5},
+    )
+    assert resp.status_code == 422
+
+
+def test_create_annotation_linked_to_matching_note(seeded_client):
+    note = seeded_client.post(
+        "/api/v1/notes", json={"course_id": "dk_pass", "title": "参照ノート"}
+    ).json()
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "note_id": note["id"], "label": "ノートリンク"},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["note_id"] == note["id"]
+
+
+def test_create_annotation_mismatched_note_rejected(seeded_client):
+    note = seeded_client.post(
+        "/api/v1/notes", json={"course_id": "dk_pass", "title": "DKノート"}
+    ).json()
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": "rt_peach_to_rainbow", "note_id": note["id"]},
+    )
+    assert resp.status_code == 400
+
+
+def test_list_annotations_filter_by_course_id(seeded_client):
+    seeded_client.post("/api/v1/map-annotations", json={"course_id": "dk_pass", "label": "DK"})
+    seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": "rt_peach_to_rainbow", "label": "ルート"},
+    )
+
+    resp = seeded_client.get("/api/v1/map-annotations", params={"course_id": "dk_pass"})
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) >= 1
+    assert all(a["course_id"] == "dk_pass" for a in items)
+
+
+def test_list_annotations_filter_by_route_id(seeded_client):
+    seeded_client.post("/api/v1/map-annotations", json={"course_id": "dk_pass", "label": "DK"})
+    seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": "rt_peach_to_rainbow", "label": "ルート"},
+    )
+
+    resp = seeded_client.get(
+        "/api/v1/map-annotations", params={"route_id": "rt_peach_to_rainbow"}
+    )
+    assert resp.status_code == 200
+    items = resp.json()
+    assert len(items) >= 1
+    assert all(a["route_id"] == "rt_peach_to_rainbow" for a in items)
+
+
+def test_patch_annotation(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "label": "元ラベル", "priority": 0},
+    ).json()
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"label": "新ラベル", "type": "icon", "priority": 5},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["label"] == "新ラベル"
+    assert body["type"] == "icon"
+    assert body["priority"] == 5
+
+
+def test_delete_annotation(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "label": "削除対象"},
+    ).json()
+
+    resp = seeded_client.delete(f"/api/v1/map-annotations/{created['id']}")
+    assert resp.status_code == 204
+
+    all_annotations = seeded_client.get("/api/v1/map-annotations").json()
+    assert all(a["id"] != created["id"] for a in all_annotations)
+
+
+def test_deleted_annotation_patch_returns_404(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": "dk_pass", "label": "削除後更新"},
+    ).json()
+    seeded_client.delete(f"/api/v1/map-annotations/{created['id']}")
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"label": "new"},
+    )
+    assert resp.status_code == 404

@@ -402,3 +402,45 @@ textarea.input { resize: vertical; font-family: inherit; }
 .route-detail__link:hover { text-decoration: underline; }
 .route-detail--compact { font-size: 0.78rem; padding: 0.3rem 0; margin-top: 0.3rem; }
 .route-detail--compact .route-detail__label { min-width: 4rem; font-size: 0.72rem; }
+
+/* -- map annotations ------------------------------------------------------- */
+.ann { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1rem; }
+
+.ann__xy-row {
+  display: flex; align-items: flex-end; gap: 0.75rem; flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+.ann__xy-field { display: flex; flex-direction: column; gap: 0.25rem; }
+.ann__xy-input { width: 6rem; }
+
+.ann__preview {
+  position: relative;
+  width: 100%; padding-bottom: 60%;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.ann__marker {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+}
+.ann__marker-dot {
+  display: block; width: 10px; height: 10px;
+  background: var(--accent); border-radius: 50%;
+  border: 2px solid var(--bg-panel);
+  flex-shrink: 0;
+}
+.ann__marker-label {
+  font-size: 0.68rem; color: var(--text);
+  background: rgba(26,26,38,0.85); padding: 1px 4px;
+  border-radius: 3px; white-space: nowrap; max-width: 8rem;
+  overflow: hidden; text-overflow: ellipsis;
+}
+
+.ann__type-tag { background: #2a1f3d; color: #c49bf5; font-size: 0.72rem; }
+
+.ann__meta-row {
+  display: flex; flex-wrap: wrap; gap: 0.5rem;
+  font-size: 0.78rem; color: var(--text-faint);
+}
+.ann__meta-item { white-space: nowrap; }
