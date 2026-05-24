@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import AnalyticsView from './AnalyticsView'
 import DashboardView from './DashboardView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
@@ -46,6 +47,8 @@ export default function App() {
           <PlayingView />
         ) : active === 'Records' ? (
           <RecordsView />
+        ) : active === 'Analytics' ? (
+          <AnalyticsView />
         ) : active === 'Settings' ? (
           <SettingsView />
         ) : active === 'Courses' ? (
