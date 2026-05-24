@@ -1,10 +1,11 @@
 """API-level tests for the v1 backend slice (SQLite-backed — see conftest.py)."""
 import uuid
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 
-from app.models import RaceRecord, RatingSnapshot, VrAccount
-from app.models.enums import RaceStatus
+from app.models import PlaySession, RaceRecord, RatingSnapshot, VrAccount
+from app.models.enums import RaceStatus, SessionStatus, SourceType
 
 
 def test_health_still_ok(client):
@@ -646,3 +647,116 @@ def test_deleted_annotation_patch_returns_404(seeded_client):
         json={"label": "new"},
     )
     assert resp.status_code == 404
+
+
+# ---------------------------------------------------------------------------
+# Date range filter tests
+# ---------------------------------------------------------------------------
+
+def _dt(year: int, month: int, day: int, hour: int = 0) -> datetime:
+    return datetime(year, month, day, hour, 0, 0, tzinfo=timezone.utc)
+
+
+def _insert_session(
+    db_session,
+    started_at: datetime,
+    source: SourceType = SourceType.lounge,
+    status: SessionStatus = SessionStatus.completed,
+) -> PlaySession:
+    s = PlaySession(source=source, status=status, started_at=started_at)
+    db_session.add(s)
+    db_session.commit()
+    db_session.refresh(s)
+    return s
+
+
+def test_date_filter_started_from(client, db_session):
+    old = _insert_session(db_session, _dt(2025, 1, 1))
+    new = _insert_session(db_session, _dt(2026, 6, 1))
+
+    resp = client.get("/api/v1/play-sessions", params={"started_from": "2026-01-01T00:00:00Z"})
+    assert resp.status_code == 200
+    ids = {s["id"] for s in resp.json()}
+    assert str(new.id) in ids
+    assert str(old.id) not in ids
+
+
+def test_date_filter_started_to(client, db_session):
+    old = _insert_session(db_session, _dt(2025, 1, 1))
+    new = _insert_session(db_session, _dt(2026, 6, 1))
+
+    resp = client.get("/api/v1/play-sessions", params={"started_to": "2026-01-01T00:00:00Z"})
+    assert resp.status_code == 200
+    ids = {s["id"] for s in resp.json()}
+    assert str(old.id) in ids
+    assert str(new.id) not in ids
+
+
+def test_date_filter_range_inclusive_lower_exclusive_upper(client, db_session):
+    s1 = _insert_session(db_session, _dt(2025, 1, 1))   # at lower bound — included
+    s2 = _insert_session(db_session, _dt(2025, 6, 15))  # inside range — included
+    s3 = _insert_session(db_session, _dt(2026, 1, 1))   # at upper bound — excluded
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"started_from": "2025-01-01T00:00:00Z", "started_to": "2026-01-01T00:00:00Z"},
+    )
+    assert resp.status_code == 200
+    ids = {s["id"] for s in resp.json()}
+    assert str(s1.id) in ids
+    assert str(s2.id) in ids
+    assert str(s3.id) not in ids
+
+
+def test_date_filter_composes_with_source(client, db_session):
+    lounge = _insert_session(db_session, _dt(2026, 3, 1), source=SourceType.lounge)
+    ranked = _insert_session(db_session, _dt(2026, 3, 1), source=SourceType.ranked)
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"started_from": "2026-01-01T00:00:00Z", "source": "lounge"},
+    )
+    assert resp.status_code == 200
+    ids = {s["id"] for s in resp.json()}
+    assert str(lounge.id) in ids
+    assert str(ranked.id) not in ids
+
+
+def test_date_filter_composes_with_status(client, db_session):
+    completed = _insert_session(db_session, _dt(2026, 3, 1), status=SessionStatus.completed)
+    active = _insert_session(db_session, _dt(2026, 3, 2), status=SessionStatus.active)
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"started_from": "2026-01-01T00:00:00Z", "status": "completed"},
+    )
+    assert resp.status_code == 200
+    ids = {s["id"] for s in resp.json()}
+    assert str(completed.id) in ids
+    assert str(active.id) not in ids
+
+
+def test_date_filter_composes_with_limit(client, db_session):
+    for day in range(1, 6):
+        _insert_session(db_session, _dt(2026, 3, day))
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"started_from": "2026-01-01T00:00:00Z", "limit": 2},
+    )
+    assert resp.status_code == 200
+    assert len(resp.json()) == 2
+
+
+def test_date_filter_default_newest_first(client, db_session):
+    for day in [5, 1, 3]:
+        _insert_session(db_session, _dt(2026, 3, day))
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"started_from": "2026-01-01T00:00:00Z"},
+    )
+    assert resp.status_code == 200
+    times = [s["started_at"] for s in resp.json()]
+    for i in range(len(times) - 1):
+        assert times[i] >= times[i + 1]

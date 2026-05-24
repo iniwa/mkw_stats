@@ -1,4 +1,5 @@
 import uuid
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, Query, status
 from sqlalchemy.orm import Session
@@ -29,9 +30,18 @@ def list_play_sessions(
     limit: int = Query(50, ge=1, le=200),
     status: SessionStatus | None = Query(None),
     source: SourceType | None = Query(None),
+    started_from: datetime | None = Query(None),
+    started_to: datetime | None = Query(None),
     db: Session = Depends(get_db),
 ):
-    return race_flow.list_sessions(db, limit=limit, status=status, source=source)
+    return race_flow.list_sessions(
+        db,
+        limit=limit,
+        status=status,
+        source=source,
+        started_from=started_from,
+        started_to=started_to,
+    )
 
 
 @router.get("/play-sessions/active", response_model=list[PlaySessionRead])

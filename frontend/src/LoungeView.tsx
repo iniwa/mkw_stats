@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { api, Course, PlaySession, RaceRecord, Route, WARNING_LABELS } from './api'
 
 interface LoungeData {
@@ -38,17 +38,35 @@ function fmtTime(iso: string): string {
   })
 }
 
+function toFromISO(d: string): string {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day).toISOString()
+}
+
+function toToISO(d: string): string {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day + 1).toISOString()
+}
+
 export default function LoungeView() {
   const [data, setData] = useState<LoungeData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [limit, setLimit] = useState(50)
 
-  const load = useCallback(async () => {
+  async function load() {
     setLoading(true)
     setError(null)
     try {
       const [sessions, courses, routes] = await Promise.all([
-        api.getSessions({ source: 'lounge', limit: 50 }),
+        api.getSessions({
+          source: 'lounge',
+          limit,
+          started_from: dateFrom ? toFromISO(dateFrom) : undefined,
+          started_to: dateTo ? toToISO(dateTo) : undefined,
+        }),
         api.getCourses(),
         api.getRoutes(),
       ])
@@ -61,9 +79,10 @@ export default function LoungeView() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }
 
-  useEffect(() => { load() }, [load])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [dateFrom, dateTo, limit])
 
   if (loading) return <p className="placeholder">読み込み中…</p>
 
@@ -80,12 +99,36 @@ export default function LoungeView() {
 
   const { sessions, racesBySession, courses, routes } = data
 
+  const windowLabel = (dateFrom || dateTo) ? 'Filtered sessions' : `Recent ${limit} Lounge sessions`
+
   if (sessions.length === 0) {
     return (
       <div className="lounge">
         <div className="lounge__header">
           <span className="lounge__title">Lounge</span>
-          <span className="lounge__window">Recent 50 Lounge sessions</span>
+          <span className="lounge__window">{windowLabel}</span>
+          <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
+        </div>
+        <div className="date-filter">
+          <div className="date-filter__group">
+            <span className="date-filter__label">開始日</span>
+            <input type="date" className="date-filter__input" value={dateFrom} disabled={loading}
+              onChange={e => setDateFrom(e.target.value)} />
+          </div>
+          <div className="date-filter__group">
+            <span className="date-filter__label">終了日</span>
+            <input type="date" className="date-filter__input" value={dateTo} disabled={loading}
+              onChange={e => setDateTo(e.target.value)} />
+          </div>
+          <div className="date-filter__group">
+            <span className="date-filter__label">件数</span>
+            <select className="date-filter__select" value={limit} disabled={loading}
+              onChange={e => setLimit(Number(e.target.value))}>
+              {[25, 50, 100, 200].map(v => <option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
+            onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
         </div>
         <p className="placeholder">Lounge セッションがありません。</p>
       </div>
@@ -144,8 +187,30 @@ export default function LoungeView() {
     <div className="lounge">
       <div className="lounge__header">
         <span className="lounge__title">Lounge</span>
-        <span className="lounge__window">Recent 50 Lounge sessions</span>
+        <span className="lounge__window">{windowLabel}</span>
         <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
+      </div>
+
+      <div className="date-filter">
+        <div className="date-filter__group">
+          <span className="date-filter__label">開始日</span>
+          <input type="date" className="date-filter__input" value={dateFrom} disabled={loading}
+            onChange={e => setDateFrom(e.target.value)} />
+        </div>
+        <div className="date-filter__group">
+          <span className="date-filter__label">終了日</span>
+          <input type="date" className="date-filter__input" value={dateTo} disabled={loading}
+            onChange={e => setDateTo(e.target.value)} />
+        </div>
+        <div className="date-filter__group">
+          <span className="date-filter__label">件数</span>
+          <select className="date-filter__select" value={limit} disabled={loading}
+            onChange={e => setLimit(Number(e.target.value))}>
+            {[25, 50, 100, 200].map(v => <option key={v} value={v}>{v}</option>)}
+          </select>
+        </div>
+        <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
+          onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
       </div>
 
       {activeSessions.length > 0 && (

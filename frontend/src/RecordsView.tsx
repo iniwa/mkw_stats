@@ -25,6 +25,16 @@ function resolveRoute(id: string, routes: Route[]): string {
   return r ? (r.short_name ?? r.name_ja ?? r.id) : id
 }
 
+function toFromISO(d: string): string {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day).toISOString()
+}
+
+function toToISO(d: string): string {
+  const [y, m, day] = d.split('-').map(Number)
+  return new Date(y, m - 1, day + 1).toISOString()
+}
+
 export default function RecordsView() {
   const [sessions, setSessions] = useState<PlaySession[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -33,6 +43,9 @@ export default function RecordsView() {
   const [error, setError] = useState<string | null>(null)
   const [filterSource, setFilterSource] = useState<SourceFilter>('all')
   const [filterStatus, setFilterStatus] = useState<StatusFilter>('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [limit, setLimit] = useState(50)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [races, setRaces] = useState<RaceRecord[]>([])
   const [racesLoading, setRacesLoading] = useState(false)
@@ -44,9 +57,11 @@ export default function RecordsView() {
     try {
       const [sess, cList, rList] = await Promise.all([
         api.getSessions({
-          limit: 50,
+          limit,
           source: filterSource === 'all' ? undefined : filterSource,
           status: filterStatus === 'all' ? undefined : filterStatus,
+          started_from: dateFrom ? toFromISO(dateFrom) : undefined,
+          started_to: dateTo ? toToISO(dateTo) : undefined,
         }),
         api.getCourses(),
         api.getRoutes(),
@@ -65,7 +80,8 @@ export default function RecordsView() {
     }
   }
 
-  useEffect(() => { load() }, [filterSource, filterStatus])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { load() }, [filterSource, filterStatus, dateFrom, dateTo, limit])
 
   async function selectSession(id: string) {
     if (selectedId === id) {
@@ -134,6 +150,66 @@ export default function RecordsView() {
             ))}
           </div>
         </div>
+      </div>
+
+      <div className="date-filter">
+        <div className="date-filter__group">
+          <span className="date-filter__label">開始日</span>
+          <input
+            type="date"
+            className="date-filter__input"
+            value={dateFrom}
+            disabled={loading}
+            onChange={e => {
+              setDateFrom(e.target.value)
+              setSelectedId(null)
+              setRaces([])
+            }}
+          />
+        </div>
+        <div className="date-filter__group">
+          <span className="date-filter__label">終了日</span>
+          <input
+            type="date"
+            className="date-filter__input"
+            value={dateTo}
+            disabled={loading}
+            onChange={e => {
+              setDateTo(e.target.value)
+              setSelectedId(null)
+              setRaces([])
+            }}
+          />
+        </div>
+        <div className="date-filter__group">
+          <span className="date-filter__label">件数</span>
+          <select
+            className="date-filter__select"
+            value={limit}
+            disabled={loading}
+            onChange={e => {
+              setLimit(Number(e.target.value))
+              setSelectedId(null)
+              setRaces([])
+            }}
+          >
+            {[25, 50, 100, 200].map(v => (
+              <option key={v} value={v}>{v}</option>
+            ))}
+          </select>
+        </div>
+        <button
+          className="btn"
+          disabled={loading || (!dateFrom && !dateTo)}
+          onClick={() => {
+            setDateFrom('')
+            setDateTo('')
+            setSelectedId(null)
+            setRaces([])
+          }}
+        >
+          日付クリア
+        </button>
       </div>
 
       {loading && <p className="placeholder">読み込み中…</p>}

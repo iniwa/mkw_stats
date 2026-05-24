@@ -545,6 +545,27 @@ textarea.input { resize: vertical; font-family: inherit; }
   color: var(--text-dim); min-width: 2rem; text-align: right;
 }
 
+/* -- date filter controls -------------------------------------------------- */
+.date-filter {
+  display: flex; flex-wrap: wrap; gap: 0.4rem 0.8rem; align-items: center;
+}
+.date-filter__group { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.date-filter__label { font-size: 0.78rem; color: var(--text-dim); white-space: nowrap; }
+.date-filter__input {
+  padding: 0.35rem 0.5rem; font-size: 0.85rem;
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 4px;
+  color-scheme: dark;
+}
+.date-filter__input:focus { outline: none; border-color: var(--accent); }
+.date-filter__input:disabled { opacity: 0.45; }
+.date-filter__select {
+  padding: 0.35rem 0.5rem; font-size: 0.85rem;
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 4px; cursor: pointer;
+}
+.date-filter__select:disabled { opacity: 0.45; cursor: not-allowed; }
+
 /* -- lounge ---------------------------------------------------------------- */
 .lounge { display: flex; flex-direction: column; gap: 0.85rem; }
 .lounge__header {

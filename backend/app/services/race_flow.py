@@ -90,12 +90,18 @@ def list_sessions(
     limit: int = 50,
     status: SessionStatus | None = None,
     source: SourceType | None = None,
+    started_from: datetime | None = None,
+    started_to: datetime | None = None,
 ) -> list[PlaySession]:
     stmt = select(PlaySession).order_by(PlaySession.started_at.desc())
     if status is not None:
         stmt = stmt.where(PlaySession.status == status)
     if source is not None:
         stmt = stmt.where(PlaySession.source == source)
+    if started_from is not None:
+        stmt = stmt.where(PlaySession.started_at >= started_from)
+    if started_to is not None:
+        stmt = stmt.where(PlaySession.started_at < started_to)
     stmt = stmt.limit(limit)
     return list(db.scalars(stmt))
 
