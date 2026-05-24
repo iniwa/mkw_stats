@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import DashboardView from './DashboardView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
 import RecordsView from './RecordsView'
@@ -10,7 +11,7 @@ const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'Analytics', 'Courses', 'L
 type HealthStatus = 'checking' | 'ok' | 'error'
 
 export default function App() {
-  const [active, setActive] = useState('Playing')
+  const [active, setActive] = useState('Dashboard')
   const [health, setHealth] = useState<HealthStatus>('checking')
 
   useEffect(() => {
@@ -39,7 +40,9 @@ export default function App() {
         ))}
       </nav>
       <main className="main">
-        {active === 'Playing' ? (
+        {active === 'Dashboard' ? (
+          <DashboardView onNavigate={setActive} />
+        ) : active === 'Playing' ? (
           <PlayingView />
         ) : active === 'Records' ? (
           <RecordsView />

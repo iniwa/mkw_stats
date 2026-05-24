@@ -444,3 +444,44 @@ textarea.input { resize: vertical; font-family: inherit; }
   font-size: 0.78rem; color: var(--text-faint);
 }
 .ann__meta-item { white-space: nowrap; }
+
+/* -- dashboard ------------------------------------------------------------- */
+.dashboard { display: flex; flex-direction: column; gap: 0.85rem; }
+.dashboard__grid {
+  display: grid; grid-template-columns: 1fr 1.4fr; gap: 0.85rem;
+}
+@media (max-width: 720px) {
+  .dashboard__grid { grid-template-columns: 1fr; }
+}
+.dashboard__metrics {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;
+}
+@media (max-width: 480px) {
+  .dashboard__metrics { grid-template-columns: repeat(2, 1fr); }
+}
+.dashboard__metric {
+  text-align: center; padding: 0.65rem 0.5rem;
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: 5px;
+}
+.dashboard__metric-value {
+  font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.dashboard__metric-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
+.dashboard__session-list { list-style: none; display: flex; flex-direction: column; gap: 0.3rem; }
+.dashboard__session-item {
+  padding: 0.45rem 0.6rem; border: 1px solid var(--border);
+  border-radius: 4px; background: var(--bg-input);
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.dashboard__session-row1 { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.dashboard__session-row2 { font-size: 0.78rem; color: var(--text-faint); }
+.dashboard__session-title { font-size: 0.88rem; }
+.dashboard__session-time { font-size: 0.78rem; color: var(--text-faint); margin-left: auto; }
+.dashboard__vr-account { display: flex; flex-direction: column; gap: 0.25rem; }
+.dashboard__vr-name { font-weight: 500; }
+.dashboard__vr-value {
+  font-size: 1.8rem; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--ok);
+}
+.dashboard__vr-sub { font-size: 0.8rem; color: var(--text-faint); }
+.dashboard__vr-empty { font-size: 0.88rem; color: var(--text-faint); }
+.dashboard__actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
