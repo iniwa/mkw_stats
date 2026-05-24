@@ -348,3 +348,134 @@ def test_list_sessions_limit(seeded_client):
     resp = seeded_client.get("/api/v1/play-sessions", params={"limit": 2})
     assert resp.status_code == 200
     assert len(resp.json()) == 2
+
+
+# ---------------------------------------------------------------------------
+# Notes
+# ---------------------------------------------------------------------------
+
+def test_create_course_note(seeded_client):
+    resp = seeded_client.post("/api/v1/notes", json={"course_id": "dk_pass", "title": "DKテスト"})
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["course_id"] == "dk_pass"
+    assert body["title"] == "DKテスト"
+    assert body["is_active"] is True
+    assert body["is_pinned"] is False
+
+
+def test_create_route_note(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/notes",
+        json={"route_id": "rt_peach_to_rainbow", "body_markdown": "ルートノート"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["route_id"] == "rt_peach_to_rainbow"
+    assert body["body_markdown"] == "ルートノート"
+
+
+def test_create_note_both_targets_rejected(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/notes",
+        json={"course_id": "dk_pass", "route_id": "rt_peach_to_rainbow"},
+    )
+    assert resp.status_code == 422
+
+
+def test_create_note_no_target_rejected(seeded_client):
+    resp = seeded_client.post("/api/v1/notes", json={"title": "タイトルのみ"})
+    assert resp.status_code == 422
+
+
+def test_create_note_unknown_course_rejected(seeded_client):
+    resp = seeded_client.post("/api/v1/notes", json={"course_id": "no_such_course"})
+    assert resp.status_code == 404
+
+
+def test_create_note_unknown_route_rejected(seeded_client):
+    resp = seeded_client.post("/api/v1/notes", json={"route_id": "no_such_route"})
+    assert resp.status_code == 404
+
+
+def test_list_notes_filter_by_course_id(seeded_client):
+    seeded_client.post("/api/v1/notes", json={"course_id": "dk_pass", "title": "DK"})
+    seeded_client.post("/api/v1/notes", json={"route_id": "rt_peach_to_rainbow", "title": "ルート"})
+
+    resp = seeded_client.get("/api/v1/notes", params={"course_id": "dk_pass"})
+    assert resp.status_code == 200
+    notes = resp.json()
+    assert len(notes) >= 1
+    assert all(n["course_id"] == "dk_pass" for n in notes)
+
+
+def test_list_notes_filter_by_route_id(seeded_client):
+    seeded_client.post("/api/v1/notes", json={"course_id": "dk_pass", "title": "DK"})
+    seeded_client.post("/api/v1/notes", json={"route_id": "rt_peach_to_rainbow", "title": "ルート"})
+
+    resp = seeded_client.get("/api/v1/notes", params={"route_id": "rt_peach_to_rainbow"})
+    assert resp.status_code == 200
+    notes = resp.json()
+    assert len(notes) >= 1
+    assert all(n["route_id"] == "rt_peach_to_rainbow" for n in notes)
+
+
+def test_list_notes_both_filters_rejected(seeded_client):
+    resp = seeded_client.get(
+        "/api/v1/notes",
+        params={"course_id": "dk_pass", "route_id": "rt_peach_to_rainbow"},
+    )
+    assert resp.status_code == 400
+
+
+def test_list_notes_pinned_priority_order(seeded_client):
+    seeded_client.post("/api/v1/notes", json={"course_id": "dk_pass", "title": "低", "priority": 0})
+    seeded_client.post("/api/v1/notes", json={"course_id": "dk_pass", "title": "高", "priority": 10})
+    seeded_client.post(
+        "/api/v1/notes",
+        json={"course_id": "dk_pass", "title": "ピン", "priority": 0, "is_pinned": True},
+    )
+
+    resp = seeded_client.get("/api/v1/notes", params={"course_id": "dk_pass"})
+    notes = resp.json()
+    assert notes[0]["is_pinned"] is True
+    assert notes[1]["priority"] == 10
+
+
+def test_patch_note(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/notes", json={"course_id": "dk_pass", "title": "元タイトル"}
+    ).json()
+
+    resp = seeded_client.patch(
+        f"/api/v1/notes/{created['id']}",
+        json={"title": "新タイトル", "is_pinned": True},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["title"] == "新タイトル"
+    assert body["is_pinned"] is True
+
+
+def test_delete_note_soft_deletes(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/notes", json={"course_id": "dk_pass", "title": "削除対象"}
+    ).json()
+
+    resp = seeded_client.delete(f"/api/v1/notes/{created['id']}")
+    assert resp.status_code == 204
+
+    active = seeded_client.get("/api/v1/notes").json()
+    assert all(n["id"] != created["id"] for n in active)
+
+
+def test_include_inactive_shows_deleted(seeded_client):
+    created = seeded_client.post(
+        "/api/v1/notes", json={"course_id": "dk_pass", "title": "削除対象"}
+    ).json()
+    seeded_client.delete(f"/api/v1/notes/{created['id']}")
+
+    resp = seeded_client.get("/api/v1/notes", params={"include_inactive": "true"})
+    assert resp.status_code == 200
+    ids = [n["id"] for n in resp.json()]
+    assert created["id"] in ids

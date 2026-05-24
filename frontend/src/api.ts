@@ -224,6 +224,51 @@ export const api = {
     request<RaceRecord>(`/play-sessions/${sessionId}/undo-last-race`, { method: 'POST' }),
   finishSession: (sessionId: string) =>
     request<PlaySession>(`/play-sessions/${sessionId}/finish`, { method: 'POST' }),
+  getNotes: (options?: { course_id?: string; route_id?: string; include_inactive?: boolean }) => {
+    const params = new URLSearchParams()
+    if (options?.course_id) params.set('course_id', options.course_id)
+    if (options?.route_id) params.set('route_id', options.route_id)
+    if (options?.include_inactive) params.set('include_inactive', 'true')
+    const qs = params.toString()
+    return request<CourseNote[]>(`/notes${qs ? '?' + qs : ''}`)
+  },
+  createNote: (body: CourseNoteCreateBody) =>
+    request<CourseNote>('/notes', { method: 'POST', body: JSON.stringify(body) }),
+  updateNote: (id: string, body: CourseNoteUpdateBody) =>
+    request<CourseNote>(`/notes/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  deleteNote: (id: string) =>
+    request<void>(`/notes/${id}`, { method: 'DELETE' }),
+}
+
+export interface CourseNote {
+  id: string
+  course_id: string | null
+  route_id: string | null
+  title: string | null
+  body_markdown: string | null
+  priority: number
+  tags: unknown[] | null
+  is_pinned: boolean
+  is_active: boolean
+  created_at: string
+}
+
+export interface CourseNoteCreateBody {
+  course_id?: string
+  route_id?: string
+  title?: string | null
+  body_markdown?: string | null
+  priority?: number
+  tags?: unknown[]
+  is_pinned?: boolean
+}
+
+export interface CourseNoteUpdateBody {
+  title?: string | null
+  body_markdown?: string | null
+  priority?: number
+  tags?: unknown[] | null
+  is_pinned?: boolean
 }
 
 export const WARNING_LABELS: Record<string, string> = {

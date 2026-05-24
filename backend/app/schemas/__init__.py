@@ -212,3 +212,45 @@ class RaceUpdateRequest(BaseModel):
     character_id: uuid.UUID | None = None
     vehicle_id: uuid.UUID | None = None
     memo: str | None = None
+
+
+# --------------------------------------------------------------------------
+# Course notes
+# --------------------------------------------------------------------------
+class CourseNoteRead(BaseModel):
+    model_config = _orm
+
+    id: uuid.UUID
+    course_id: str | None
+    route_id: str | None
+    title: str | None
+    body_markdown: str | None
+    priority: int
+    tags: list | None
+    is_pinned: bool
+    is_active: bool
+    created_at: datetime
+
+
+class CourseNoteCreate(BaseModel):
+    course_id: str | None = None
+    route_id: str | None = None
+    title: str | None = None
+    body_markdown: str | None = None
+    priority: int = 0
+    tags: list | None = None
+    is_pinned: bool = False
+
+    @model_validator(mode="after")
+    def _exactly_one_target(self) -> CourseNoteCreate:
+        if bool(self.course_id) == bool(self.route_id):
+            raise ValueError("course_id か route_id のどちらか一方が必要です")
+        return self
+
+
+class CourseNoteUpdate(BaseModel):
+    title: str | None = None
+    body_markdown: str | None = None
+    priority: int | None = None
+    tags: list | None = None
+    is_pinned: bool | None = None

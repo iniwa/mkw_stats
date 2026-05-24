@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import './App.css'
+import NotesView from './NotesView'
 import PlayingView from './PlayingView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
@@ -44,6 +45,8 @@ export default function App() {
           <RecordsView />
         ) : active === 'Settings' ? (
           <SettingsView />
+        ) : active === 'Courses' ? (
+          <NotesView />
         ) : (
           <p className="placeholder">{active} はこのスライスでは未実装です。</p>
         )}
