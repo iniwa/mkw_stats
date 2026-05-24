@@ -403,6 +403,47 @@ textarea.input { resize: vertical; font-family: inherit; }
 .route-detail--compact { font-size: 0.78rem; padding: 0.3rem 0; margin-top: 0.3rem; }
 .route-detail--compact .route-detail__label { min-width: 4rem; font-size: 0.72rem; }
 
+/* -- target assist --------------------------------------------------------- */
+.target-assist {
+  display: flex; flex-direction: column; gap: 0.5rem;
+  border-top: 1px solid var(--border); margin-top: 0.5rem; padding-top: 0.5rem;
+}
+.target-assist__header { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.target-assist__title { font-size: 0.86rem; font-weight: 600; color: var(--text); }
+.target-assist__section { display: flex; flex-direction: column; gap: 0.2rem; }
+.target-assist__section-label {
+  font-size: 0.72rem; font-weight: 600; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 0.15rem;
+}
+.target-assist__list { list-style: none; display: flex; flex-direction: column; gap: 0.2rem; }
+.target-assist__note-item {
+  display: flex; flex-direction: column; gap: 0.2rem;
+  padding: 0.3rem 0.45rem; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem;
+}
+.target-assist__note-head { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.target-assist__note-title { font-weight: 500; }
+.target-assist__note-title--untitled { font-weight: 400; color: var(--text-faint); }
+.target-assist__note-body {
+  font-size: 0.82rem; color: var(--text-dim);
+  white-space: pre-wrap; word-break: break-word;
+  font-family: inherit; margin: 0; padding: 0;
+  max-height: 6rem; overflow: hidden;
+}
+.target-assist__ann-item {
+  display: flex; flex-direction: column; gap: 0.15rem;
+  padding: 0.3rem 0.45rem; background: var(--bg-input);
+  border: 1px solid var(--border); border-radius: 4px; font-size: 0.85rem;
+}
+.target-assist__ann-head { display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; }
+.target-assist__hover-text { font-size: 0.78rem; color: var(--text-dim); padding-left: 0.1rem; }
+.target-assist__meta { font-size: 0.75rem; color: var(--text-faint); }
+.target-assist__loading { margin-top: 0.5rem; }
+.target-assist__empty { margin-top: 0.5rem; }
+.target-assist__error {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.5rem;
+}
+
 /* -- map annotations ------------------------------------------------------- */
 .ann { display: flex; flex-direction: column; gap: 0.85rem; margin-top: 1rem; }
 

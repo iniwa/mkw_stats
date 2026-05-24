@@ -16,6 +16,7 @@ import {
   type VrAccount,
 } from './api'
 import { RouteDetail } from './RouteDetail'
+import { TargetAssist } from './TargetAssist'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -675,6 +676,11 @@ function SelectionConfirm({
       {resolved.kind === 'route' && resolved.route && (
         <RouteDetail route={resolved.route} />
       )}
+      <TargetAssist
+        kind={resolved.kind}
+        id={resolved.kind === 'course' ? resolved.course!.id : resolved.route!.id}
+        displayName={resolved.display_name}
+      />
       <div className="btn-row">
         <button className="btn" disabled={recording} onClick={onReselect}>
           選び直す
@@ -712,10 +718,25 @@ function RankedResultForm({
   const currentVr = account?.current_vr ?? null
   const projectedVr = currentVr === null ? null : currentVr + delta
 
+  const assistTarget: { kind: 'course' | 'route'; id: string } | null =
+    draftRace.course_id
+      ? { kind: 'course', id: draftRace.course_id }
+      : draftRace.route_id
+        ? { kind: 'route', id: draftRace.route_id }
+        : null
+
   return (
     <div className="result">
       <h3 className="panel__title">{courseLabel} の結果</h3>
       <p className="result__race">Race #{draftRace.race_no ?? '-'}（draft）</p>
+
+      {assistTarget && (
+        <TargetAssist
+          kind={assistTarget.kind}
+          id={assistTarget.id}
+          displayName={courseLabel}
+        />
+      )}
 
       <div className="field">
         <span className="field__label">参加人数</span>
