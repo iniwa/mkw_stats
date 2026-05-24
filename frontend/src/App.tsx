@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import AnalyticsView from './AnalyticsView'
 import DashboardView from './DashboardView'
+import LoungeView from './LoungeView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
 import RecordsView from './RecordsView'
@@ -49,6 +50,8 @@ export default function App() {
           <RecordsView />
         ) : active === 'Analytics' ? (
           <AnalyticsView />
+        ) : active === 'Lounge' ? (
+          <LoungeView />
         ) : active === 'Settings' ? (
           <SettingsView />
         ) : active === 'Courses' ? (

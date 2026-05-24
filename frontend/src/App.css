@@ -544,3 +544,45 @@ textarea.input { resize: vertical; font-family: inherit; }
   font-variant-numeric: tabular-nums; font-weight: 600;
   color: var(--text-dim); min-width: 2rem; text-align: right;
 }
+
+/* -- lounge ---------------------------------------------------------------- */
+.lounge { display: flex; flex-direction: column; gap: 0.85rem; }
+.lounge__header {
+  display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;
+}
+.lounge__title { font-size: 1.1rem; font-weight: 600; }
+.lounge__window {
+  font-size: 0.78rem; color: var(--text-dim);
+  background: var(--bg-panel); border: 1px solid var(--border);
+  padding: 0.2rem 0.5rem; border-radius: 3px; flex-shrink: 0;
+}
+.lounge__list { list-style: none; display: flex; flex-direction: column; gap: 0.35rem; }
+.lounge__row {
+  display: flex; flex-direction: column; gap: 0.25rem;
+  padding: 0.45rem 0.55rem; border: 1px solid var(--border);
+  border-radius: 4px; background: var(--bg-input);
+}
+.lounge__row-top { display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.lounge__row-detail {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  font-size: 0.82rem;
+}
+.lounge__meta { font-size: 0.82rem; color: var(--text-dim); }
+.lounge__progress { font-weight: 600; font-variant-numeric: tabular-nums; font-size: 0.85rem; }
+.lounge__warn-badge { color: var(--warn); font-size: 0.82rem; font-weight: 600; }
+.lounge__latest { font-size: 0.82rem; color: var(--text-faint); }
+.lounge__preview { font-size: 0.82rem; color: var(--text-faint); }
+.lounge__warn-summary { display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 0.6rem; }
+.lounge__section-label {
+  font-size: 0.75rem; font-weight: 600; color: var(--text-faint);
+  text-transform: uppercase; letter-spacing: 0.04em;
+  margin: 0.4rem 0 0.3rem;
+}
+.lounge__warn-detail { list-style: none; display: flex; flex-direction: column; gap: 0.25rem; }
+.lounge__warn-item {
+  display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.83rem;
+}
+.lounge__warn-item:last-child { border-bottom: none; }
+.lounge__warn-target { flex-shrink: 0; }
+.lounge__warn-flags { color: var(--warn); }
