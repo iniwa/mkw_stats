@@ -1534,6 +1534,28 @@ def test_mmr_sync_api_error_returns_502(seeded_client):
     assert resp.status_code == 502
 
 
+def test_mmr_sync_non_json_response_returns_502(seeded_client):
+    """Non-JSON body from MKCentral (e.g. HTML maintenance page) must return 502, not 500."""
+    import urllib.error
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+
+    class FakeHtmlResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return b"<html><body>Service Unavailable</body></html>"
+
+    with patch("urllib.request.urlopen", return_value=FakeHtmlResponse()):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 502
+
+
 def test_session_read_includes_mmr_fields(seeded_client, db_session):
     now = datetime.now(timezone.utc)
     s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)

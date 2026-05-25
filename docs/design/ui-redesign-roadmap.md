@@ -421,6 +421,21 @@ Completed behavior:
 
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
+## Completed Foundation: MKCentral Non-JSON Response Fix
+
+A latent 500 path in `_fetch_player_details` has been closed.
+
+Root cause:
+
+- `json.JSONDecodeError` and `UnicodeDecodeError` from `_fetch_player_details` were not wrapped in `RuntimeError`, so they propagated past the `except RuntimeError` handler in `lounge.py` and became unhandled exceptions → HTTP 500.
+- This occurs when MKCentral returns a non-JSON body (e.g., HTML maintenance page) while the HTTP status code is 200.
+
+Completed behavior:
+
+- `_fetch_player_details` now catches `(ValueError, UnicodeDecodeError)` and re-raises as `RuntimeError`, which the API layer converts to HTTP 502.
+- `test_mmr_sync_non_json_response_returns_502` added to verify this path.
+- 122 tests pass locally.
+
 ## Completed Foundation: MKCentral Response Compatibility
 
 Pi verification of Playing-driven Lounge MMR auto-sync found two blockers:

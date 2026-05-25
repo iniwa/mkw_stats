@@ -51,6 +51,8 @@ def _fetch_player_details(player_id: str, season: int, game: str) -> dict:
         raise RuntimeError(f"MKCentral HTTP error: {e.code}") from e
     except urllib.error.URLError as e:
         raise RuntimeError(f"MKCentral unreachable: {e.reason}") from e
+    except (ValueError, UnicodeDecodeError) as e:
+        raise RuntimeError(f"MKCentral returned non-JSON response: {e}") from e
 
 
 def _normalize_mmr_change(change: dict) -> dict | None:
