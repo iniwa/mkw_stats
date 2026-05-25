@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-26-lounge-mmr-sync-500-investigation.md`
 
 Current UI redesign order:
 
