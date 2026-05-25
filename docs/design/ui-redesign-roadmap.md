@@ -358,7 +358,7 @@ Completed behavior:
 
 The hidden race recovery UI has been verified on Pi.
 
-The Lounge MMR trend panel has been implemented.
+The Lounge MMR trend panel has been implemented and verified on Pi.
 
 Completed behavior:
 
