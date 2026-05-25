@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-26-annotation-visual-placement.md`
 
 Current UI redesign order:
 

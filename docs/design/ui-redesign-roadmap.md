@@ -400,7 +400,16 @@ Completed behavior:
 - Typecheck and build pass clean.
 - Pi verification confirmed on deployed images (2026-05-26).
 
-Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
+The next immediate slice is visual annotation placement in Courses:
+
+- keep existing numeric X/Y inputs
+- add a visual placement surface for the selected course or route target
+- use local route images when present
+- use the local world map image for course targets when present
+- fall back to the existing normalized preview surface when images are missing
+- support click-to-set create coordinates and drag-to-edit existing marker coordinates
+
+Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Response Compatibility
 
