@@ -20,7 +20,7 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 ## Active Implementation Handoffs
 
-- `2026-05-25-lounge-mmr-response-compat.md`
+None.
 
 Current UI redesign order:
 

@@ -401,11 +401,24 @@ Completed behavior:
 
 Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
 
-## Active Follow-Up: MKCentral Response Compatibility
+## Completed Foundation: MKCentral Response Compatibility
 
 Pi verification of Playing-driven Lounge MMR auto-sync found two blockers:
 
 - the new frontend image containing commit `edf0466` was not yet deployed because the commit had not reached the GitHub Actions/GHCR path
 - manual `POST /api/v1/lounge/mmr-sync` returned HTTP 500 due to `KeyError: 'changeId'` in `backend/app/services/lounge_mmr.py`
 
-The response-compatibility bug blocks both manual and automatic MMR sync. The next implementation handoff should make MKCentral `mmrChanges[]` parsing tolerant of field aliases such as `tableId` / `delta` / `verifiedOn`, skip malformed entries, and never return 500 merely because one external change item is missing `changeId`.
+The response-compatibility fix has been implemented.
+
+Completed behavior:
+
+- `_normalize_mmr_change()` normalizes each `mmrChanges[]` entry before processing.
+- Supported id aliases: `changeId`, `tableId`, `id`.
+- Supported MMR aliases: `newMmr`, `mmr`.
+- Supported delta aliases: `mmrDelta`, `delta`.
+- Supported timestamp aliases: `time`, `verifiedOn`, `createdOn`.
+- Malformed or incomplete change entries are skipped silently; other entries continue processing.
+- If `mmrChanges` has items but all are unusable, returns HTTP 200 with `message = "MMR同期に利用できる変更履歴がありません"`.
+- `KeyError: 'changeId'` and similar field-access crashes can no longer occur.
+- Top-level `mmr` still populates `current_mmr_12p` / `current_mmr_24p` regardless of change usability.
+- All existing sync behavior (idempotency, ±2 hour window, game/player-count matching) is preserved.

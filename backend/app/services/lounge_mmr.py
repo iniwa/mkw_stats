@@ -53,6 +53,57 @@ def _fetch_player_details(player_id: str, season: int, game: str) -> dict:
         raise RuntimeError(f"MKCentral unreachable: {e.reason}") from e
 
 
+def _normalize_mmr_change(change: dict) -> dict | None:
+    """Normalize one MKCentral mmrChanges[] entry, supporting field aliases.
+
+    Supported aliases:
+    - change_id : changeId | tableId | id
+    - new_mmr   : newMmr | mmr
+    - mmr_delta : mmrDelta | delta
+    - time      : time | verifiedOn | createdOn
+
+    Returns None if any required field is absent or malformed; caller must skip that entry.
+    """
+    raw_id = None
+    for key in ("changeId", "tableId", "id"):
+        if change.get(key) is not None:
+            raw_id = change[key]
+            break
+    if raw_id is None:
+        return None
+
+    raw_mmr = change["newMmr"] if "newMmr" in change else change.get("mmr")
+    if raw_mmr is None:
+        return None
+
+    raw_delta = change["mmrDelta"] if "mmrDelta" in change else change.get("delta")
+    if raw_delta is None:
+        return None
+
+    raw_time = None
+    for key in ("time", "verifiedOn", "createdOn"):
+        if change.get(key) is not None:
+            raw_time = change[key]
+            break
+    if raw_time is None:
+        return None
+
+    try:
+        change_id = str(raw_id)
+        new_mmr = int(raw_mmr)
+        mmr_delta = int(raw_delta)
+        change_time = datetime.fromisoformat(str(raw_time).replace("Z", "+00:00"))
+    except (ValueError, TypeError):
+        return None
+
+    return {
+        "change_id": change_id,
+        "new_mmr": new_mmr,
+        "mmr_delta": mmr_delta,
+        "time": change_time,
+    }
+
+
 def _find_best_session(
     db: Session, change_time: datetime, game: str, season: int
 ) -> PlaySession | None:
@@ -109,6 +160,7 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
     all_changes: list[tuple[str, dict]] = []
     current_mmr_12p: int | None = None
     current_mmr_24p: int | None = None
+    raw_change_count = 0
 
     for game in games_to_fetch:
         data = _fetch_player_details(player_id, season, game)
@@ -120,15 +172,22 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
         elif game == "mkworld24p":
             current_mmr_24p = mmr_val
         for change in (data.get("mmrChanges") or []):
-            all_changes.append((game, change))
+            raw_change_count += 1
+            normalized = _normalize_mmr_change(change)
+            if normalized is not None:
+                all_changes.append((game, normalized))
 
     if not all_changes:
+        if raw_change_count > 0:
+            message = "MMR同期に利用できる変更履歴がありません"
+        else:
+            message = "MMRの変更履歴がありません"
         return {
             "current_mmr_12p": current_mmr_12p,
             "current_mmr_24p": current_mmr_24p,
             "updated_session": None,
             "updated_game": None,
-            "message": "MMRの変更履歴がありません",
+            "message": message,
         }
 
     all_changes_sorted = sorted(all_changes, key=lambda x: x[1]["time"], reverse=True)
@@ -141,14 +200,14 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
     }
 
     for game, change in all_changes_sorted:
-        change_id = str(change["changeId"])
+        change_id = change["change_id"]
         if change_id in existing_ids:
             continue
 
-        new_mmr: int = change["newMmr"]
-        mmr_delta: int = change["mmrDelta"]
+        new_mmr = change["new_mmr"]
+        mmr_delta = change["mmr_delta"]
         mmr_before = new_mmr - mmr_delta
-        change_time = datetime.fromisoformat(change["time"].replace("Z", "+00:00"))
+        change_time = change["time"]
 
         candidate = _find_best_session(db, change_time, game, season)
         if candidate is None:

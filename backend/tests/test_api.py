@@ -1249,6 +1249,17 @@ def _mmr_change(change_id: int, new_mmr: int, delta: int, hours_ago: float = 0.5
     }
 
 
+def _mmr_change_alias(change_id: int, new_mmr: int, delta: int, hours_ago: float = 0.5) -> dict:
+    """Like _mmr_change but uses tableId/mmr/delta/verifiedOn field aliases."""
+    t = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
+    return {
+        "tableId": change_id,
+        "mmr": new_mmr,
+        "delta": delta,
+        "verifiedOn": t.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+    }
+
+
 def _player_details(mmr: int = 1000, changes: list | None = None) -> dict:
     return {"playerId": 1, "name": "Test", "mkcId": 1, "mmr": mmr, "mmrChanges": changes or []}
 
@@ -1542,3 +1553,104 @@ def test_session_read_includes_mmr_fields(seeded_client, db_session):
     assert body["lounge_mmr_delta"] == 50
     assert body["lounge_mmr_table_id"] == "9999"
     assert body["lounge_mmr_game"] == "mkworld"
+
+
+# ---------------------------------------------------------------------------
+# Lounge MMR response compatibility (field alias / malformed entry tolerance)
+# ---------------------------------------------------------------------------
+
+def test_mmr_sync_alias_fields_sync_successfully(seeded_client, db_session):
+    """tableId/mmr/delta/verifiedOn aliases should sync identically to canonical fields."""
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    change = _mmr_change_alias(9001, 1200, 150, hours_ago=0.5)
+    details = _player_details(1200, [change])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is not None
+    s = body["updated_session"]
+    assert s["lounge_mmr_after"] == 1200
+    assert s["lounge_mmr_delta"] == 150
+    assert s["lounge_mmr_before"] == 1050
+    assert s["lounge_mmr_table_id"] == "9001"
+
+
+def test_mmr_sync_missing_all_id_fields_skipped(seeded_client, db_session):
+    """A change entry with no changeId/tableId/id is skipped; returns 200 with no updated session."""
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    t = (datetime.now(timezone.utc) - timedelta(hours=0.5)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    change = {"newMmr": 1000, "mmrDelta": 50, "time": t}
+    details = _player_details(1000, [change])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is None
+    assert "利用できる" in body["message"]
+
+
+def test_mmr_sync_malformed_change_then_valid_syncs_valid(seeded_client, db_session):
+    """A malformed change entry before a valid one must not prevent syncing the valid entry."""
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    t = (datetime.now(timezone.utc) - timedelta(hours=0.5)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    bad_change = {"newMmr": 1100, "mmrDelta": 100, "time": t}  # no id field
+    good_change = _mmr_change(9101, 1100, 100, hours_ago=0.5)
+    details = _player_details(1100, [bad_change, good_change])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is not None
+    assert body["updated_session"]["lounge_mmr_table_id"] == "9101"
+
+
+def test_mmr_sync_idempotent_with_alias_fields(seeded_client, db_session):
+    """Second sync with alias-field change should find already-synced tableId and return no update."""
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    change = _mmr_change_alias(9201, 900, 40, hours_ago=0.5)
+    details = _player_details(900, [change])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp1 = seeded_client.post("/api/v1/lounge/mmr-sync")
+        resp2 = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp1.status_code == 200
+    assert resp1.json()["updated_session"] is not None
+    assert resp2.status_code == 200
+    assert resp2.json()["updated_session"] is None
+
+
+def test_mmr_sync_current_mmr_populated_when_changes_unusable(seeded_client):
+    """Top-level mmr must populate current_mmr_12p even when every change entry is skipped."""
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    t = (datetime.now(timezone.utc) - timedelta(hours=0.5)).strftime("%Y-%m-%dT%H:%M:%S.000Z")
+    bad_change = {"newMmr": 1500, "mmrDelta": 100, "time": t}  # no id field
+    details = _player_details(1500, [bad_change])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["current_mmr_12p"] == 1500
+    assert body["current_mmr_24p"] == 1500
+    assert body["updated_session"] is None
