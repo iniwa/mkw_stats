@@ -119,7 +119,21 @@ Use only when a clean slate is clearly intended:
 
 ### Option B — Record-only cleanup
 
-To delete play sessions, race records, notes, and annotations while keeping master courses, routes, and settings, prepare and review a targeted SQL script first. Do not run an unreviewed destructive SQL block. Request a dedicated SQL handoff from Codex.
+A reviewed script is available at `scripts/record_only_cleanup.sql`.
+
+Steps:
+
+1. Take a `pg_dump` backup first (see Backup section).
+2. Review the script — confirm it deletes only user play data and resets `vr_accounts.current_vr` to `initial_vr`.
+3. Run the script (it defaults to `ROLLBACK`):
+   ```sh
+   cd /path/to/mkw_stats
+   docker exec -i mkw-postgres psql -U mkw mkw_stats < scripts/record_only_cleanup.sql
+   ```
+4. Check the pre/post row counts in the output.
+5. If counts look correct, edit the script: comment out `ROLLBACK` and uncomment `COMMIT`, then re-run.
+
+The script preserves: courses, routes, map_points, vr_accounts, app_settings, and uploaded_files.
 
 ## External Dependency Notes
 
