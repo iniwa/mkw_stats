@@ -16,7 +16,7 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 Current UI redesign order:
 
-1. `2026-05-25-result-model-redesign.md`
+1. `2026-05-25-result-model-pi-verification.md`
 2. `2026-05-25-playing-flow-redesign.md`
 3. `2026-05-25-records-correction-ui.md`
 4. `2026-05-25-analytics-split-vr-lounge.md`
