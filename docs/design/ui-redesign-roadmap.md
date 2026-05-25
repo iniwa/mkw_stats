@@ -398,6 +398,7 @@ Completed behavior:
 - Manual sync in Lounge view is unchanged.
 - No new CSS, backend changes, or npm dependencies.
 - Typecheck and build pass clean.
+- Pi verification confirmed on deployed images (2026-05-26).
 
 Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
 
