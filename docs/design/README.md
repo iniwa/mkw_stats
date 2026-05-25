@@ -11,4 +11,5 @@ Recommended files:
 - `api.md`
 - `frontend.md`
 - `deployment.md`
+- `operations.md`
 - `ui-redesign-roadmap.md`

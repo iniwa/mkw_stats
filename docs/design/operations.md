@@ -1,0 +1,163 @@
+# Operations
+
+Daily maintenance runbook for MKWorld Stats Manager deployed on Raspberry Pi via Portainer.
+
+## Normal Deploy Flow
+
+After a code change is committed:
+
+1. Push to `main` on Gitea.
+2. Gitea mirror pushes to GitHub `main`.
+3. GitHub Actions runs `.github/workflows/docker-publish.yml` and publishes new images to GHCR.
+4. Open Portainer → Stacks → `mkw-stats` → **Redeploy**.
+5. Enable **Pull latest image** before deploying.
+6. Confirm stack environment variables are still present (see below).
+
+Portainer does **not** auto-pull new images. A manual redeploy with image pull is required after every push.
+
+## Portainer Stack Environment Variables
+
+These must be present in the Portainer stack environment. Never omit them during a redeploy — missing values cause compose to fall back to defaults, binding the backend to port `8000` which conflicts with Portainer's own Edge tunnel.
+
+```text
+DATA_DIR=/home/iniwa/docker/mkw-stats
+POSTGRES_DB=mkw_stats
+POSTGRES_USER=mkw
+POSTGRES_PASSWORD=<real password>
+FRONTEND_PORT=3030
+BACKEND_PORT=8001
+```
+
+## Post-Deploy Checks
+
+```sh
+# Container status
+docker ps | grep mkw
+
+# Backend health (direct)
+curl http://192.168.1.205:8001/api/v1/health
+# Expected: {"status":"ok","service":"mkw-stats-backend"}
+
+# Frontend health (through nginx proxy)
+curl http://192.168.1.205:3030/api/v1/health
+
+# Migration state (when a schema change was included)
+docker exec mkw-backend alembic current
+```
+
+After a **frontend** redeploy, do a hard reload in the browser (`Ctrl+Shift+R` / `Cmd+Shift+R`) if the old JS bundle is still served.
+
+## Migration and Seed
+
+Run from within the Portainer-managed backend container via SSH:
+
+```sh
+ssh iniwapi
+docker exec mkw-backend alembic upgrade head
+docker exec mkw-backend python -m app.seed.initial_data
+```
+
+Or use the backend container console in Portainer (Exec).
+
+Always run migration before seed after schema changes.
+
+The seed command is idempotent — it upserts master data (courses, map points, routes) and does not touch user play data.
+
+## Backup
+
+### What to back up
+
+| Path on Pi | Contents |
+|------------|----------|
+| `/home/iniwa/docker/mkw-stats/postgres/` | PostgreSQL data directory (all user data) |
+| `/home/iniwa/docker/mkw-stats/uploads/` | Uploaded assets (if user file uploads are added) |
+
+Take a backup before any schema migration or destructive operation.
+
+### pg_dump example
+
+```sh
+ssh iniwapi
+docker exec mkw-postgres pg_dump -U mkw mkw_stats > ~/mkw_stats_backup_$(date +%Y%m%d).sql
+```
+
+Backup destination: `/mnt/nas/pi_backup/` (SMB, Synology DS420j @ 192.168.1.190)
+
+## Restore
+
+1. Stop the stack in Portainer (or stop `mkw-backend` and `mkw-frontend` at minimum).
+2. Restore data using one of:
+
+```sh
+# Option A: load from pg_dump
+cat mkw_stats_backup.sql | docker exec -i mkw-postgres psql -U mkw mkw_stats
+
+# Option B: replace postgres data directory
+# Stop stack, remove /home/iniwa/docker/mkw-stats/postgres/, replace with backup copy,
+# then redeploy via Portainer.
+```
+
+3. Redeploy through Portainer (not via SSH `docker compose`).
+4. Run post-deploy checks above.
+
+Always redeploy through Portainer to keep container names, env values, and port bindings correct.
+
+## Data Reset
+
+Current record data is non-critical, but a reset should still be deliberate.
+
+### Option A — Full reset
+
+Use only when a clean slate is clearly intended:
+
+1. Take a `pg_dump` backup.
+2. Stop the stack in Portainer.
+3. Remove or rename `/home/iniwa/docker/mkw-stats/postgres/`.
+4. Redeploy via Portainer (Postgres re-initialises a fresh database).
+5. `docker exec mkw-backend alembic upgrade head`
+6. `docker exec mkw-backend python -m app.seed.initial_data`
+
+### Option B — Record-only cleanup
+
+To delete play sessions, race records, notes, and annotations while keeping master courses, routes, and settings, prepare and review a targeted SQL script first. Do not run an unreviewed destructive SQL block. Request a dedicated SQL handoff from Codex.
+
+## External Dependency Notes
+
+### MKCentral API
+
+Lounge MMR sync calls `https://lounge.mkcentral.com/api/player/details`.
+
+- If MKCentral returns a non-JSON body (e.g., HTML maintenance page) with HTTP 200, the backend converts it to a `502 Bad Gateway`.
+- HTTP 4xx/5xx from MKCentral are also returned as `502`.
+
+### MMR Sync Configuration
+
+MMR sync depends on these settings (configured in the Settings UI):
+
+| Setting | Role |
+|---------|------|
+| `lounge_player_id` | MKCentral numeric ID or player name |
+| `lounge_season` | Current Lounge season number |
+
+Player count determines the game endpoint:
+
+| `player_count` | Season | Game |
+|----------------|--------|------|
+| 12 | any | `mkworld` |
+| 24 | ≤ 1 | `mkworld` (shared stream) |
+| 24 | ≥ 2 | `mkworld24p` |
+
+If sync returns "対応する完了済み Lounge セッションが見つかりませんでした", the MMR change timestamp did not match any completed Lounge session within ±2 hours.
+
+## GHCR Images
+
+Images are public:
+
+```text
+ghcr.io/iniwa/mkw-stats-backend:latest
+ghcr.io/iniwa/mkw-stats-frontend:latest
+```
+
+Do not add GHCR credentials to Portainer unless private package access is intentionally required.
+
+If Portainer returns `401` on pull, check for stale registry credentials in Portainer Settings → Registries before changing image visibility.

@@ -23,3 +23,12 @@ backups/*
 !data/postgres/.gitkeep
 !data/uploads/.gitkeep
 !backups/.gitkeep
+
+# Screenshots from Playwright / manual UI verification
+frontend/*.png
+frontend/*.jpg
+frontend/*.jpeg
+frontend/*.webp
+
+# Local test databases
+backend/test_browser.db
