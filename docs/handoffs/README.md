@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-26-release-readiness-cleanup.md`
 
 Current UI redesign order:
 
