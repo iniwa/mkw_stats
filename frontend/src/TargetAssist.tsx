@@ -100,7 +100,7 @@ export function TargetAssist({
                   <div className="target-assist__ann-head">
                     <span className="tag ann__type-tag">{ann.type}</span>
                     <span className={`target-assist__note-title${!ann.label ? ' target-assist__note-title--untitled' : ''}`}>
-                      {ann.label ?? '(untitled)'}
+                      {ann.label ?? '(無題)'}
                     </span>
                     {ann.x !== null && ann.y !== null && (
                       <span className="target-assist__meta">

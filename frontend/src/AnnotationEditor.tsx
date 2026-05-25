@@ -462,7 +462,7 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
                         <div
                           className={`note-item__title${!a.label ? ' note-item__title--untitled' : ''}`}
                         >
-                          {a.label ?? '(untitled)'}
+                          {a.label ?? '(無題)'}
                         </div>
                         <div className="ann__meta-row">
                           {a.x !== null && a.y !== null && (

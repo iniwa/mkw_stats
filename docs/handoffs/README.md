@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-05-25-frontend-daily-use-polish.md`
+None.
 
 Current UI redesign order:
 

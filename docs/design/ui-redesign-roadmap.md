@@ -371,6 +371,15 @@ Completed behavior:
 - If no synced sessions exist, an empty state is shown.
 - No new backend APIs or database columns; frontend-only change.
 
-The next immediate step is a small frontend daily-use polish pass: add a local favicon, confirm there are no obvious broken display strings, and remove avoidable browser noise before adding more features.
+The frontend daily-use polish pass has been implemented.
+
+Completed behavior:
+
+- `frontend/public/favicon.svg` added: steering wheel icon (dark navy background, blue ring and spokes), repo-native SVG with no copyrighted assets.
+- `frontend/index.html` links the favicon via `<link rel="icon" type="image/svg+xml" href="/favicon.svg" />`.
+- `favicon.ico 404` browser noise eliminated.
+- Text audit confirmed no mojibake or replacement characters in any source file.
+- Annotation unlabeled fallback corrected from `(untitled)` to `(無題)` in `AnnotationEditor.tsx` and `TargetAssist.tsx` for consistency with note unlabeled fallbacks.
+- Typecheck and build pass clean.
 
 Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
