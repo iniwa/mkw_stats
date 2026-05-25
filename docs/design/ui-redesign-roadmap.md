@@ -400,3 +400,12 @@ Completed behavior:
 - Typecheck and build pass clean.
 
 Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
+
+## Active Follow-Up: MKCentral Response Compatibility
+
+Pi verification of Playing-driven Lounge MMR auto-sync found two blockers:
+
+- the new frontend image containing commit `edf0466` was not yet deployed because the commit had not reached the GitHub Actions/GHCR path
+- manual `POST /api/v1/lounge/mmr-sync` returned HTTP 500 due to `KeyError: 'changeId'` in `backend/app/services/lounge_mmr.py`
+
+The response-compatibility bug blocks both manual and automatic MMR sync. The next implementation handoff should make MKCentral `mmrChanges[]` parsing tolerant of field aliases such as `tableId` / `delta` / `verifiedOn`, skip malformed entries, and never return 500 merely because one external change item is missing `changeId`.
