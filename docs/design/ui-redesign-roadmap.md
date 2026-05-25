@@ -400,14 +400,24 @@ Completed behavior:
 - Typecheck and build pass clean.
 - Pi verification confirmed on deployed images (2026-05-26).
 
-The next immediate slice is visual annotation placement in Courses:
+The annotation visual placement slice has been implemented.
 
-- keep existing numeric X/Y inputs
-- add a visual placement surface for the selected course or route target
-- use local route images when present
-- use the local world map image for course targets when present
-- fall back to the existing normalized preview surface when images are missing
-- support click-to-set create coordinates and drag-to-edit existing marker coordinates
+Completed behavior:
+
+- `AnnotationEditor` shows a visual placement surface before the create form.
+- Route targets try `/assets/routes/<route_id>.png` as background; course targets try `/assets/maps/world.png`.
+- If the image fails to load or is missing, the surface falls back to a neutral 60%-aspect-ratio panel without a broken image icon or console error.
+- Clicking the surface sets `createX`/`createY` and shows a pending green marker.
+- Manual numeric entry in the X/Y inputs moves the pending marker.
+- Switching selected target clears pending create coordinates.
+- Existing positioned annotations appear as clickable markers on the surface.
+- Clicking a non-editing marker starts editing that annotation (same as the list edit button).
+- While an annotation is in edit mode, its marker shows in amber and can be dragged; dragging updates the edit X/Y inputs in real time.
+- Canceling edit discards unsaved drag changes; saved marker persists at updated location.
+- Numeric X/Y inputs are preserved in both create and edit forms.
+- Layout order: visual surface → create form → annotation list.
+- No new backend calls, no new npm dependencies, no new image downloads.
+- Typecheck and build pass clean.
 
 Deeper Lounge analytics and broader final cleanup remain later slices.
 

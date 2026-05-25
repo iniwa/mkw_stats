@@ -501,28 +501,59 @@ textarea.input { resize: vertical; font-family: inherit; }
 .ann__xy-field { display: flex; flex-direction: column; gap: 0.25rem; }
 .ann__xy-input { width: 6rem; }
 
-.ann__preview {
-  position: relative;
-  width: 100%; padding-bottom: 60%;
+/* Visual placement surface */
+.ann__surface-wrap {
+  position: relative; width: 100%;
   background: var(--bg-input); border: 1px solid var(--border);
   border-radius: 4px; overflow: hidden;
+  cursor: crosshair; user-select: none; min-height: 2rem;
 }
-.ann__marker {
-  position: absolute;
-  transform: translate(-50%, -50%);
+.ann__surface-wrap--fallback { padding-bottom: 60%; }
+.ann__surface-img {
+  display: block; width: 100%; height: auto;
+  user-select: none; pointer-events: none;
+}
+.ann__marker-btn {
+  position: absolute; transform: translate(-50%, -50%);
   display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: none; padding: 4px; cursor: pointer; z-index: 1;
 }
+.ann__marker-btn:hover { z-index: 5; }
+.ann__marker-btn--editing { cursor: grab; }
+.ann__marker-btn--editing .ann__marker-dot {
+  background: var(--warn); border-color: rgba(230,178,77,0.6);
+  width: 12px; height: 12px;
+}
+.ann__marker-btn--dragging { cursor: grabbing; z-index: 10; touch-action: none; }
+.ann__marker-create {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  pointer-events: none; z-index: 4; opacity: 0.65;
+}
+.ann__marker-create .ann__marker-dot { background: var(--ok); border-color: rgba(95,201,122,0.6); }
+
+/* Shared marker dot/label (used by .ann__marker-btn and .ann__marker-create) */
 .ann__marker-dot {
   display: block; width: 10px; height: 10px;
   background: var(--accent); border-radius: 50%;
-  border: 2px solid var(--bg-panel);
-  flex-shrink: 0;
+  border: 2px solid var(--bg-panel); flex-shrink: 0;
 }
 .ann__marker-label {
   font-size: 0.68rem; color: var(--text);
   background: rgba(26,26,38,0.85); padding: 1px 4px;
   border-radius: 3px; white-space: nowrap; max-width: 8rem;
   overflow: hidden; text-overflow: ellipsis;
+}
+
+/* Legacy preview (kept for reference, no longer rendered) */
+.ann__preview {
+  position: relative; width: 100%; padding-bottom: 60%;
+  background: var(--bg-input); border: 1px solid var(--border);
+  border-radius: 4px; overflow: hidden;
+}
+.ann__marker {
+  position: absolute; transform: translate(-50%, -50%);
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
 }
 
 .ann__type-tag { background: #2a1f3d; color: #c49bf5; font-size: 0.72rem; }

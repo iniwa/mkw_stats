@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   api,
   type AnnotationType,
@@ -17,6 +17,157 @@ function annotationSortComparator(a: MapAnnotation, b: MapAnnotation): number {
   const cmp = (a.label ?? '').localeCompare(b.label ?? '', 'ja')
   if (cmp !== 0) return cmp
   return a.id.localeCompare(b.id)
+}
+
+interface SurfaceProps {
+  selectedTargetType: 'course' | 'route'
+  selectedTargetId: string
+  positioned: MapAnnotation[]
+  editingId: string | null
+  createX: string
+  createY: string
+  editX: string
+  editY: string
+  onSurfaceClick: (x: number, y: number) => void
+  onMarkerClick: (a: MapAnnotation) => void
+  onEditDragEnd: (x: number, y: number) => void
+}
+
+function AnnotationSurface({
+  selectedTargetType,
+  selectedTargetId,
+  positioned,
+  editingId,
+  createX: createXStr,
+  createY: createYStr,
+  editX: editXStr,
+  editY: editYStr,
+  onSurfaceClick,
+  onMarkerClick,
+  onEditDragEnd,
+}: SurfaceProps) {
+  const [imgFailed, setImgFailed] = useState(false)
+  const [dragging, setDragging] = useState(false)
+  const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
+  const surfaceRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    setImgFailed(false)
+  }, [selectedTargetId, selectedTargetType])
+
+  useEffect(() => {
+    setDragging(false)
+    setDragPos(null)
+  }, [editingId])
+
+  const imgSrc =
+    selectedTargetType === 'route'
+      ? `/assets/routes/${selectedTargetId}.png`
+      : `/assets/maps/world.png`
+
+  const computeNorm = (clientX: number, clientY: number) => {
+    if (!surfaceRef.current) return null
+    const rect = surfaceRef.current.getBoundingClientRect()
+    return {
+      x: Math.max(0, Math.min(1, (clientX - rect.left) / rect.width)),
+      y: Math.max(0, Math.min(1, (clientY - rect.top) / rect.height)),
+    }
+  }
+
+  const createXNum = parseFloat(createXStr)
+  const createYNum = parseFloat(createYStr)
+  const showCreate =
+    createXStr !== '' && createYStr !== '' && !isNaN(createXNum) && !isNaN(createYNum)
+
+  const editXNum = parseFloat(editXStr)
+  const editYNum = parseFloat(editYStr)
+
+  return (
+    <div
+      className={`ann__surface-wrap${imgFailed ? ' ann__surface-wrap--fallback' : ''}`}
+      ref={surfaceRef}
+      onClick={e => {
+        const pos = computeNorm(e.clientX, e.clientY)
+        if (pos) onSurfaceClick(pos.x, pos.y)
+      }}
+    >
+      {!imgFailed && (
+        <img
+          className="ann__surface-img"
+          src={imgSrc}
+          alt=""
+          onError={() => setImgFailed(true)}
+        />
+      )}
+
+      {positioned.map(a => {
+        const isEdit = editingId === a.id
+        let px: number
+        let py: number
+        if (isEdit) {
+          if (dragging && dragPos) {
+            px = dragPos.x
+            py = dragPos.y
+          } else {
+            px = editXStr !== '' && !isNaN(editXNum) ? editXNum : (a.x ?? 0)
+            py = editYStr !== '' && !isNaN(editYNum) ? editYNum : (a.y ?? 0)
+          }
+        } else {
+          px = a.x ?? 0
+          py = a.y ?? 0
+        }
+
+        return (
+          <button
+            key={a.id}
+            className={`ann__marker-btn${isEdit ? ' ann__marker-btn--editing' : ''}${dragging && isEdit ? ' ann__marker-btn--dragging' : ''}`}
+            style={{ left: `${px * 100}%`, top: `${py * 100}%` }}
+            title={a.hover_text ?? a.label ?? ''}
+            onClick={e => {
+              e.stopPropagation()
+              if (!isEdit) onMarkerClick(a)
+            }}
+            onPointerDown={e => {
+              if (!isEdit) return
+              e.preventDefault()
+              e.stopPropagation()
+              ;(e.currentTarget as HTMLElement).setPointerCapture(e.pointerId)
+              setDragging(true)
+              const pos = computeNorm(e.clientX, e.clientY)
+              if (pos) setDragPos(pos)
+            }}
+            onPointerMove={e => {
+              if (!isEdit || !dragging) return
+              const pos = computeNorm(e.clientX, e.clientY)
+              if (pos) setDragPos(pos)
+            }}
+            onPointerUp={e => {
+              if (!isEdit) return
+              ;(e.currentTarget as HTMLElement).releasePointerCapture(e.pointerId)
+              if (dragging) {
+                const pos = dragPos
+                setDragging(false)
+                setDragPos(null)
+                if (pos) onEditDragEnd(pos.x, pos.y)
+              }
+            }}
+          >
+            <span className="ann__marker-dot" />
+            {a.label && <span className="ann__marker-label">{a.label}</span>}
+          </button>
+        )
+      })}
+
+      {showCreate && (
+        <div
+          className="ann__marker-create"
+          style={{ left: `${createXNum * 100}%`, top: `${createYNum * 100}%` }}
+        >
+          <span className="ann__marker-dot" />
+        </div>
+      )}
+    </div>
+  )
 }
 
 interface Props {
@@ -64,6 +215,8 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
   useEffect(() => {
     setEditingId(null)
     setCreateNoteId('')
+    setCreateX('')
+    setCreateY('')
   }, [selectedTargetType, selectedTargetId])
 
   const routeMap = useMemo(() => new Map(routes.map(r => [r.id, r])), [routes])
@@ -200,6 +353,26 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
         <p className="placeholder">コース/ルートを選択してください。</p>
       ) : (
         <>
+          <AnnotationSurface
+            selectedTargetType={selectedTargetType}
+            selectedTargetId={selectedTargetId}
+            positioned={positioned}
+            editingId={editingId}
+            createX={createX}
+            createY={createY}
+            editX={editX}
+            editY={editY}
+            onSurfaceClick={(x, y) => {
+              setCreateX(x.toFixed(4))
+              setCreateY(y.toFixed(4))
+            }}
+            onMarkerClick={startEdit}
+            onEditDragEnd={(x, y) => {
+              setEditX(x.toFixed(4))
+              setEditY(y.toFixed(4))
+            }}
+          />
+
           <div className="panel">
             <div className="panel__title">アノテーションを作成</div>
             <div className="field">
@@ -298,28 +471,6 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
             </div>
             {createError && <p className="notice notice--error notes__msg">{createError}</p>}
           </div>
-
-          {positioned.length > 0 && (
-            <div className="panel">
-              <div className="panel__title">プレビュー（正規化座標）</div>
-              <div className="ann__preview">
-                {positioned.map(a => (
-                  <div
-                    key={a.id}
-                    className="ann__marker"
-                    style={{
-                      left: `${((a.x ?? 0) * 100).toFixed(1)}%`,
-                      top: `${((a.y ?? 0) * 100).toFixed(1)}%`,
-                    }}
-                    title={a.hover_text ?? a.label ?? ''}
-                  >
-                    <span className="ann__marker-dot" />
-                    {a.label && <span className="ann__marker-label">{a.label}</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
 
           {visibleAnnotations.length === 0 ? (
             <p className="placeholder">このターゲットにアノテーションはありません。</p>
