@@ -10,6 +10,22 @@ YYYY-MM-DD-<short-task>.md
 
 After Claude Code reports back and Codex review is complete, move the handoff to `archive/`.
 
+## Queued UI Redesign Handoffs
+
+Large redesign work may be split into several active handoff files ahead of implementation. When doing this, Codex must still re-check the next handoff after each Claude Code report before handing it over.
+
+Current UI redesign order:
+
+1. `2026-05-25-result-model-redesign.md`
+2. `2026-05-25-playing-flow-redesign.md`
+3. `2026-05-25-records-correction-ui.md`
+4. `2026-05-25-analytics-split-vr-lounge.md`
+5. `2026-05-25-course-notes-target-view.md`
+6. `2026-05-25-map-image-assets-and-picker.md`
+7. `2026-05-25-lounge-mmr-session-sync.md`
+
+Only hand the next file to Claude Code after Codex has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
+
 Each handoff should include:
 
 ```md
