@@ -1,5 +1,5 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has reviewed Records/Analytics work and explicitly says this handoff is ready.
+This handoff is ready for implementation after Codex review of the Analytics split.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
@@ -18,6 +18,10 @@ Roadmap direction:
 - show notes and annotations for that target
 - keep all-note browsing secondary or remove it from the primary screen
 - keep advanced map-image editing for a later slice
+
+Depends on:
+
+- `docs/handoffs/archive/2026-05-25-analytics-split-vr-lounge.md`
 
 ## Files To Inspect
 
@@ -115,4 +119,3 @@ Report in Japanese:
 - Verification results
 - Blocked checks
 - Design questions for Codex
-

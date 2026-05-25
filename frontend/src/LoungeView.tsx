@@ -138,6 +138,18 @@ export default function LoungeView() {
   const activeSessions = sessions.filter(s => s.status === 'active')
   const recentSessions = sessions.slice(0, 10)
 
+  // Lounge summary metrics
+  const allRacesFlat = [...racesBySession.values()].flat()
+  const completedLounge = allRacesFlat.filter(r => r.status === 'completed')
+  const placementRaces = completedLounge.filter(r => r.placement != null)
+  const avgPlacement = placementRaces.length > 0
+    ? placementRaces.reduce((s, r) => s + r.placement!, 0) / placementRaces.length
+    : null
+  const scoreRaces = completedLounge.filter(r => r.score != null)
+  const avgScore = scoreRaces.length > 0
+    ? scoreRaces.reduce((s, r) => s + r.score!, 0) / scoreRaces.length
+    : null
+
   // Warning aggregation — sessions in returned order (newest first), races in race order
   const warnCounts: Record<string, number> = {}
   const warnEntries: WarnEntry[] = []
@@ -211,6 +223,28 @@ export default function LoungeView() {
         </div>
         <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
           onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
+      </div>
+
+      <div className="panel">
+        <div className="panel__title">Lounge サマリー</div>
+        <div className="analytics__grid analytics__grid--4">
+          {([
+            ['セッション', sessions.length],
+            ['完了レース', completedLounge.length],
+            ['平均順位', avgPlacement != null ? avgPlacement.toFixed(1) : '—'],
+            ['平均スコア', avgScore != null ? Math.round(avgScore).toString() : '—'],
+          ] as [string, string | number][]).map(([label, value]) => (
+            <div key={label} className="analytics__metric">
+              <div className="analytics__metric-value">{value}</div>
+              <div className="analytics__metric-label">{label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      <div className="panel">
+        <div className="panel__title">MMR</div>
+        <p className="placeholder">未連携 — Lounge API 同期後に表示されます</p>
       </div>
 
       {activeSessions.length > 0 && (

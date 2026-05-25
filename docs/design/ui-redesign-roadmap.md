@@ -60,7 +60,7 @@ Recommended order:
 1. Completed: redesign result data model and APIs.
 2. Completed: redesign Playing flow around the new model.
 3. Completed: update Records to correct and hide/delete the new result shape.
-4. Split Analytics into VR and Lounge analytics.
+4. Completed: split Analytics into VR and Lounge analytics.
 5. Improve course/route target browsing and notes.
 6. Improve course/route visual selection and map-image note editing.
 
@@ -288,15 +288,34 @@ Design note:
 
 - Editing historical `rating_after` recalculates the record's `rating_delta`, but does not update `VrAccount.current_vr`. Current VR correction remains a separate Settings/account maintenance concern unless a later design explicitly couples it to Records edits.
 
+## Completed Foundation: Analytics Split
+
+The first Analytics split has been implemented.
+
+Completed behavior:
+
+- Analytics is now ranked-focused and labeled as VR Analytics.
+- VR Analytics uses ranked sessions only.
+- Hidden records remain excluded by default through the race-list API.
+- Cancelled records are excluded from normal VR metrics.
+- VR Analytics shows active/current account VR from account data, not from historical record corrections.
+- Lounge shows Lounge-specific summaries for completed Lounge races, including average placement and average score.
+- Lounge includes an explicit MMR placeholder instead of inventing MMR values before sync exists.
+
+Design notes:
+
+- Records corrections to historical `rating_after` do not update `VrAccount.current_vr`; current VR remains an account maintenance value for now.
+- VR Analytics "effective race" count excludes cancelled records.
+- Lounge average placement and score use completed races only.
+
 ## Recommended Next Slice
 
 The next implementation slice should be:
 
-**Analytics split**
+**Course/route target view**
 
 Goals:
 
-- Make the existing Analytics view clearly ranked/VR-focused.
-- Make Lounge focus on Lounge-specific score, placement, warnings, and recent matches.
-- Keep date filtering.
-- Do not implement MMR sync or add a charting library in this slice.
+- Make the Courses area less list-heavy.
+- Prefer selecting a course or route target first, then showing notes and annotations for that target.
+- Keep advanced map-image editing for a later slice.
