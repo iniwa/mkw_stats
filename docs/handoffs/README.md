@@ -19,6 +19,10 @@ Large redesign work may be split into several active handoff files ahead of impl
 - `2026-05-25-analytics-split-pi-verification.md`
 - `2026-05-25-lounge-mmr-pi-verification.md`
 
+## Active Implementation Handoffs
+
+- `2026-05-25-lounge-mmr-player-count-game.md`
+
 Current UI redesign order:
 
 No queued implementation handoff is currently ready. Codex should prepare or re-check the next handoff before giving it to Claude Code.
