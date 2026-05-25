@@ -307,6 +307,17 @@ textarea.input { resize: vertical; font-family: inherit; }
 .records__vr-range { font-size: 0.78rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }
 .records__actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.15rem; }
 .records__memo-edit-area { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.15rem; }
+.records__edit-area { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.15rem; }
+.records__edit-grid { display: flex; flex-wrap: wrap; gap: 0.25rem 0.6rem; }
+.records__edit-field { display: flex; align-items: center; gap: 0.25rem; }
+.records__edit-label { font-size: 0.76rem; color: var(--text-dim); white-space: nowrap; }
+.records__edit-input {
+  width: 5.5rem; padding: 0.2rem 0.3rem; font-size: 0.82rem;
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 4px; font-family: inherit;
+}
+.records__edit-input:focus { outline: none; border-color: var(--accent); }
+.records__edit-input:disabled { opacity: 0.45; }
 .records__memo-edit {
   width: 100%; padding: 0.3rem 0.45rem; font-size: 0.82rem;
   background: var(--bg-input); color: var(--text);

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Course, PlaySession, RaceRecord, Route, SessionStatus, SourceType, WARNING_LABELS } from './api'
+import { api, Course, PlaySession, RaceRecord, RaceUpdateBody, Route, SessionStatus, SourceType, WARNING_LABELS } from './api'
 import { RouteDetail } from './RouteDetail'
 
 type SourceFilter = SourceType | 'all'
@@ -50,6 +50,10 @@ export default function RecordsView() {
   const [racesError, setRacesError] = useState<string | null>(null)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editMemo, setEditMemo] = useState('')
+  const [editPlayerCount, setEditPlayerCount] = useState('')
+  const [editPlacement, setEditPlacement] = useState('')
+  const [editRatingAfter, setEditRatingAfter] = useState('')
+  const [editScore, setEditScore] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
 
@@ -115,14 +119,34 @@ export default function RecordsView() {
     await loadRaces(id)
   }
 
-  async function saveMemo(raceId: string) {
+  function clearEditStates() {
+    setEditMemo('')
+    setEditPlayerCount('')
+    setEditPlacement('')
+    setEditRatingAfter('')
+    setEditScore('')
+  }
+
+  async function saveEdit(raceId: string, race: RaceRecord) {
     setPendingId(raceId)
     setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
     try {
-      const memo = editMemo.trim() || null
-      await api.updateRaceRecord(raceId, { memo })
+      const body: RaceUpdateBody = { memo: editMemo.trim() || null }
+      const pc = Number(editPlayerCount)
+      if (editPlayerCount !== '' && pc >= 1) body.player_count = pc
+      const pl = Number(editPlacement)
+      if (editPlacement !== '' && pl >= 1) body.placement = pl
+      if (race.source === 'ranked') {
+        const ra = Number(editRatingAfter)
+        if (editRatingAfter !== '' && ra >= 0) body.rating_after = ra
+      }
+      if (race.source === 'lounge') {
+        const sc = Number(editScore)
+        if (editScore !== '' && sc >= 0) body.score = sc
+      }
+      await api.updateRaceRecord(raceId, body)
       setEditingId(null)
-      setEditMemo('')
+      clearEditStates()
       if (selectedId) await loadRaces(selectedId)
     } catch (e: unknown) {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '保存エラー' }))
@@ -140,6 +164,20 @@ export default function RecordsView() {
       if (selectedId) await loadRaces(selectedId)
     } catch (e: unknown) {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '取消エラー' }))
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  async function hideRace(raceId: string) {
+    if (!window.confirm('このレースを非表示にしますか？\n誤って入力したレースを通常の履歴と分析から除外します。')) return
+    setPendingId(raceId)
+    setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
+    try {
+      await api.hideRaceRecord(raceId)
+      if (selectedId) await loadRaces(selectedId)
+    } catch (e: unknown) {
+      setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '非表示エラー' }))
     } finally {
       setPendingId(null)
     }
@@ -352,29 +390,49 @@ export default function RecordsView() {
                         </div>
                       )}
                       {isEditing ? (
-                        <div className="records__memo-edit-area">
-                          <textarea
-                            className="records__memo-edit"
-                            value={editMemo}
+                        <div className="records__edit-area">
+                          <div className="records__edit-grid">
+                            <div className="records__edit-field">
+                              <span className="records__edit-label">人数</span>
+                              <input type="number" className="records__edit-input" min={1}
+                                value={editPlayerCount} disabled={isPending}
+                                onChange={e => setEditPlayerCount(e.target.value)} />
+                            </div>
+                            <div className="records__edit-field">
+                              <span className="records__edit-label">順位</span>
+                              <input type="number" className="records__edit-input" min={1}
+                                value={editPlacement} disabled={isPending}
+                                onChange={e => setEditPlacement(e.target.value)} />
+                            </div>
+                            {r.source === 'ranked' && (
+                              <div className="records__edit-field">
+                                <span className="records__edit-label">結果VR</span>
+                                <input type="number" className="records__edit-input" min={0}
+                                  value={editRatingAfter} disabled={isPending}
+                                  onChange={e => setEditRatingAfter(e.target.value)} />
+                              </div>
+                            )}
+                            {r.source === 'lounge' && (
+                              <div className="records__edit-field">
+                                <span className="records__edit-label">スコア</span>
+                                <input type="number" className="records__edit-input" min={0}
+                                  value={editScore} disabled={isPending}
+                                  onChange={e => setEditScore(e.target.value)} />
+                              </div>
+                            )}
+                          </div>
+                          <textarea className="records__memo-edit" value={editMemo}
                             onChange={e => setEditMemo(e.target.value)}
-                            rows={2}
-                            disabled={isPending}
-                          />
+                            rows={2} disabled={isPending} placeholder="メモ（任意）" />
                           <div className="records__actions">
-                            <button
-                              className="btn btn--sm btn--primary"
-                              disabled={isPending}
-                              onClick={() => saveMemo(r.id)}
-                            >保存</button>
-                            <button
-                              className="btn btn--sm"
-                              disabled={isPending}
+                            <button className="btn btn--sm btn--primary" disabled={isPending}
+                              onClick={() => saveEdit(r.id, r)}>保存</button>
+                            <button className="btn btn--sm" disabled={isPending}
                               onClick={() => {
                                 setEditingId(null)
-                                setEditMemo('')
+                                clearEditStates()
                                 setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
-                              }}
-                            >キャンセル</button>
+                              }}>キャンセル</button>
                           </div>
                         </div>
                       ) : (
@@ -385,21 +443,23 @@ export default function RecordsView() {
                       )}
                       {!isEditing && (
                         <div className="records__actions">
-                          <button
-                            className="btn btn--sm"
-                            disabled={pendingId !== null}
+                          <button className="btn btn--sm" disabled={pendingId !== null}
                             onClick={() => {
                               setEditingId(r.id)
                               setEditMemo(r.memo ?? '')
+                              setEditPlayerCount(r.player_count != null ? String(r.player_count) : '')
+                              setEditPlacement(r.placement != null ? String(r.placement) : '')
+                              setEditRatingAfter(r.rating_after != null ? String(r.rating_after) : '')
+                              setEditScore(r.score != null ? String(r.score) : '')
                               setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
-                            }}
-                          >編集</button>
+                            }}>編集</button>
                           {r.status !== 'cancelled' && (
-                            <button
-                              className="btn btn--sm btn--danger"
-                              disabled={pendingId !== null}
-                              onClick={() => cancelRace(r.id)}
-                            >取消</button>
+                            <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
+                              onClick={() => cancelRace(r.id)}>取消</button>
+                          )}
+                          {!r.is_hidden && (
+                            <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
+                              onClick={() => hideRace(r.id)}>非表示</button>
                           )}
                         </div>
                       )}

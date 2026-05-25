@@ -1,5 +1,5 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has reviewed the result-model and Records correction implementations and explicitly says this handoff is ready.
+This handoff is ready for implementation after Codex review of the result-model, Playing-flow, and Records correction implementations.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
@@ -13,13 +13,22 @@ This slice should reduce overlap between Analytics and Lounge while keeping impl
 Depends on:
 
 - `docs/design/ui-redesign-roadmap.md`
-- numeric ranked/Lounge result model from prior handoffs
+- `docs/handoffs/archive/2026-05-25-result-model-redesign.md`
+- `docs/handoffs/archive/2026-05-25-playing-flow-redesign.md`
+- `docs/handoffs/archive/2026-05-25-records-correction-ui.md`
 
 The current Analytics and Lounge views overlap. Long term:
 
 - VR Analytics focuses on ranked VR.
 - Lounge Analytics focuses on Lounge score/MMR/match behavior.
 - Lounge overview remains an operational recent-match page.
+
+Current implementation assumptions:
+
+- ranked records have numeric `placement`, `rating_before`, `rating_after`, and `rating_delta`.
+- Lounge records have numeric `placement` and `score`.
+- hidden records are excluded by default from `getSessionRaces`.
+- Records can hide mistaken records; do not add hidden-record recovery here.
 
 ## Files To Inspect
 
@@ -123,4 +132,3 @@ Report in Japanese:
 - Verification results
 - Blocked checks
 - Design questions for Codex
-

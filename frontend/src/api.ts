@@ -149,6 +149,10 @@ export interface CompleteLoungeBody {
 
 export interface RaceUpdateBody {
   memo?: string | null
+  player_count?: number
+  placement?: number
+  rating_after?: number
+  score?: number
 }
 
 export class ApiError extends Error {

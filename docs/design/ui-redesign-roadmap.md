@@ -18,6 +18,7 @@ The current MVP has useful foundations:
 - Map annotations exist.
 - Playing already has `TargetAssist` for notes and annotations.
 - Records can list sessions and races, edit race memo, and cancel race records.
+- Records can correct numeric ranked/Lounge result fields and hide mistaken race records.
 - Dashboard, Records, Analytics, Lounge, Courses, and Settings views exist.
 - The result model redesign is implemented and verified on Pi:
   - ranked records use numeric `placement` and user-entered `rating_after`
@@ -57,8 +58,8 @@ Do not attempt the full UI redesign in one implementation slice.
 Recommended order:
 
 1. Completed: redesign result data model and APIs.
-2. Redesign Playing flow around the new model.
-3. Update Records to correct and hide/delete the new result shape.
+2. Completed: redesign Playing flow around the new model.
+3. Completed: update Records to correct and hide/delete the new result shape.
 4. Split Analytics into VR and Lounge analytics.
 5. Improve course/route target browsing and notes.
 6. Improve course/route visual selection and map-image note editing.
@@ -260,19 +261,42 @@ Completed behavior:
 
 `placement_band` may remain in the database only as a legacy or unrelated compatibility field. New UI and analytics work should not depend on it.
 
+## Completed Foundation: Playing Flow Cleanup
+
+The Playing flow cleanup has been implemented.
+
+Completed behavior:
+
+- Playing now presents the flow as target selection -> assist review -> result input.
+- The confirmation button now makes it clear that the next step is result input.
+- Ranked result input keeps `TargetAssist` available for resume cases.
+- Ranked placement input warns when it is outside `1..player_count`.
+
+## Completed Foundation: Records Correction UI
+
+The Records correction UI has been implemented.
+
+Completed behavior:
+
+- Records can edit memo, player count, placement, ranked result VR, and Lounge score.
+- Empty memo is saved as `null`.
+- Race records entered by mistake can be hidden from the default race list.
+- Cancel remains distinct from hide.
+- Hidden-record recovery is intentionally deferred.
+
+Design note:
+
+- Editing historical `rating_after` recalculates the record's `rating_delta`, but does not update `VrAccount.current_vr`. Current VR correction remains a separate Settings/account maintenance concern unless a later design explicitly couples it to Records edits.
+
 ## Recommended Next Slice
 
 The next implementation slice should be:
 
-**Playing flow redesign**
+**Analytics split**
 
 Goals:
 
-- Make the Playing flow explicitly follow: target selection -> assist review -> result input.
-- Reuse the existing result-model API wiring; do not redesign backend models in this slice.
-- Keep `TargetAssist` visible and useful in the assist/review step.
-- Keep ranked input centered on numeric `placement` and resulting VR (`rating_after`).
-- Keep Lounge input centered on per-race `placement` and `score`.
-- Reduce duplicate or confusing panels now that the result model is settled.
-
-After that, update Records correction UI around the same result shape.
+- Make the existing Analytics view clearly ranked/VR-focused.
+- Make Lounge focus on Lounge-specific score, placement, warnings, and recent matches.
+- Keep date filtering.
+- Do not implement MMR sync or add a charting library in this slice.
