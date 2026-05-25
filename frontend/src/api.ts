@@ -82,6 +82,7 @@ export interface PlaySession {
   lounge_mmr_table_id: string | null
   lounge_mmr_synced_at: string | null
   lounge_mmr_game: string | null
+  completion_reason: string | null
 }
 
 export interface RaceRecord {

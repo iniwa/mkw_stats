@@ -165,6 +165,7 @@ class PlaySessionRead(BaseModel):
     lounge_mmr_table_id: str | None
     lounge_mmr_synced_at: datetime | None
     lounge_mmr_game: str | None
+    completion_reason: str | None
 
 
 # --------------------------------------------------------------------------

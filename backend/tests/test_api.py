@@ -972,6 +972,113 @@ def test_restore_lounge_race_syncs_session_status(seeded_client):
     assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "completed"
 
 
+def test_manual_finish_lounge_session_stays_completed_after_hide(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft_id = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    finish_resp = seeded_client.post(f"/api/v1/play-sessions/{session['id']}/finish")
+    assert finish_resp.json()["completion_reason"] == "manual"
+
+    seeded_client.post(f"/api/v1/race-records/{draft_id}/hide")
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "completed"
+    assert detail["completion_reason"] == "manual"
+
+
+def test_manual_finish_lounge_session_stays_completed_after_restore(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft_id = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/play-sessions/{session['id']}/finish")
+    seeded_client.post(f"/api/v1/race-records/{draft_id}/hide")
+
+    seeded_client.post(f"/api/v1/race-records/{draft_id}/restore")
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "completed"
+    assert detail["completion_reason"] == "manual"
+
+
+def test_auto_finished_lounge_session_has_completion_reason_auto(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    for _ in range(12):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        )
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "completed"
+    assert detail["completion_reason"] == "auto"
+
+
+def test_hide_race_reopens_auto_finished_session_and_clears_reason(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    last_race_id = None
+    for _ in range(12):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        last_race_id = seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        ).json()["id"]
+
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["completion_reason"] == "auto"
+
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/hide")
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "active"
+    assert detail["completion_reason"] is None
+
+
+def test_restore_race_re_auto_finishes_session_with_reason_auto(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    last_race_id = None
+    for _ in range(12):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        last_race_id = seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        ).json()["id"]
+
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/hide")
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "active"
+
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/restore")
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "completed"
+    assert detail["completion_reason"] == "auto"
+
+
 def test_update_race_rating_after_recalculates_delta(seeded_client):
     session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
     draft = seeded_client.post(

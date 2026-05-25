@@ -118,6 +118,7 @@ def finish_session(db: Session, session_id: uuid.UUID) -> PlaySession:
         raise HTTPException(400, f"session is not active (status={session.status.value})")
     session.status = SessionStatus.completed
     session.completed_at = _now()
+    session.completion_reason = "manual"
     db.commit()
     db.refresh(session)
     return session
@@ -334,9 +335,15 @@ def _sync_lounge_auto_finish(db: Session, session: PlaySession) -> None:
     if completed_count >= LOUNGE_MATCH_RACES and session.status == SessionStatus.active:
         session.status = SessionStatus.completed
         session.completed_at = _now()
-    elif completed_count < LOUNGE_MATCH_RACES and session.status == SessionStatus.completed:
+        session.completion_reason = "auto"
+    elif (
+        completed_count < LOUNGE_MATCH_RACES
+        and session.status == SessionStatus.completed
+        and session.completion_reason == "auto"
+    ):
         session.status = SessionStatus.active
         session.completed_at = None
+        session.completion_reason = None
 
 
 def _revert_race_effects(db: Session, race: RaceRecord) -> None:
