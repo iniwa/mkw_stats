@@ -371,4 +371,6 @@ Completed behavior:
 - If no synced sessions exist, an empty state is shown.
 - No new backend APIs or database columns; frontend-only change.
 
-Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and final cleanup remain later slices.
+The next immediate step is a small frontend daily-use polish pass: add a local favicon, confirm there are no obvious broken display strings, and remove avoidable browser noise before adding more features.
+
+Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
