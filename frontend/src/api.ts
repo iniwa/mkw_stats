@@ -3,7 +3,6 @@
 export type SourceType = 'ranked' | 'lounge'
 export type SessionStatus = 'active' | 'completed' | 'cancelled'
 export type RaceStatus = 'draft' | 'completed' | 'cancelled'
-export type PlacementBand = 'top' | 'middle' | 'bottom'
 
 export interface Settings {
   id: number
@@ -80,7 +79,10 @@ export interface RaceRecord {
   course_id: string | null
   route_id: string | null
   player_count: number | null
-  placement_band: PlacementBand | null
+  placement: number | null
+  score: number | null
+  is_hidden: boolean
+  hidden_at: string | null
   vr_account_id: string | null
   rating_before: number | null
   rating_after: number | null
@@ -133,9 +135,16 @@ export interface CreateSessionBody {
 
 export interface CompleteRankedBody {
   player_count: number
-  placement_band: PlacementBand
-  rating_delta: number
-  memo?: string
+  placement: number
+  rating_after: number
+  rating_before?: number | null
+  character_id?: string | null
+  vehicle_id?: string | null
+}
+
+export interface CompleteLoungeBody {
+  placement: number
+  score: number
 }
 
 export interface RaceUpdateBody {
@@ -211,10 +220,13 @@ export const api = {
   getCourses: () => request<Course[]>('/courses'),
   getRoutes: () => request<Route[]>('/routes'),
   getSession: (id: string) => request<PlaySession>(`/play-sessions/${id}`),
-  getSessionRaces: (sessionId: string, includeCancelled = false) =>
-    request<RaceRecord[]>(
-      `/play-sessions/${sessionId}/races${includeCancelled ? '?include_cancelled=true' : ''}`,
-    ),
+  getSessionRaces: (sessionId: string, includeCancelled = false, includeHidden = false) => {
+    const params = new URLSearchParams()
+    if (includeCancelled) params.set('include_cancelled', 'true')
+    if (includeHidden) params.set('include_hidden', 'true')
+    const qs = params.toString()
+    return request<RaceRecord[]>(`/play-sessions/${sessionId}/races${qs ? '?' + qs : ''}`)
+  },
   createSession: (body: CreateSessionBody) =>
     request<PlaySession>('/play-sessions', { method: 'POST', body: JSON.stringify(body) }),
   resolveSelection: (fromMapPointId: string, toMapPointId: string) =>
@@ -238,6 +250,13 @@ export const api = {
     request<RaceRecord>(`/race-records/${raceId}`, { method: 'PATCH', body: JSON.stringify(body) }),
   cancelRaceRecord: (raceId: string) =>
     request<RaceRecord>(`/race-records/${raceId}/cancel`, { method: 'POST' }),
+  completeLounge: (raceId: string, body: CompleteLoungeBody) =>
+    request<RaceRecord>(`/race-records/${raceId}/complete-lounge`, {
+      method: 'PATCH',
+      body: JSON.stringify(body),
+    }),
+  hideRaceRecord: (raceId: string) =>
+    request<RaceRecord>(`/race-records/${raceId}/hide`, { method: 'POST' }),
   finishSession: (sessionId: string) =>
     request<PlaySession>(`/play-sessions/${sessionId}/finish`, { method: 'POST' }),
   getNotes: (options?: { course_id?: string; route_id?: string; include_inactive?: boolean }) => {

@@ -8,12 +8,6 @@ interface AnalyticsData {
   routes: Route[]
 }
 
-const BAND_LABELS: { band: 'top' | 'middle' | 'bottom'; label: string }[] = [
-  { band: 'top', label: '上位' },
-  { band: 'middle', label: '中位' },
-  { band: 'bottom', label: '下位' },
-]
-
 function resolveName(kind: 'course' | 'route', id: string, courses: Course[], routes: Route[]): string {
   if (kind === 'course') {
     const c = courses.find(c => c.id === id)
@@ -149,13 +143,6 @@ export default function AnalyticsView() {
   const avgVrDelta = deltas.length > 0 ? totalVrDelta / deltas.length : null
   const bestDelta = deltas.length > 0 ? Math.max(...deltas) : null
   const worstDelta = deltas.length > 0 ? Math.min(...deltas) : null
-  const bandCounts = { top: 0, middle: 0, bottom: 0 }
-  for (const r of completedRanked) {
-    if (r.placement_band === 'top') bandCounts.top++
-    else if (r.placement_band === 'middle') bandCounts.middle++
-    else if (r.placement_band === 'bottom') bandCounts.bottom++
-  }
-
   // Lounge summary
   const loungeRaces = allRaces.filter(r => r.source === 'lounge')
   const completedLoungeCount = loungeRaces.filter(r => r.status === 'completed').length
@@ -268,14 +255,6 @@ export default function AnalyticsView() {
             <div key={label} className="analytics__metric">
               <div className="analytics__metric-value">{value}</div>
               <div className="analytics__metric-label">{label}</div>
-            </div>
-          ))}
-        </div>
-        <div className="analytics__band-row">
-          {BAND_LABELS.map(({ band, label }) => (
-            <div key={band} className="analytics__band">
-              <span className="analytics__band-label">{label}</span>
-              <span className="analytics__band-value">{bandCounts[band]}</span>
             </div>
           ))}
         </div>

@@ -60,9 +60,10 @@ def get_play_session(session_id: uuid.UUID, db: Session = Depends(get_db)):
 def list_play_session_races(
     session_id: uuid.UUID,
     include_cancelled: bool = Query(False),
+    include_hidden: bool = Query(False),
     db: Session = Depends(get_db),
 ):
-    return race_flow.list_session_races(db, session_id, include_cancelled)
+    return race_flow.list_session_races(db, session_id, include_cancelled, include_hidden)
 
 
 @router.post("/play-sessions/{session_id}/finish", response_model=PlaySessionRead)

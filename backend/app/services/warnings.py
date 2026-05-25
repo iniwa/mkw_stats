@@ -27,6 +27,7 @@ def compute_lounge_warnings(
             select(RaceRecord).where(
                 RaceRecord.session_id == session.id,
                 RaceRecord.status == RaceStatus.completed,
+                RaceRecord.is_hidden.is_(False),
             )
         )
     )

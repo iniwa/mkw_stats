@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.enums import AnnotationType, PlacementBand, RaceStatus, SessionStatus, SourceType
+from app.models.enums import AnnotationType, RaceStatus, SessionStatus, SourceType
 
 _orm = ConfigDict(from_attributes=True)
 
@@ -165,7 +165,10 @@ class RaceRecordRead(BaseModel):
     course_id: str | None
     route_id: str | None
     player_count: int | None
-    placement_band: PlacementBand | None
+    placement: int | None
+    score: int | None
+    is_hidden: bool
+    hidden_at: datetime | None
     vr_account_id: uuid.UUID | None
     rating_before: int | None
     rating_after: int | None
@@ -196,22 +199,25 @@ class RaceDraftRequest(BaseModel):
 
 
 class RaceCompleteRankedRequest(BaseModel):
-    player_count: int
-    placement_band: PlacementBand
-    rating_delta: int
+    player_count: int = Field(ge=1)
+    placement: int = Field(ge=1)
+    rating_after: int = Field(ge=0)
     rating_before: int | None = None
-    rating_after: int | None = None
     character_id: uuid.UUID | None = None
     vehicle_id: uuid.UUID | None = None
-    memo: str | None = None
+
+
+class RaceCompleteLoungeRequest(BaseModel):
+    placement: int = Field(ge=1)
+    score: int = Field(ge=0)
 
 
 class RaceUpdateRequest(BaseModel):
-    player_count: int | None = None
-    placement_band: PlacementBand | None = None
-    character_id: uuid.UUID | None = None
-    vehicle_id: uuid.UUID | None = None
     memo: str | None = None
+    player_count: int | None = Field(default=None, ge=1)
+    placement: int | None = Field(default=None, ge=1)
+    rating_after: int | None = Field(default=None, ge=0)
+    score: int | None = Field(default=None, ge=0)
 
 
 # --------------------------------------------------------------------------

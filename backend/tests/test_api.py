@@ -111,13 +111,15 @@ def test_ranked_race_completion_updates_vr_and_snapshot(seeded_client, db_sessio
 
     completed = seeded_client.patch(
         f"/api/v1/race-records/{race['id']}/complete-ranked",
-        json={"player_count": 12, "placement_band": "top", "rating_delta": 48},
+        json={"player_count": 12, "placement": 1, "rating_after": 48},
     )
     assert completed.status_code == 200
     body = completed.json()
     assert body["status"] == "completed"
+    assert body["placement"] == 1
     assert body["rating_before"] == 0
     assert body["rating_after"] == 48
+    assert body["rating_delta"] == 48
 
     account = db_session.scalars(
         select(VrAccount).where(VrAccount.id == uuid.UUID(session["vr_account_id"]))
@@ -145,7 +147,13 @@ def test_lounge_repick_warning(seeded_client):
     )
     assert first.status_code == 201
     assert first.json()["warnings"] == []
-    assert first.json()["race"]["status"] == "completed"
+    assert first.json()["race"]["status"] == "draft"
+
+    # Complete first race before drafting second (lounge stays draft now)
+    seeded_client.patch(
+        f"/api/v1/race-records/{first.json()['race']['id']}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
 
     second = seeded_client.post(
         f"/api/v1/play-sessions/{session['id']}/races/draft",
@@ -153,8 +161,7 @@ def test_lounge_repick_warning(seeded_client):
     )
     assert second.status_code == 201
     assert "repick" in second.json()["warnings"]
-    # Warning must not block the record.
-    assert second.json()["race"]["status"] == "completed"
+    assert second.json()["race"]["status"] == "draft"
 
 
 def test_lounge_12p_banned_route_warning(seeded_client):
@@ -168,7 +175,7 @@ def test_lounge_12p_banned_route_warning(seeded_client):
     )
     assert resp.status_code == 201
     assert "route_banned_12p" in resp.json()["warnings"]
-    assert resp.json()["race"]["status"] == "completed"
+    assert resp.json()["race"]["status"] == "draft"
 
 
 def test_lounge_session_auto_finishes_after_race_12(seeded_client):
@@ -177,12 +184,17 @@ def test_lounge_session_auto_finishes_after_race_12(seeded_client):
     ).json()
 
     for n in range(1, 13):
-        resp = seeded_client.post(
+        draft_resp = seeded_client.post(
             f"/api/v1/play-sessions/{session['id']}/races/draft",
             json={"course_id": "dk_pass"},
         )
-        assert resp.status_code == 201
-        assert resp.json()["race"]["race_no"] == n
+        assert draft_resp.status_code == 201
+        assert draft_resp.json()["race"]["race_no"] == n
+        race_id = draft_resp.json()["race"]["id"]
+        seeded_client.patch(
+            f"/api/v1/race-records/{race_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        )
 
     detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
     assert detail["status"] == "completed"
@@ -214,7 +226,7 @@ def test_undo_last_race_reverts_ranked_vr(seeded_client, db_session):
     ).json()
     seeded_client.patch(
         f"/api/v1/race-records/{draft['race']['id']}/complete-ranked",
-        json={"player_count": 12, "placement_band": "top", "rating_delta": 48},
+        json={"player_count": 12, "placement": 1, "rating_after": 48},
     )
 
     undo = seeded_client.post(f"/api/v1/play-sessions/{session['id']}/undo-last-race")
@@ -760,3 +772,202 @@ def test_date_filter_default_newest_first(client, db_session):
     times = [s["started_at"] for s in resp.json()]
     for i in range(len(times) - 1):
         assert times[i] >= times[i + 1]
+
+
+# ---------------------------------------------------------------------------
+# Result model redesign
+# ---------------------------------------------------------------------------
+
+def test_complete_lounge_records_placement_score(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    assert draft["race"]["status"] == "draft"
+
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{draft['race']['id']}/complete-lounge",
+        json={"placement": 4, "score": 9},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["status"] == "completed"
+    assert body["placement"] == 4
+    assert body["score"] == 9
+
+
+def test_complete_lounge_validates_placement_against_player_count(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 12}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{draft['race']['id']}/complete-lounge",
+        json={"placement": 13, "score": 0},
+    )
+    assert resp.status_code == 400
+
+
+def test_ranked_complete_validates_placement_range(seeded_client):
+    session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{draft['race']['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 13, "rating_after": 5000},
+    )
+    assert resp.status_code == 400
+
+
+def test_hide_race_excludes_from_default_list(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{race_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+
+    resp = seeded_client.post(f"/api/v1/race-records/{race_id}/hide")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_hidden"] is True
+    assert body["hidden_at"] is not None
+
+    races = seeded_client.get(f"/api/v1/play-sessions/{session['id']}/races").json()
+    assert all(r["id"] != race_id for r in races)
+
+
+def test_include_hidden_shows_hidden_race(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{race_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/race-records/{race_id}/hide")
+
+    races = seeded_client.get(
+        f"/api/v1/play-sessions/{session['id']}/races",
+        params={"include_hidden": "true"},
+    ).json()
+    assert any(r["id"] == race_id for r in races)
+
+
+def test_update_race_rating_after_recalculates_delta(seeded_client):
+    session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{race_id}/complete-ranked",
+        json={"player_count": 12, "placement": 1, "rating_after": 48},
+    )
+
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{race_id}",
+        json={"rating_after": 60},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["rating_after"] == 60
+    assert body["rating_delta"] == 60  # 60 - 0 (rating_before)
+
+
+def test_lounge_hidden_race_does_not_count_toward_auto_finish(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+
+    # Record and hide 1 race, then complete 12 more — auto-finish should use the 12 completed+visible
+    first_draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{first_draft}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/race-records/{first_draft}/hide")
+
+    # Session is still active after hiding
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "active"
+
+    # Complete 12 more races — session should auto-finish
+    for _ in range(12):
+        d = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        seeded_client.patch(
+            f"/api/v1/race-records/{d}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        )
+
+    detail = seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()
+    assert detail["status"] == "completed"
+
+
+def test_hiding_twelfth_lounge_race_reopens_session(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    last_race_id = None
+
+    for _ in range(12):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        completed = seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        ).json()
+        last_race_id = completed["id"]
+
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "completed"
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/hide")
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "active"
+
+
+def test_hidden_lounge_race_does_not_trigger_repick_warning(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    first_draft_id = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{first_draft_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/race-records/{first_draft_id}/hide")
+
+    second = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    )
+    assert second.status_code == 201
+    assert "repick" not in second.json()["warnings"]

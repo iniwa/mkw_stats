@@ -3,10 +3,10 @@ import {
   ApiError,
   WARNING_LABELS,
   api,
-  type Course,
+  type CompleteLoungeBody,
   type CompleteRankedBody,
+  type Course,
   type MapPoint,
-  type PlacementBand,
   type PlaySession,
   type RaceRecord,
   type ResolveResult,
@@ -19,12 +19,6 @@ import { RouteDetail } from './RouteDetail'
 import { TargetAssist } from './TargetAssist'
 
 type LoadState = 'loading' | 'ready' | 'error'
-
-const PLACEMENT_LABELS: Record<PlacementBand, string> = {
-  top: '上位',
-  middle: '中位',
-  bottom: '下位',
-}
 
 const LOUNGE_FORMATS = ['FFA', '2v2', '3v3', '4v4', '6v6']
 
@@ -143,16 +137,18 @@ export default function PlayingView() {
       const races = await api.getSessionRaces(target.id)
       const completed = races.filter(r => r.status === 'completed')
       setRecordedRaces(completed)
-      if (target.source === 'ranked') {
-        const drafts = races.filter(r => r.status === 'draft')
-        const draft = drafts.length > 0 ? drafts[drafts.length - 1] : null
-        setDraftRace(draft)
-      }
-      const latestWithWarnings = [...completed].reverse().find(
-        r => r.warning_flags && r.warning_flags.length > 0,
-      )
-      if (latestWithWarnings?.warning_flags) {
-        setLastWarnings(latestWithWarnings.warning_flags)
+      const drafts = races.filter(r => r.status === 'draft')
+      const draft = drafts.length > 0 ? drafts[drafts.length - 1] : null
+      setDraftRace(draft)
+      if (draft?.warning_flags?.length) {
+        setLastWarnings(draft.warning_flags)
+      } else {
+        const latestWithWarnings = [...completed].reverse().find(
+          r => r.warning_flags && r.warning_flags.length > 0,
+        )
+        if (latestWithWarnings?.warning_flags) {
+          setLastWarnings(latestWithWarnings.warning_flags)
+        }
       }
       setSession(target)
     })
@@ -190,13 +186,11 @@ export default function PlayingView() {
           : { route_id: resolved.route!.id }
       const response = await api.draftRace(session.id, target)
       setResolved(null)
+      setDraftRace(response.race)
       if (session.source === 'ranked') {
-        setDraftRace(response.race)
         setLastWarnings([])
       } else {
         setLastWarnings(response.warnings)
-        await reloadRaces(session.id)
-        setSession(await api.getSession(session.id))
       }
     })
 
@@ -206,8 +200,20 @@ export default function PlayingView() {
       if (!draftRace || !session) return
       await api.completeRanked(draftRace.id, body)
       setDraftRace(null)
+      setLastWarnings([])
       await reloadRaces(session.id)
       await refreshAccounts()
+    })
+
+  // -- Lounge result -------------------------------------------------------
+  const completeLounge = (body: CompleteLoungeBody) =>
+    runAction('complete-lounge', async () => {
+      if (!draftRace || !session) return
+      await api.completeLounge(draftRace.id, body)
+      setDraftRace(null)
+      setLastWarnings([])
+      await reloadRaces(session.id)
+      setSession(await api.getSession(session.id))
     })
 
   // -- Session controls ----------------------------------------------------
@@ -237,15 +243,18 @@ export default function PlayingView() {
     )
   }
 
-  const phase: 'start' | 'finished' | 'ranked_input' | 'confirm' | 'select' = !session
-    ? 'start'
-    : session.status !== 'active'
-      ? 'finished'
-      : draftRace
-        ? 'ranked_input'
-        : resolved
-          ? 'confirm'
-          : 'select'
+  const phase: 'start' | 'finished' | 'ranked_input' | 'lounge_input' | 'confirm' | 'select' =
+    !session
+      ? 'start'
+      : session.status !== 'active'
+        ? 'finished'
+        : draftRace
+          ? session.source === 'ranked'
+            ? 'ranked_input'
+            : 'lounge_input'
+          : resolved
+            ? 'confirm'
+            : 'select'
 
   return (
     <div className="playing">
@@ -298,6 +307,20 @@ export default function PlayingView() {
                     : routeName(routesById.get(draftRace.route_id ?? ''), coursesById)
                 }
                 onComplete={completeRanked}
+              />
+            )}
+            {phase === 'lounge_input' && draftRace && (
+              <LoungeResultForm
+                draftRace={draftRace}
+                session={session}
+                lastWarnings={lastWarnings}
+                courseLabel={
+                  draftRace.course_id
+                    ? courseName(coursesById.get(draftRace.course_id))
+                    : routeName(routesById.get(draftRace.route_id ?? ''), coursesById)
+                }
+                busy={busy}
+                onComplete={completeLounge}
               />
             )}
             {phase === 'finished' && (
@@ -710,13 +733,12 @@ function RankedResultForm({
   onComplete: (body: CompleteRankedBody) => void
 }) {
   const [playerCount, setPlayerCount] = useState(defaultPlayerCount === 24 ? 24 : 12)
-  const [band, setBand] = useState<PlacementBand>('top')
-  const [delta, setDelta] = useState(0)
-  const [memo, setMemo] = useState('')
+  const [placement, setPlacement] = useState(1)
+  const [ratingAfter, setRatingAfter] = useState(account?.current_vr ?? 0)
   const saving = busy === 'complete-ranked'
 
   const currentVr = account?.current_vr ?? null
-  const projectedVr = currentVr === null ? null : currentVr + delta
+  const computedDelta = currentVr !== null ? ratingAfter - currentVr : null
 
   const assistTarget: { kind: 'course' | 'route'; id: string } | null =
     draftRace.course_id
@@ -754,33 +776,45 @@ function RankedResultForm({
       </div>
 
       <div className="field">
-        <span className="field__label">順位帯</span>
-        <div className="seg">
-          {(['top', 'middle', 'bottom'] as PlacementBand[]).map(b => (
-            <button
-              key={b}
-              className={`seg__btn${band === b ? ' seg__btn--on' : ''}`}
-              onClick={() => setBand(b)}
-            >
-              {PLACEMENT_LABELS[b]}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      <div className="field">
-        <span className="field__label">VR増減</span>
+        <span className="field__label">順位（1〜{playerCount}）</span>
         <div className="stepper">
-          <button className="btn stepper__btn" onClick={() => setDelta(d => d - 1)}>
+          <button
+            className="btn stepper__btn"
+            onClick={() => setPlacement(p => Math.max(1, p - 1))}
+          >
             −
           </button>
           <input
             className="input stepper__input"
             type="number"
-            value={delta}
-            onChange={e => setDelta(Number(e.target.value) || 0)}
+            min={1}
+            max={playerCount}
+            value={placement}
+            onChange={e => setPlacement(Math.min(playerCount, Math.max(1, Number(e.target.value) || 1)))}
           />
-          <button className="btn stepper__btn" onClick={() => setDelta(d => d + 1)}>
+          <button
+            className="btn stepper__btn"
+            onClick={() => setPlacement(p => Math.min(playerCount, p + 1))}
+          >
+            ＋
+          </button>
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="field__label">結果VR</span>
+        <div className="stepper">
+          <button className="btn stepper__btn" onClick={() => setRatingAfter(v => Math.max(0, v - 1))}>
+            −
+          </button>
+          <input
+            className="input stepper__input"
+            type="number"
+            min={0}
+            value={ratingAfter}
+            onChange={e => setRatingAfter(Math.max(0, Number(e.target.value) || 0))}
+          />
+          <button className="btn stepper__btn" onClick={() => setRatingAfter(v => v + 1)}>
             ＋
           </button>
         </div>
@@ -788,26 +822,14 @@ function RankedResultForm({
 
       <p className="result__vr">
         現在VR: {currentVr ?? '—'}
-        {projectedVr !== null && (
-          <>
-            {' → '}
-            <strong>{projectedVr}</strong>
-          </>
+        {' → '}
+        <strong>{ratingAfter}</strong>
+        {computedDelta !== null && (
+          <span className={computedDelta >= 0 ? 'records__delta--pos' : 'records__delta--neg'}>
+            {' '}({computedDelta >= 0 ? '+' : ''}{computedDelta})
+          </span>
         )}
       </p>
-
-      <div className="field">
-        <label className="field__label" htmlFor="memo">
-          メモ（任意）
-        </label>
-        <textarea
-          id="memo"
-          className="input"
-          rows={2}
-          value={memo}
-          onChange={e => setMemo(e.target.value)}
-        />
-      </div>
 
       <button
         className="btn btn--primary"
@@ -815,11 +837,118 @@ function RankedResultForm({
         onClick={() =>
           onComplete({
             player_count: playerCount,
-            placement_band: band,
-            rating_delta: delta,
-            memo: memo.trim() ? memo.trim() : undefined,
+            placement,
+            rating_after: ratingAfter,
           })
         }
+      >
+        保存して次のコースへ
+      </button>
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+function LoungeResultForm({
+  draftRace,
+  session,
+  lastWarnings,
+  courseLabel,
+  busy,
+  onComplete,
+}: {
+  draftRace: RaceRecord
+  session: PlaySession
+  lastWarnings: string[]
+  courseLabel: string
+  busy: string | null
+  onComplete: (body: CompleteLoungeBody) => void
+}) {
+  const [placement, setPlacement] = useState(1)
+  const [score, setScore] = useState(0)
+  const maxPlacement = session.player_count ?? 99
+  const saving = busy === 'complete-lounge'
+
+  const assistTarget: { kind: 'course' | 'route'; id: string } | null =
+    draftRace.course_id
+      ? { kind: 'course', id: draftRace.course_id }
+      : draftRace.route_id
+        ? { kind: 'route', id: draftRace.route_id }
+        : null
+
+  return (
+    <div className="result">
+      <h3 className="panel__title">{courseLabel} の結果</h3>
+      <p className="result__race">Race #{draftRace.race_no ?? '-'}</p>
+
+      {lastWarnings.length > 0 && (
+        <div className="warnbox">
+          <p className="warnbox__head">⚠ 警告（記録は完了できます）</p>
+          <ul>
+            {lastWarnings.map(w => (
+              <li key={w}>{WARNING_LABELS[w] ?? w}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+
+      {assistTarget && (
+        <TargetAssist
+          kind={assistTarget.kind}
+          id={assistTarget.id}
+          displayName={courseLabel}
+        />
+      )}
+
+      <div className="field">
+        <span className="field__label">順位（1〜{maxPlacement}）</span>
+        <div className="stepper">
+          <button
+            className="btn stepper__btn"
+            onClick={() => setPlacement(p => Math.max(1, p - 1))}
+          >
+            −
+          </button>
+          <input
+            className="input stepper__input"
+            type="number"
+            min={1}
+            max={maxPlacement}
+            value={placement}
+            onChange={e => setPlacement(Math.min(maxPlacement, Math.max(1, Number(e.target.value) || 1)))}
+          />
+          <button
+            className="btn stepper__btn"
+            onClick={() => setPlacement(p => Math.min(maxPlacement, p + 1))}
+          >
+            ＋
+          </button>
+        </div>
+      </div>
+
+      <div className="field">
+        <span className="field__label">スコア</span>
+        <div className="stepper">
+          <button className="btn stepper__btn" onClick={() => setScore(s => Math.max(0, s - 1))}>
+            −
+          </button>
+          <input
+            className="input stepper__input"
+            type="number"
+            min={0}
+            value={score}
+            onChange={e => setScore(Math.max(0, Number(e.target.value) || 0))}
+          />
+          <button className="btn stepper__btn" onClick={() => setScore(s => s + 1)}>
+            ＋
+          </button>
+        </div>
+      </div>
+
+      <button
+        className="btn btn--primary"
+        disabled={saving}
+        onClick={() => onComplete({ placement, score })}
       >
         保存して次のコースへ
       </button>
@@ -888,6 +1017,12 @@ function SessionSidebar({
                 <span className="race-history__warn" title={race.warning_flags.join(', ')}>
                   ⚠
                 </span>
+              )}
+              {race.placement != null && (
+                <span className="race-history__delta">{race.placement}位</span>
+              )}
+              {race.score != null && (
+                <span className="race-history__delta">{race.score}pt</span>
               )}
               {race.rating_delta !== null && (
                 <span className="race-history__delta">

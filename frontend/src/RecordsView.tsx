@@ -5,8 +5,6 @@ import { RouteDetail } from './RouteDetail'
 type SourceFilter = SourceType | 'all'
 type StatusFilter = SessionStatus | 'all'
 
-const BAND_LABELS: Record<string, string> = { top: '上位', middle: '中位', bottom: '下位' }
-
 function fmtTime(iso: string | null): string {
   if (!iso) return '—'
   const d = new Date(iso)
@@ -329,10 +327,11 @@ export default function RecordsView() {
                         {r.player_count != null && (
                           <span className="race-history__delta">{r.player_count}人</span>
                         )}
-                        {r.placement_band && (
-                          <span className="race-history__delta">
-                            {BAND_LABELS[r.placement_band] ?? r.placement_band}
-                          </span>
+                        {r.placement != null && (
+                          <span className="race-history__delta">{r.placement}位</span>
+                        )}
+                        {r.score != null && (
+                          <span className="race-history__delta">{r.score}pt</span>
                         )}
                         {r.rating_delta != null && (
                           <span className={`race-history__delta ${r.rating_delta >= 0 ? 'records__delta--pos' : 'records__delta--neg'}`}>

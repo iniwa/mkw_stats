@@ -1,9 +1,4 @@
-"""Play-session and race-record lifecycle.
-
-Ranked races are drafted on course selection and finished later via
-complete-ranked. Lounge races are completed immediately on selection, the
-session auto-finishes after race 12, and repick warnings never block a record.
-"""
+"""Play-session and race-record lifecycle."""
 import uuid
 from datetime import datetime, timezone
 
@@ -23,6 +18,7 @@ from app.models import (
 from app.models.enums import RaceStatus, SessionStatus, SourceType
 from app.schemas import (
     PlaySessionCreate,
+    RaceCompleteLoungeRequest,
     RaceCompleteRankedRequest,
     RaceDraftRequest,
     RaceUpdateRequest,
@@ -128,12 +124,14 @@ def finish_session(db: Session, session_id: uuid.UUID) -> PlaySession:
 
 
 def list_session_races(
-    db: Session, session_id: uuid.UUID, include_cancelled: bool = False
+    db: Session, session_id: uuid.UUID, include_cancelled: bool = False, include_hidden: bool = False
 ) -> list[RaceRecord]:
     get_session(db, session_id)  # 404 if the session does not exist
     stmt = select(RaceRecord).where(RaceRecord.session_id == session_id)
     if not include_cancelled:
         stmt = stmt.where(RaceRecord.status != RaceStatus.cancelled)
+    if not include_hidden:
+        stmt = stmt.where(RaceRecord.is_hidden.is_(False))
     stmt = stmt.order_by(RaceRecord.race_no, RaceRecord.created_at)
     return list(db.scalars(stmt))
 
@@ -181,22 +179,12 @@ def draft_race(
         route_id=payload.route_id,
         player_count=payload.player_count or session.player_count,
         warning_flags=warnings or None,
+        status=RaceStatus.draft,
     )
     if session.source == SourceType.ranked:
-        race.status = RaceStatus.draft
         race.vr_account_id = session.vr_account_id
-    else:
-        # Lounge records are complete on selection.
-        race.status = RaceStatus.completed
 
     db.add(race)
-    db.flush()
-
-    # Lounge match auto-finishes once 12 races are recorded.
-    if session.source == SourceType.lounge and race.race_no >= LOUNGE_MATCH_RACES:
-        session.status = SessionStatus.completed
-        session.completed_at = _now()
-
     db.commit()
     db.refresh(race)
     return race, warnings
@@ -214,27 +202,24 @@ def complete_ranked(
         raise HTTPException(400, f"race is not a draft (status={race.status.value})")
     if race.vr_account_id is None:
         raise HTTPException(400, "ranked race has no VR account")
+    if payload.placement > payload.player_count:
+        raise HTTPException(400, f"placement {payload.placement} exceeds player_count {payload.player_count}")
 
     account = db.get(VrAccount, race.vr_account_id)
     if account is None:
         raise HTTPException(404, f"vr account not found: {race.vr_account_id}")
 
     rating_before = payload.rating_before if payload.rating_before is not None else account.current_vr
-    rating_after = (
-        payload.rating_after
-        if payload.rating_after is not None
-        else rating_before + payload.rating_delta
-    )
+    rating_after = payload.rating_after
+    rating_delta = rating_after - rating_before
 
     race.player_count = payload.player_count
-    race.placement_band = payload.placement_band
-    race.rating_delta = payload.rating_delta
+    race.placement = payload.placement
     race.rating_before = rating_before
     race.rating_after = rating_after
+    race.rating_delta = rating_delta
     race.character_id = payload.character_id
     race.vehicle_id = payload.vehicle_id
-    if payload.memo is not None:
-        race.memo = payload.memo
     race.status = RaceStatus.completed
 
     account.current_vr = rating_after
@@ -244,7 +229,7 @@ def complete_ranked(
             source=SourceType.ranked,
             vr_account_id=account.id,
             value=rating_after,
-            delta=payload.rating_delta,
+            delta=rating_delta,
             captured_at=_now(),
             race_record_id=race.id,
         )
@@ -254,15 +239,87 @@ def complete_ranked(
     return race
 
 
+def complete_lounge(
+    db: Session, race_id: uuid.UUID, payload: RaceCompleteLoungeRequest
+) -> RaceRecord:
+    race = db.get(RaceRecord, race_id)
+    if race is None:
+        raise HTTPException(404, f"race record not found: {race_id}")
+    if race.source != SourceType.lounge:
+        raise HTTPException(400, "complete-lounge is only valid for lounge races")
+    if race.status != RaceStatus.draft:
+        raise HTTPException(400, f"race is not a draft (status={race.status.value})")
+
+    session = db.get(PlaySession, race.session_id)
+    if session and session.player_count and payload.placement > session.player_count:
+        raise HTTPException(400, f"placement {payload.placement} exceeds player_count {session.player_count}")
+
+    race.placement = payload.placement
+    race.score = payload.score
+    race.status = RaceStatus.completed
+
+    db.flush()
+
+    if session:
+        _sync_lounge_auto_finish(db, session)
+
+    db.commit()
+    db.refresh(race)
+    return race
+
+
 def update_race(db: Session, race_id: uuid.UUID, payload: RaceUpdateRequest) -> RaceRecord:
     race = db.get(RaceRecord, race_id)
     if race is None:
         raise HTTPException(404, f"race record not found: {race_id}")
-    for field, value in payload.model_dump(exclude_unset=True).items():
+    updates = payload.model_dump(exclude_unset=True)
+    if 'rating_after' in updates:
+        ra = updates.pop('rating_after')
+        race.rating_after = ra
+        if ra is not None and race.rating_before is not None:
+            race.rating_delta = ra - race.rating_before
+    for field, value in updates.items():
         setattr(race, field, value)
     db.commit()
     db.refresh(race)
     return race
+
+
+def hide_race(db: Session, race_id: uuid.UUID) -> RaceRecord:
+    race = db.get(RaceRecord, race_id)
+    if race is None:
+        raise HTTPException(404, f"race record not found: {race_id}")
+    race.is_hidden = True
+    race.hidden_at = _now()
+    db.flush()
+    session = db.get(PlaySession, race.session_id)
+    if session:
+        _sync_lounge_auto_finish(db, session)
+    db.commit()
+    db.refresh(race)
+    return race
+
+
+def _sync_lounge_auto_finish(db: Session, session: PlaySession) -> None:
+    if session.source != SourceType.lounge:
+        return
+
+    completed_count = db.scalar(
+        select(func.count())
+        .select_from(RaceRecord)
+        .where(
+            RaceRecord.session_id == session.id,
+            RaceRecord.status == RaceStatus.completed,
+            RaceRecord.is_hidden.is_(False),
+        )
+    ) or 0
+
+    if completed_count >= LOUNGE_MATCH_RACES and session.status == SessionStatus.active:
+        session.status = SessionStatus.completed
+        session.completed_at = _now()
+    elif completed_count < LOUNGE_MATCH_RACES and session.status == SessionStatus.completed:
+        session.status = SessionStatus.active
+        session.completed_at = None
 
 
 def _revert_race_effects(db: Session, race: RaceRecord) -> None:
