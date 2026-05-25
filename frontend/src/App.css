@@ -721,3 +721,9 @@ textarea.input { resize: vertical; font-family: inherit; }
 .lounge__warn-item:last-child { border-bottom: none; }
 .lounge__warn-target { flex-shrink: 0; }
 .lounge__warn-flags { color: var(--warn); }
+
+/* -- route image ----------------------------------------------------------- */
+.route-image {
+  display: block; max-width: 100%; height: auto; border-radius: 4px;
+  margin-bottom: 0.6rem; border: 1px solid var(--border);
+}

@@ -16,6 +16,7 @@ import {
   type VrAccount,
 } from './api'
 import { RouteDetail } from './RouteDetail'
+import { RouteImage } from './RouteImage'
 import { TargetAssist } from './TargetAssist'
 
 type LoadState = 'loading' | 'ready' | 'error'
@@ -718,7 +719,10 @@ function SelectionConfirm({
       </p>
       <p className="confirm__msg">{resolved.confirm_message}</p>
       {resolved.kind === 'route' && resolved.route && (
-        <RouteDetail route={resolved.route} />
+        <>
+          <RouteImage routeId={resolved.route.id} />
+          <RouteDetail route={resolved.route} />
+        </>
       )}
       <TargetAssist
         kind={resolved.kind}
