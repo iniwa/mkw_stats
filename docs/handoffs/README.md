@@ -16,13 +16,12 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 Current UI redesign order:
 
-1. `2026-05-25-result-model-pi-verification.md`
-2. `2026-05-25-playing-flow-redesign.md`
-3. `2026-05-25-records-correction-ui.md`
-4. `2026-05-25-analytics-split-vr-lounge.md`
-5. `2026-05-25-course-notes-target-view.md`
-6. `2026-05-25-map-image-assets-and-picker.md`
-7. `2026-05-25-lounge-mmr-session-sync.md`
+1. `2026-05-25-playing-flow-redesign.md`
+2. `2026-05-25-records-correction-ui.md`
+3. `2026-05-25-analytics-split-vr-lounge.md`
+4. `2026-05-25-course-notes-target-view.md`
+5. `2026-05-25-map-image-assets-and-picker.md`
+6. `2026-05-25-lounge-mmr-session-sync.md`
 
 Only hand the next file to Claude Code after Codex has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
 

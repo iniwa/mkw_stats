@@ -1,5 +1,4 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has reviewed the result-model redesign implementation and explicitly says this handoff is ready.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
@@ -16,7 +15,8 @@ This slice should focus on the user-facing Playing workflow after the result dat
 
 Depends on:
 
-- `docs/handoffs/2026-05-25-result-model-redesign.md`
+- `docs/handoffs/archive/2026-05-25-result-model-redesign.md`
+- `docs/handoffs/archive/2026-05-25-result-model-pi-verification.md`
 - `docs/design/ui-redesign-roadmap.md`
 
 Expected prior state:
@@ -25,6 +25,7 @@ Expected prior state:
 - Lounge races use numeric `placement` and `score`.
 - Lounge course selection creates a draft race and requires result completion.
 - `TargetAssist` already exists and should be reused.
+- Result model redesign has been verified on the Pi deployment.
 
 ## Files To Inspect
 
@@ -178,4 +179,3 @@ Report in Japanese:
 - Blocked checks
 - Screenshots/temp files created and removed
 - Design questions for Codex
-
