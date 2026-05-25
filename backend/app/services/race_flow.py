@@ -300,6 +300,23 @@ def hide_race(db: Session, race_id: uuid.UUID) -> RaceRecord:
     return race
 
 
+def restore_race(db: Session, race_id: uuid.UUID) -> RaceRecord:
+    race = db.get(RaceRecord, race_id)
+    if race is None:
+        raise HTTPException(404, f"race record not found: {race_id}")
+    if not race.is_hidden:
+        return race
+    race.is_hidden = False
+    race.hidden_at = None
+    db.flush()
+    session = db.get(PlaySession, race.session_id)
+    if session:
+        _sync_lounge_auto_finish(db, session)
+    db.commit()
+    db.refresh(race)
+    return race
+
+
 def _sync_lounge_auto_finish(db: Session, session: PlaySession) -> None:
     if session.source != SourceType.lounge:
         return

@@ -16,17 +16,17 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 ## Active Verification Handoffs
 
-None.
+- `2026-05-25-records-hidden-race-recovery-pi-verification.md`
 
 ## Active Implementation Handoffs
 
-- `2026-05-25-records-hidden-race-recovery.md`
+None.
 
 Current UI redesign order:
 
-Next queued implementation handoff:
+Next queued verification handoff:
 
-- `2026-05-25-records-hidden-race-recovery.md`
+- `2026-05-25-records-hidden-race-recovery-pi-verification.md`
 
 Only hand the next file to Claude Code after Codex has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
 

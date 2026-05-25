@@ -39,3 +39,8 @@ def cancel_race_record(race_id: uuid.UUID, db: Session = Depends(get_db)):
 @router.post("/race-records/{race_id}/hide", response_model=RaceRecordRead)
 def hide_race_record(race_id: uuid.UUID, db: Session = Depends(get_db)):
     return race_flow.hide_race(db, race_id)
+
+
+@router.post("/race-records/{race_id}/restore", response_model=RaceRecordRead)
+def restore_race_record(race_id: uuid.UUID, db: Session = Depends(get_db)):
+    return race_flow.restore_race(db, race_id)

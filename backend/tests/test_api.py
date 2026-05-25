@@ -876,6 +876,102 @@ def test_include_hidden_shows_hidden_race(seeded_client):
     assert any(r["id"] == race_id for r in races)
 
 
+def test_hide_then_restore_returns_visible(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{race_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/race-records/{race_id}/hide")
+
+    resp = seeded_client.post(f"/api/v1/race-records/{race_id}/restore")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["is_hidden"] is False
+    assert body["hidden_at"] is None
+
+
+def test_restore_already_visible_is_idempotent(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+
+    resp = seeded_client.post(f"/api/v1/race-records/{race_id}/restore")
+    assert resp.status_code == 200
+    assert resp.json()["is_hidden"] is False
+
+
+def test_restore_race_appears_in_default_list(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    race_id = draft["race"]["id"]
+    seeded_client.patch(
+        f"/api/v1/race-records/{race_id}/complete-lounge",
+        json={"placement": 1, "score": 15},
+    )
+    seeded_client.post(f"/api/v1/race-records/{race_id}/hide")
+
+    # Hidden — excluded from default list
+    default = seeded_client.get(f"/api/v1/play-sessions/{session['id']}/races").json()
+    assert all(r["id"] != race_id for r in default)
+
+    seeded_client.post(f"/api/v1/race-records/{race_id}/restore")
+
+    # Restored — appears in default list again
+    default2 = seeded_client.get(f"/api/v1/play-sessions/{session['id']}/races").json()
+    assert any(r["id"] == race_id for r in default2)
+
+
+def test_restore_race_unknown_404(client):
+    resp = client.post(f"/api/v1/race-records/{uuid.uuid4()}/restore")
+    assert resp.status_code == 404
+
+
+def test_restore_lounge_race_syncs_session_status(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    last_race_id = None
+    for _ in range(12):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session['id']}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        completed = seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        ).json()
+        last_race_id = completed["id"]
+
+    # Session auto-finished at 12 completed races
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "completed"
+
+    # Hide the 12th race — session should reopen
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/hide")
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "active"
+
+    # Restore it — session should complete again
+    seeded_client.post(f"/api/v1/race-records/{last_race_id}/restore")
+    assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "completed"
+
+
 def test_update_race_rating_after_recalculates_delta(seeded_client):
     session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
     draft = seeded_client.post(

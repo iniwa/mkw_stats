@@ -48,6 +48,7 @@ export default function RecordsView() {
   const [races, setRaces] = useState<RaceRecord[]>([])
   const [racesLoading, setRacesLoading] = useState(false)
   const [racesError, setRacesError] = useState<string | null>(null)
+  const [showHidden, setShowHidden] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editMemo, setEditMemo] = useState('')
   const [editPlayerCount, setEditPlayerCount] = useState('')
@@ -62,14 +63,15 @@ export default function RecordsView() {
     setRaces([])
     setEditingId(null)
     setRowErrors({})
+    setShowHidden(false)
   }
 
-  async function loadRaces(id: string) {
+  async function loadRaces(id: string, includeHidden = false) {
     setRacesLoading(true)
     setRacesError(null)
     setRaces([])
     try {
-      setRaces(await api.getSessionRaces(id, true))
+      setRaces(await api.getSessionRaces(id, true, includeHidden))
     } catch (e: unknown) {
       setRacesError(e instanceof Error ? e.message : 'レース取得エラー')
     } finally {
@@ -116,7 +118,8 @@ export default function RecordsView() {
     setSelectedId(id)
     setEditingId(null)
     setRowErrors({})
-    await loadRaces(id)
+    setShowHidden(false)
+    await loadRaces(id, false)
   }
 
   function clearEditStates() {
@@ -147,7 +150,7 @@ export default function RecordsView() {
       await api.updateRaceRecord(raceId, body)
       setEditingId(null)
       clearEditStates()
-      if (selectedId) await loadRaces(selectedId)
+      if (selectedId) await loadRaces(selectedId, showHidden)
     } catch (e: unknown) {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '保存エラー' }))
     } finally {
@@ -161,7 +164,7 @@ export default function RecordsView() {
     setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
     try {
       await api.cancelRaceRecord(raceId)
-      if (selectedId) await loadRaces(selectedId)
+      if (selectedId) await loadRaces(selectedId, showHidden)
     } catch (e: unknown) {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '取消エラー' }))
     } finally {
@@ -175,9 +178,23 @@ export default function RecordsView() {
     setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
     try {
       await api.hideRaceRecord(raceId)
-      if (selectedId) await loadRaces(selectedId)
+      if (selectedId) await loadRaces(selectedId, showHidden)
     } catch (e: unknown) {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '非表示エラー' }))
+    } finally {
+      setPendingId(null)
+    }
+  }
+
+  async function restoreRace(raceId: string) {
+    if (!window.confirm('このレースを表示に戻しますか？')) return
+    setPendingId(raceId)
+    setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
+    try {
+      await api.restoreRaceRecord(raceId)
+      if (selectedId) await loadRaces(selectedId, showHidden)
+    } catch (e: unknown) {
+      setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '復元エラー' }))
     } finally {
       setPendingId(null)
     }
@@ -335,6 +352,20 @@ export default function RecordsView() {
                   </span>
                 )}
               </div>
+              <div className="records__hidden-toggle">
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={showHidden}
+                    onChange={e => {
+                      const next = e.target.checked
+                      setShowHidden(next)
+                      if (selectedId) loadRaces(selectedId, next)
+                    }}
+                  />
+                  非表示も表示
+                </label>
+              </div>
               {racesLoading && <p className="placeholder">読み込み中…</p>}
               {racesError && <div className="notice notice--error">{racesError}</div>}
               {!racesLoading && !racesError && races.length === 0 && (
@@ -348,7 +379,7 @@ export default function RecordsView() {
                     const isPending = pendingId === r.id
                     return (
                     <li key={r.id}
-                      className={`race-history__item records__race-item${r.status === 'cancelled' ? ' records__race-item--cancelled' : ''}`}
+                      className={`race-history__item records__race-item${r.status === 'cancelled' ? ' records__race-item--cancelled' : ''}${r.is_hidden ? ' records__race-item--hidden' : ''}`}
                     >
                       <div className="records__race-row">
                         <span className="race-history__no">{r.race_no ?? '—'}</span>
@@ -361,6 +392,9 @@ export default function RecordsView() {
                         </span>
                         {r.status === 'cancelled' && (
                           <span className="tag tag--status-cancelled" style={{ fontSize: '0.7rem' }}>取消</span>
+                        )}
+                        {r.is_hidden && (
+                          <span className="tag tag--hidden" style={{ fontSize: '0.7rem' }}>非表示</span>
                         )}
                         {r.player_count != null && (
                           <span className="race-history__delta">{r.player_count}人</span>
@@ -443,23 +477,28 @@ export default function RecordsView() {
                       )}
                       {!isEditing && (
                         <div className="records__actions">
-                          <button className="btn btn--sm" disabled={pendingId !== null}
-                            onClick={() => {
-                              setEditingId(r.id)
-                              setEditMemo(r.memo ?? '')
-                              setEditPlayerCount(r.player_count != null ? String(r.player_count) : '')
-                              setEditPlacement(r.placement != null ? String(r.placement) : '')
-                              setEditRatingAfter(r.rating_after != null ? String(r.rating_after) : '')
-                              setEditScore(r.score != null ? String(r.score) : '')
-                              setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
-                            }}>編集</button>
-                          {r.status !== 'cancelled' && (
-                            <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
-                              onClick={() => cancelRace(r.id)}>取消</button>
-                          )}
-                          {!r.is_hidden && (
-                            <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
-                              onClick={() => hideRace(r.id)}>非表示</button>
+                          {r.is_hidden ? (
+                            <button className="btn btn--sm btn--primary" disabled={pendingId !== null}
+                              onClick={() => restoreRace(r.id)}>表示に戻す</button>
+                          ) : (
+                            <>
+                              <button className="btn btn--sm" disabled={pendingId !== null}
+                                onClick={() => {
+                                  setEditingId(r.id)
+                                  setEditMemo(r.memo ?? '')
+                                  setEditPlayerCount(r.player_count != null ? String(r.player_count) : '')
+                                  setEditPlacement(r.placement != null ? String(r.placement) : '')
+                                  setEditRatingAfter(r.rating_after != null ? String(r.rating_after) : '')
+                                  setEditScore(r.score != null ? String(r.score) : '')
+                                  setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
+                                }}>編集</button>
+                              {r.status !== 'cancelled' && (
+                                <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
+                                  onClick={() => cancelRace(r.id)}>取消</button>
+                              )}
+                              <button className="btn btn--sm btn--danger" disabled={pendingId !== null}
+                                onClick={() => hideRace(r.id)}>非表示</button>
+                            </>
                           )}
                         </div>
                       )}

@@ -294,8 +294,8 @@ Completed behavior:
 - Records can edit memo, player count, placement, ranked result VR, and Lounge score.
 - Empty memo is saved as `null`.
 - Race records entered by mistake can be hidden from the default race list.
+- Hidden race records can be included on demand in Records and restored to the visible list.
 - Cancel remains distinct from hide.
-- Hidden-record recovery is intentionally deferred.
 
 Design note:
 
@@ -355,12 +355,4 @@ Completed behavior:
 - Repeated sync is idempotent by stored MKCentral `changeId`.
 - Lounge view exposes a manual MMR sync button and displays the latest synced values.
 
-The next implementation slice should be:
-
-**Records hidden race recovery**
-
-Scope:
-
-- Restore hidden race records from Records.
-- Keep hidden records excluded by default.
-- Add only the minimal recovery path; do not build a full trash-management view yet.
+The next immediate step should be Pi verification of the hidden race recovery UI before starting another implementation slice.
