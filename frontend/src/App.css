@@ -391,6 +391,8 @@ textarea.input { resize: vertical; font-family: inherit; }
   gap: 0.5rem; flex-wrap: wrap;
 }
 .notes__title { font-size: 1.1rem; font-weight: 600; }
+.notes__target { display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap; }
+.notes__target-select { flex: 1; min-width: 10rem; }
 .notes__create-row { display: flex; align-items: flex-end; gap: 1rem; flex-wrap: wrap; margin-bottom: 0.5rem; }
 .notes__priority-field { display: flex; flex-direction: column; gap: 0.25rem; }
 .notes__priority-input { width: 5rem; }

@@ -74,8 +74,10 @@ The current searchable picker is acceptable as the functional baseline, but the 
 
 Desired future behavior:
 
-- Use a Mario Kart World-style course map image or equivalent local asset.
-- Allow selecting map points by clicking/tapping on the image.
+- Use one Mario Kart World-style world map image or equivalent local asset as the base visual.
+- Place course/map-point icons on top of the world map using normalized `map_points.x/y`.
+- Allow selecting map points by clicking/tapping icons on the image.
+- Provide an explicit calibration mode to drag map points and save updated normalized coordinates.
 - Hide or disable impossible route choices.
 - Continue to support text search as a fallback for speed and accessibility.
 
@@ -87,6 +89,12 @@ Before implementing image-based selection, remember:
 - use optional local frontend assets under `frontend/public/assets/`
 - keep the text/search picker as fallback when images are missing
 - keep coordinates normalized to the existing `map_points.x` and `map_points.y`
+- normal Playing selection should not move coordinates; dragging is only for calibration/edit mode
+
+User-approved exception:
+
+- Images referenced by `https://japan-mk.blog.jp/mkworld.info-1/route.html` may be downloaded for this private LAN tool.
+- Do not hotlink those images at runtime; serve local copies under `frontend/public/assets/...`.
 
 ### Play Assist Review
 
@@ -94,6 +102,7 @@ After target selection and before result recording, show a focused assist panel:
 
 - target name
 - normal course vs route
+- route image when a selected route has a local image asset
 - route metadata when available
 - course/route notes
 - map annotations
@@ -102,6 +111,8 @@ After target selection and before result recording, show a focused assist panel:
 The current `TargetAssist` is the starting point for this step. It should be evolved, not discarded.
 
 For routes, route details and assist notes should remain visible before confirming the race record.
+
+The map-image work should start in the Playing picker. Reusing the same map component in the assist review is useful, but the first requirement is faster visual selection during play.
 
 ## Ranked VR
 
@@ -312,12 +323,20 @@ Design notes:
 
 ## Recommended Next Slice
 
+The course/route target view slice has been implemented.
+
+Completed behavior:
+
+- Courses now starts from a selected course or route target.
+- Notes and annotations are scoped to that selected target.
+- Note and annotation creation no longer asks for a separate target after the target is selected.
+- Compact route metadata is shown for selected route targets.
+
 The next implementation slice should be:
 
-**Course/route target view**
+**Route image assets and route image display in Playing**
 
-Goals:
+Then continue map/image work in smaller slices:
 
-- Make the Courses area less list-heavy.
-- Prefer selecting a course or route target first, then showing notes and annotations for that target.
-- Keep advanced map-image editing for a later slice.
+1. World-map picker in Playing.
+2. Explicit map point coordinate calibration.

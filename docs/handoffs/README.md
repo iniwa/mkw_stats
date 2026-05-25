@@ -20,9 +20,10 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 Current UI redesign order:
 
-1. `2026-05-25-course-notes-target-view.md`
-2. `2026-05-25-map-image-assets-and-picker.md`
-3. `2026-05-25-lounge-mmr-session-sync.md`
+1. `2026-05-25-route-image-assets.md`
+2. `2026-05-25-playing-world-map-picker.md`
+3. `2026-05-25-map-point-calibration.md`
+4. `2026-05-25-lounge-mmr-session-sync.md`
 
 Only hand the next file to Claude Code after Codex has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
 

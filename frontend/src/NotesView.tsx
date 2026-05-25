@@ -10,7 +10,6 @@ import {
 import AnnotationEditor from './AnnotationEditor'
 import { RouteDetail } from './RouteDetail'
 
-type FilterType = 'all' | 'course' | 'route'
 type TargetType = 'course' | 'route'
 
 function noteSortComparator(a: CourseNote, b: CourseNote): number {
@@ -25,10 +24,10 @@ export default function NotesView() {
   const [notes, setNotes] = useState<CourseNote[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-  const [filter, setFilter] = useState<FilterType>('all')
 
-  const [createTargetType, setCreateTargetType] = useState<TargetType>('course')
-  const [createTargetId, setCreateTargetId] = useState('')
+  const [selectedType, setSelectedType] = useState<TargetType>('course')
+  const [selectedId, setSelectedId] = useState('')
+
   const [createTitle, setCreateTitle] = useState('')
   const [createBody, setCreateBody] = useState('')
   const [createPinned, setCreatePinned] = useState(false)
@@ -65,21 +64,6 @@ export default function NotesView() {
     return `${from} → ${to}`
   }
 
-  function targetDisplayName(note: CourseNote): string {
-    if (note.course_id) return courseMap.get(note.course_id)?.name_ja ?? note.course_id
-    if (note.route_id) {
-      const r = routeMap.get(note.route_id)
-      return r ? routeLabel(r) : note.route_id
-    }
-    return '?'
-  }
-
-  const filteredNotes = useMemo(() => {
-    if (filter === 'course') return notes.filter(n => n.course_id !== null)
-    if (filter === 'route') return notes.filter(n => n.route_id !== null)
-    return notes
-  }, [notes, filter])
-
   const sortedCourses = useMemo(
     () => [...courses].sort((a, b) => a.sort_order - b.sort_order),
     [courses],
@@ -90,20 +74,41 @@ export default function NotesView() {
     [routes, courseMap], // eslint-disable-line react-hooks/exhaustive-deps
   )
 
-  function handleTargetTypeChange(type: TargetType) {
-    setCreateTargetType(type)
-    setCreateTargetId('')
+  const targetNotes = useMemo(
+    () =>
+      notes
+        .filter(n =>
+          selectedType === 'course' ? n.course_id === selectedId : n.route_id === selectedId,
+        )
+        .sort(noteSortComparator),
+    [notes, selectedType, selectedId],
+  )
+
+  const selectedRoute = useMemo(
+    () => (selectedType === 'route' && selectedId ? (routeMap.get(selectedId) ?? null) : null),
+    [selectedType, selectedId, routeMap],
+  )
+
+  function handleTypeChange(type: TargetType) {
+    setSelectedType(type)
+    setSelectedId('')
+    setEditingId(null)
+  }
+
+  function handleIdChange(id: string) {
+    setSelectedId(id)
+    setEditingId(null)
   }
 
   async function handleCreate() {
-    if (!createTargetId) return
+    if (!selectedId) return
     setCreating(true)
     setCreateError(null)
     try {
       const body: CourseNoteCreateBody =
-        createTargetType === 'course'
-          ? { course_id: createTargetId }
-          : { route_id: createTargetId }
+        selectedType === 'course'
+          ? { course_id: selectedId }
+          : { route_id: selectedId }
       if (createTitle) body.title = createTitle
       if (createBody) body.body_markdown = createBody
       body.is_pinned = createPinned
@@ -114,7 +119,6 @@ export default function NotesView() {
       setCreateBody('')
       setCreatePinned(false)
       setCreatePriority(0)
-      setCreateTargetId('')
     } catch (e: unknown) {
       setCreateError(e instanceof Error ? e.message : '作成に失敗しました')
     } finally {
@@ -155,8 +159,8 @@ export default function NotesView() {
     try {
       await api.deleteNote(id)
       setNotes(prev => prev.filter(n => n.id !== id))
-    } catch (e: unknown) {
-      // silently ignore for MVP
+    } catch {
+      // silently ignore
     }
   }
 
@@ -167,228 +171,217 @@ export default function NotesView() {
     <div className="notes">
       <div className="notes__head">
         <span className="notes__title">コースノート</span>
-        <div className="seg">
-          {(['all', 'course', 'route'] as FilterType[]).map(f => (
-            <button
-              key={f}
-              className={`seg__btn${filter === f ? ' seg__btn--on' : ''}`}
-              onClick={() => setFilter(f)}
-            >
-              {f === 'all' ? 'すべて' : f === 'course' ? 'コース' : 'ルート'}
-            </button>
-          ))}
-        </div>
       </div>
 
-      <div className="panel">
-        <div className="panel__title">ノートを作成</div>
-        <div className="field">
-          <label className="field__label">対象タイプ</label>
-          <div className="seg">
-            <button
-              className={`seg__btn${createTargetType === 'course' ? ' seg__btn--on' : ''}`}
-              onClick={() => handleTargetTypeChange('course')}
-            >
-              コース
-            </button>
-            <button
-              className={`seg__btn${createTargetType === 'route' ? ' seg__btn--on' : ''}`}
-              onClick={() => handleTargetTypeChange('route')}
-            >
-              ルート
-            </button>
-          </div>
-        </div>
-        <div className="field">
-          <label className="field__label">対象</label>
-          <select
-            className="input"
-            value={createTargetId}
-            onChange={e => setCreateTargetId(e.target.value)}
-          >
-            <option value="">-- 選択してください --</option>
-            {createTargetType === 'course'
-              ? sortedCourses.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.name_ja}
-                  </option>
-                ))
-              : sortedRoutes.map(r => (
-                  <option key={r.id} value={r.id}>
-                    {routeLabel(r)}
-                  </option>
-                ))}
-          </select>
-        </div>
-        <div className="field">
-          <label className="field__label">タイトル</label>
-          <input
-            className="input"
-            value={createTitle}
-            onChange={e => setCreateTitle(e.target.value)}
-            placeholder="（省略可）"
-          />
-        </div>
-        <div className="field">
-          <label className="field__label">本文</label>
-          <textarea
-            className="input"
-            rows={4}
-            value={createBody}
-            onChange={e => setCreateBody(e.target.value)}
-            placeholder="（省略可）"
-          />
-        </div>
-        <div className="notes__create-row">
-          <div className="toggle-row">
-            <input
-              type="checkbox"
-              id="create-pinned"
-              checked={createPinned}
-              onChange={e => setCreatePinned(e.target.checked)}
-            />
-            <label htmlFor="create-pinned">ピン留め</label>
-          </div>
-          <div className="notes__priority-field">
-            <label className="field__label">優先度</label>
-            <input
-              type="number"
-              className="input notes__priority-input"
-              value={createPriority}
-              onChange={e => setCreatePriority(Number(e.target.value))}
-            />
-          </div>
-        </div>
-        <div className="btn-row">
+      <div className="notes__target">
+        <div className="seg">
           <button
-            className="btn btn--primary"
-            onClick={handleCreate}
-            disabled={!createTargetId || creating}
+            className={`seg__btn${selectedType === 'course' ? ' seg__btn--on' : ''}`}
+            onClick={() => handleTypeChange('course')}
           >
-            {creating ? '作成中…' : '作成'}
+            コース
+          </button>
+          <button
+            className={`seg__btn${selectedType === 'route' ? ' seg__btn--on' : ''}`}
+            onClick={() => handleTypeChange('route')}
+          >
+            ルート
           </button>
         </div>
-        {createError && (
-          <p className="notice notice--error notes__msg">{createError}</p>
-        )}
+        <select
+          className="input notes__target-select"
+          value={selectedId}
+          onChange={e => handleIdChange(e.target.value)}
+        >
+          <option value="">-- 選択してください --</option>
+          {selectedType === 'course'
+            ? sortedCourses.map(c => (
+                <option key={c.id} value={c.id}>{c.name_ja}</option>
+              ))
+            : sortedRoutes.map(r => (
+                <option key={r.id} value={r.id}>{routeLabel(r)}</option>
+              ))}
+        </select>
       </div>
 
-      {filteredNotes.length === 0 ? (
-        <p className="placeholder">ノートはありません。</p>
+      {selectedRoute && <RouteDetail route={selectedRoute} compact />}
+
+      {!selectedId ? (
+        <p className="placeholder">コース/ルートを選択してください。</p>
       ) : (
-        <ul className="notes__list">
-          {filteredNotes.map((note) => {
-            const isEditing = editingId === note.id
-            const routeForDetail = note.route_id ? (routeMap.get(note.route_id) ?? null) : null
-            const isRoute = note.route_id !== null
-            return (
-              <li key={note.id} className="panel note-item">
-                {isEditing ? (
-                  <div className="note-item__edit">
-                    <div className="note-item__head">
-                      {note.is_pinned && <span className="tag tag--pinned">ピン</span>}
-                      <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
-                        {isRoute ? 'ルート' : 'コース'}
-                      </span>
-                      <span className="note-item__target">{targetDisplayName(note)}</span>
-                    </div>
-                    <div className="field" style={{ marginBottom: 0 }}>
-                      <label className="field__label">タイトル</label>
-                      <input
-                        className="input"
-                        value={editTitle}
-                        onChange={e => setEditTitle(e.target.value)}
-                      />
-                    </div>
-                    <div className="field" style={{ marginBottom: 0 }}>
-                      <label className="field__label">本文</label>
-                      <textarea
-                        className="input"
-                        rows={4}
-                        value={editBody}
-                        onChange={e => setEditBody(e.target.value)}
-                      />
-                    </div>
-                    <div className="notes__create-row">
-                      <div className="toggle-row">
-                        <input
-                          type="checkbox"
-                          id={`edit-pinned-${note.id}`}
-                          checked={editPinned}
-                          onChange={e => setEditPinned(e.target.checked)}
-                        />
-                        <label htmlFor={`edit-pinned-${note.id}`}>ピン留め</label>
+        <>
+          <div className="panel">
+            <div className="panel__title">ノートを作成</div>
+            <div className="field">
+              <label className="field__label">タイトル</label>
+              <input
+                className="input"
+                value={createTitle}
+                onChange={e => setCreateTitle(e.target.value)}
+                placeholder="（省略可）"
+              />
+            </div>
+            <div className="field">
+              <label className="field__label">本文</label>
+              <textarea
+                className="input"
+                rows={4}
+                value={createBody}
+                onChange={e => setCreateBody(e.target.value)}
+                placeholder="（省略可）"
+              />
+            </div>
+            <div className="notes__create-row">
+              <div className="toggle-row">
+                <input
+                  type="checkbox"
+                  id="create-pinned"
+                  checked={createPinned}
+                  onChange={e => setCreatePinned(e.target.checked)}
+                />
+                <label htmlFor="create-pinned">ピン留め</label>
+              </div>
+              <div className="notes__priority-field">
+                <label className="field__label">優先度</label>
+                <input
+                  type="number"
+                  className="input notes__priority-input"
+                  value={createPriority}
+                  onChange={e => setCreatePriority(Number(e.target.value))}
+                />
+              </div>
+            </div>
+            <div className="btn-row">
+              <button
+                className="btn btn--primary"
+                onClick={handleCreate}
+                disabled={creating}
+              >
+                {creating ? '作成中…' : '作成'}
+              </button>
+            </div>
+            {createError && (
+              <p className="notice notice--error notes__msg">{createError}</p>
+            )}
+          </div>
+
+          {targetNotes.length === 0 ? (
+            <p className="placeholder">このターゲットにノートはありません。</p>
+          ) : (
+            <ul className="notes__list">
+              {targetNotes.map(note => {
+                const isEditing = editingId === note.id
+                const isRoute = note.route_id !== null
+                return (
+                  <li key={note.id} className="panel note-item">
+                    {isEditing ? (
+                      <div className="note-item__edit">
+                        <div className="note-item__head">
+                          {note.is_pinned && <span className="tag tag--pinned">ピン</span>}
+                          <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
+                            {isRoute ? 'ルート' : 'コース'}
+                          </span>
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label className="field__label">タイトル</label>
+                          <input
+                            className="input"
+                            value={editTitle}
+                            onChange={e => setEditTitle(e.target.value)}
+                          />
+                        </div>
+                        <div className="field" style={{ marginBottom: 0 }}>
+                          <label className="field__label">本文</label>
+                          <textarea
+                            className="input"
+                            rows={4}
+                            value={editBody}
+                            onChange={e => setEditBody(e.target.value)}
+                          />
+                        </div>
+                        <div className="notes__create-row">
+                          <div className="toggle-row">
+                            <input
+                              type="checkbox"
+                              id={`edit-pinned-${note.id}`}
+                              checked={editPinned}
+                              onChange={e => setEditPinned(e.target.checked)}
+                            />
+                            <label htmlFor={`edit-pinned-${note.id}`}>ピン留め</label>
+                          </div>
+                          <div className="notes__priority-field">
+                            <label className="field__label">優先度</label>
+                            <input
+                              type="number"
+                              className="input notes__priority-input"
+                              value={editPriority}
+                              onChange={e => setEditPriority(Number(e.target.value))}
+                            />
+                          </div>
+                        </div>
+                        {saveError && <p className="notice notice--error">{saveError}</p>}
+                        <div className="btn-row">
+                          <button
+                            className="btn btn--primary"
+                            onClick={() => handleSave(note.id)}
+                            disabled={saving}
+                          >
+                            {saving ? '保存中…' : '保存'}
+                          </button>
+                          <button className="btn" onClick={() => setEditingId(null)}>
+                            キャンセル
+                          </button>
+                        </div>
                       </div>
-                      <div className="notes__priority-field">
-                        <label className="field__label">優先度</label>
-                        <input
-                          type="number"
-                          className="input notes__priority-input"
-                          value={editPriority}
-                          onChange={e => setEditPriority(Number(e.target.value))}
-                        />
-                      </div>
-                    </div>
-                    {saveError && <p className="notice notice--error">{saveError}</p>}
-                    <div className="btn-row">
-                      <button
-                        className="btn btn--primary"
-                        onClick={() => handleSave(note.id)}
-                        disabled={saving}
-                      >
-                        {saving ? '保存中…' : '保存'}
-                      </button>
-                      <button className="btn" onClick={() => setEditingId(null)}>
-                        キャンセル
-                      </button>
-                    </div>
-                  </div>
-                ) : (
-                  <>
-                    <div className="note-item__head">
-                      {note.is_pinned && <span className="tag tag--pinned">ピン</span>}
-                      <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
-                        {isRoute ? 'ルート' : 'コース'}
-                      </span>
-                      <span className="note-item__target">{targetDisplayName(note)}</span>
-                      <div className="note-item__actions">
-                        <button
-                          className="btn note-item__btn"
-                          onClick={() => startEdit(note)}
+                    ) : (
+                      <>
+                        <div className="note-item__head">
+                          {note.is_pinned && <span className="tag tag--pinned">ピン</span>}
+                          <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
+                            {isRoute ? 'ルート' : 'コース'}
+                          </span>
+                          <div className="note-item__actions">
+                            <button
+                              className="btn note-item__btn"
+                              onClick={() => startEdit(note)}
+                            >
+                              編集
+                            </button>
+                            <button
+                              className="btn btn--danger note-item__btn"
+                              onClick={() => handleDelete(note.id)}
+                            >
+                              削除
+                            </button>
+                          </div>
+                        </div>
+                        <div
+                          className={`note-item__title${!note.title ? ' note-item__title--untitled' : ''}`}
                         >
-                          編集
-                        </button>
-                        <button
-                          className="btn btn--danger note-item__btn"
-                          onClick={() => handleDelete(note.id)}
-                        >
-                          削除
-                        </button>
-                      </div>
-                    </div>
-                    <div className={`note-item__title${!note.title ? ' note-item__title--untitled' : ''}`}>
-                      {note.title ?? '(無題)'}
-                    </div>
-                    {note.body_markdown && (
-                      <pre className="note-item__body">{note.body_markdown}</pre>
+                          {note.title ?? '(無題)'}
+                        </div>
+                        {note.body_markdown && (
+                          <pre className="note-item__body">{note.body_markdown}</pre>
+                        )}
+                        {note.priority !== 0 && (
+                          <div className="note-item__meta">優先度: {note.priority}</div>
+                        )}
+                      </>
                     )}
-                    {note.priority !== 0 && (
-                      <div className="note-item__meta">優先度: {note.priority}</div>
-                    )}
-                    {routeForDetail && <RouteDetail route={routeForDetail} compact />}
-                  </>
-                )}
-              </li>
-            )
-          })}
-        </ul>
+                  </li>
+                )
+              })}
+            </ul>
+          )}
+        </>
       )}
 
       <AnnotationEditor
-        courses={courses}
         routes={routes}
         notes={notes}
         courseMap={courseMap}
+        selectedTargetType={selectedType}
+        selectedTargetId={selectedId}
       />
     </div>
   )
