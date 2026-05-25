@@ -145,6 +145,7 @@ textarea.input { resize: vertical; font-family: inherit; }
 
 .btn-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
 .btn-row--end { justify-content: flex-end; margin-top: 0.85rem; }
+.btn--sm { padding: 0.22rem 0.55rem; font-size: 0.78rem; min-height: unset; }
 
 /* -- stepper --------------------------------------------------------------- */
 .stepper { display: flex; align-items: stretch; gap: 0.35rem; }
@@ -289,6 +290,17 @@ textarea.input { resize: vertical; font-family: inherit; }
 .records__delta--pos { color: var(--ok); font-variant-numeric: tabular-nums; }
 .records__delta--neg { color: var(--danger); font-variant-numeric: tabular-nums; }
 .records__vr-range { font-size: 0.78rem; color: var(--text-faint); font-variant-numeric: tabular-nums; }
+.records__actions { display: flex; gap: 0.3rem; flex-wrap: wrap; margin-top: 0.15rem; }
+.records__memo-edit-area { display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.15rem; }
+.records__memo-edit {
+  width: 100%; padding: 0.3rem 0.45rem; font-size: 0.82rem;
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: 4px;
+  font-family: inherit; resize: vertical; min-height: 3rem;
+}
+.records__memo-edit:focus { outline: none; border-color: var(--accent); }
+.records__memo-edit:disabled { opacity: 0.45; }
+.records__row-error { font-size: 0.76rem; color: var(--danger); padding-left: 0.1rem; margin-top: 0.1rem; }
 
 /* -- map point picker ------------------------------------------------------ */
 .mp-picker { display: flex; flex-direction: column; gap: 0.3rem; }

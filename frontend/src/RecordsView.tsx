@@ -50,6 +50,30 @@ export default function RecordsView() {
   const [races, setRaces] = useState<RaceRecord[]>([])
   const [racesLoading, setRacesLoading] = useState(false)
   const [racesError, setRacesError] = useState<string | null>(null)
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editMemo, setEditMemo] = useState('')
+  const [pendingId, setPendingId] = useState<string | null>(null)
+  const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
+
+  function onClearSelection() {
+    setSelectedId(null)
+    setRaces([])
+    setEditingId(null)
+    setRowErrors({})
+  }
+
+  async function loadRaces(id: string) {
+    setRacesLoading(true)
+    setRacesError(null)
+    setRaces([])
+    try {
+      setRaces(await api.getSessionRaces(id, true))
+    } catch (e: unknown) {
+      setRacesError(e instanceof Error ? e.message : 'レース取得エラー')
+    } finally {
+      setRacesLoading(false)
+    }
+  }
 
   async function load() {
     setLoading(true)
@@ -70,8 +94,7 @@ export default function RecordsView() {
       setCourses(cList)
       setRoutes(rList)
       if (selectedId && !sess.some(s => s.id === selectedId)) {
-        setSelectedId(null)
-        setRaces([])
+        onClearSelection()
       }
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
@@ -85,20 +108,42 @@ export default function RecordsView() {
 
   async function selectSession(id: string) {
     if (selectedId === id) {
-      setSelectedId(null)
-      setRaces([])
+      onClearSelection()
       return
     }
     setSelectedId(id)
-    setRacesLoading(true)
-    setRacesError(null)
-    setRaces([])
+    setEditingId(null)
+    setRowErrors({})
+    await loadRaces(id)
+  }
+
+  async function saveMemo(raceId: string) {
+    setPendingId(raceId)
+    setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
     try {
-      setRaces(await api.getSessionRaces(id, true))
+      const memo = editMemo.trim() || null
+      await api.updateRaceRecord(raceId, { memo })
+      setEditingId(null)
+      setEditMemo('')
+      if (selectedId) await loadRaces(selectedId)
     } catch (e: unknown) {
-      setRacesError(e instanceof Error ? e.message : 'レース取得エラー')
+      setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '保存エラー' }))
     } finally {
-      setRacesLoading(false)
+      setPendingId(null)
+    }
+  }
+
+  async function cancelRace(raceId: string) {
+    if (!window.confirm('このレースを取消しますか？（削除ではなく取消済みとして残ります）')) return
+    setPendingId(raceId)
+    setRowErrors(prev => { const n = { ...prev }; delete n[raceId]; return n })
+    try {
+      await api.cancelRaceRecord(raceId)
+      if (selectedId) await loadRaces(selectedId)
+    } catch (e: unknown) {
+      setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '取消エラー' }))
+    } finally {
+      setPendingId(null)
     }
   }
 
@@ -123,8 +168,7 @@ export default function RecordsView() {
                 disabled={loading}
                 onClick={() => {
                   setFilterSource(v)
-                  setSelectedId(null)
-                  setRaces([])
+                  onClearSelection()
                 }}
               >
                 {v === 'all' ? '全て' : v}
@@ -141,8 +185,7 @@ export default function RecordsView() {
                 disabled={loading}
                 onClick={() => {
                   setFilterStatus(v)
-                  setSelectedId(null)
-                  setRaces([])
+                  onClearSelection()
                 }}
               >
                 {v === 'all' ? '全て' : v}
@@ -162,8 +205,7 @@ export default function RecordsView() {
             disabled={loading}
             onChange={e => {
               setDateFrom(e.target.value)
-              setSelectedId(null)
-              setRaces([])
+              onClearSelection()
             }}
           />
         </div>
@@ -176,8 +218,7 @@ export default function RecordsView() {
             disabled={loading}
             onChange={e => {
               setDateTo(e.target.value)
-              setSelectedId(null)
-              setRaces([])
+              onClearSelection()
             }}
           />
         </div>
@@ -189,8 +230,7 @@ export default function RecordsView() {
             disabled={loading}
             onChange={e => {
               setLimit(Number(e.target.value))
-              setSelectedId(null)
-              setRaces([])
+              onClearSelection()
             }}
           >
             {[25, 50, 100, 200].map(v => (
@@ -204,8 +244,7 @@ export default function RecordsView() {
           onClick={() => {
             setDateFrom('')
             setDateTo('')
-            setSelectedId(null)
-            setRaces([])
+            onClearSelection()
           }}
         >
           日付クリア
@@ -269,6 +308,8 @@ export default function RecordsView() {
                 <ul className="race-history">
                   {races.map(r => {
                     const routeForDetail = r.route_id ? (routes.find(rt => rt.id === r.route_id) ?? null) : null
+                    const isEditing = editingId === r.id
+                    const isPending = pendingId === r.id
                     return (
                     <li key={r.id}
                       className={`race-history__item records__race-item${r.status === 'cancelled' ? ' records__race-item--cancelled' : ''}`}
@@ -311,7 +352,58 @@ export default function RecordsView() {
                           ))}
                         </div>
                       )}
-                      {r.memo && <div className="records__memo">{r.memo}</div>}
+                      {isEditing ? (
+                        <div className="records__memo-edit-area">
+                          <textarea
+                            className="records__memo-edit"
+                            value={editMemo}
+                            onChange={e => setEditMemo(e.target.value)}
+                            rows={2}
+                            disabled={isPending}
+                          />
+                          <div className="records__actions">
+                            <button
+                              className="btn btn--sm btn--primary"
+                              disabled={isPending}
+                              onClick={() => saveMemo(r.id)}
+                            >保存</button>
+                            <button
+                              className="btn btn--sm"
+                              disabled={isPending}
+                              onClick={() => {
+                                setEditingId(null)
+                                setEditMemo('')
+                                setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
+                              }}
+                            >キャンセル</button>
+                          </div>
+                        </div>
+                      ) : (
+                        r.memo && <div className="records__memo">{r.memo}</div>
+                      )}
+                      {rowErrors[r.id] && (
+                        <div className="records__row-error">{rowErrors[r.id]}</div>
+                      )}
+                      {!isEditing && (
+                        <div className="records__actions">
+                          <button
+                            className="btn btn--sm"
+                            disabled={pendingId !== null}
+                            onClick={() => {
+                              setEditingId(r.id)
+                              setEditMemo(r.memo ?? '')
+                              setRowErrors(prev => { const n = { ...prev }; delete n[r.id]; return n })
+                            }}
+                          >編集</button>
+                          {r.status !== 'cancelled' && (
+                            <button
+                              className="btn btn--sm btn--danger"
+                              disabled={pendingId !== null}
+                              onClick={() => cancelRace(r.id)}
+                            >取消</button>
+                          )}
+                        </div>
+                      )}
                       {routeForDetail && <RouteDetail route={routeForDetail} compact />}
                     </li>
                     )

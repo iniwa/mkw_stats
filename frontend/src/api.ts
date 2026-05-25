@@ -138,6 +138,10 @@ export interface CompleteRankedBody {
   memo?: string
 }
 
+export interface RaceUpdateBody {
+  memo?: string | null
+}
+
 export class ApiError extends Error {
   status: number
   constructor(status: number, message: string) {
@@ -230,6 +234,10 @@ export const api = {
     }),
   undoLastRace: (sessionId: string) =>
     request<RaceRecord>(`/play-sessions/${sessionId}/undo-last-race`, { method: 'POST' }),
+  updateRaceRecord: (raceId: string, body: RaceUpdateBody) =>
+    request<RaceRecord>(`/race-records/${raceId}`, { method: 'PATCH', body: JSON.stringify(body) }),
+  cancelRaceRecord: (raceId: string) =>
+    request<RaceRecord>(`/race-records/${raceId}/cancel`, { method: 'POST' }),
   finishSession: (sessionId: string) =>
     request<PlaySession>(`/play-sessions/${sessionId}/finish`, { method: 'POST' }),
   getNotes: (options?: { course_id?: string; route_id?: string; include_inactive?: boolean }) => {
