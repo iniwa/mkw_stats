@@ -57,6 +57,12 @@ export interface MapPoint {
   radius: number | null
 }
 
+export interface MapPointUpdateBody {
+  x?: number
+  y?: number
+  radius?: number
+}
+
 export interface PlaySession {
   id: string
   source: SourceType
@@ -221,6 +227,8 @@ export const api = {
   },
   getActiveSessions: () => request<PlaySession[]>('/play-sessions/active'),
   getMapPoints: () => request<MapPoint[]>('/map-points'),
+  updateMapPoint: (id: string, body: MapPointUpdateBody) =>
+    request<MapPoint>(`/map-points/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   getCourses: () => request<Course[]>('/courses'),
   getRoutes: () => request<Route[]>('/routes'),
   getSession: (id: string) => request<PlaySession>(`/play-sessions/${id}`),

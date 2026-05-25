@@ -332,11 +332,17 @@ Completed behavior:
 - Note and annotation creation no longer asks for a separate target after the target is selected.
 - Compact route metadata is shown for selected route targets.
 
+The route image assets, Playing world-map picker, and map point calibration slices have been implemented.
+
+Completed behavior:
+
+- Playing can show a local route image for selected routes when an asset exists.
+- Route image display falls back silently when the asset is missing.
+- Playing includes a world-map picker that uses normalized `map_points.x/y`.
+- Text search pickers remain as fallback and stay synchronized with the map picker.
+- Map point coordinates can be calibrated by dragging markers in explicit calibration mode.
+- Calibration persists through `PATCH /api/v1/map-points/{map_point_id}`.
+
 The next implementation slice should be:
 
-**Route image assets and route image display in Playing**
-
-Then continue map/image work in smaller slices:
-
-1. World-map picker in Playing.
-2. Explicit map point coordinate calibration.
+**Lounge MMR session sync**

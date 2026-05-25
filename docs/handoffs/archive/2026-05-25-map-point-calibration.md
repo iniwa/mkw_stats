@@ -1,5 +1,5 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, docs/decisions/2026-05-25-map-image-asset-policy.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has reviewed the world-map picker slice and explicitly says this handoff is ready.
+This handoff is ready for implementation after Codex review of the world-map picker slice.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal

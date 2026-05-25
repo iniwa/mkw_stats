@@ -107,6 +107,12 @@ class MapPointRead(BaseModel):
     radius: float | None
 
 
+class MapPointUpdate(BaseModel):
+    x: _normalized_float | None = None
+    y: _normalized_float | None = None
+    radius: _normalized_float | None = None
+
+
 class CourseSearchResult(BaseModel):
     courses: list[CourseRead]
     routes: list[RouteRead]

@@ -951,6 +951,38 @@ def test_hiding_twelfth_lounge_race_reopens_session(seeded_client):
     assert seeded_client.get(f"/api/v1/play-sessions/{session['id']}").json()["status"] == "active"
 
 
+# ---------------------------------------------------------------------------
+# Map point coordinate update
+# ---------------------------------------------------------------------------
+
+def test_map_point_patch_updates_coordinates(seeded_client):
+    resp = seeded_client.patch(
+        "/api/v1/map-points/mp_dk_pass",
+        json={"x": 0.25, "y": 0.75},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["id"] == "mp_dk_pass"
+    assert body["x"] == 0.25
+    assert body["y"] == 0.75
+
+
+def test_map_point_patch_unknown_returns_404(seeded_client):
+    resp = seeded_client.patch(
+        "/api/v1/map-points/no_such_point",
+        json={"x": 0.5},
+    )
+    assert resp.status_code == 404
+
+
+def test_map_point_patch_out_of_bounds_rejected(seeded_client):
+    resp = seeded_client.patch(
+        "/api/v1/map-points/mp_dk_pass",
+        json={"x": 1.5},
+    )
+    assert resp.status_code == 422
+
+
 def test_hidden_lounge_race_does_not_trigger_repick_warning(seeded_client):
     session = seeded_client.post(
         "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}

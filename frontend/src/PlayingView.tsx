@@ -18,6 +18,7 @@ import {
 import { RouteDetail } from './RouteDetail'
 import { RouteImage } from './RouteImage'
 import { TargetAssist } from './TargetAssist'
+import { WorldMapPicker } from './WorldMapPicker'
 
 type LoadState = 'loading' | 'ready' | 'error'
 
@@ -217,6 +218,11 @@ export default function PlayingView() {
       setSession(await api.getSession(session.id))
     })
 
+  // -- Map point calibration -----------------------------------------------
+  const handleMapPointUpdated = useCallback((updated: MapPoint) => {
+    setMapPoints(prev => prev.map(mp => mp.id === updated.id ? updated : mp))
+  }, [])
+
   // -- Session controls ----------------------------------------------------
   const undoLastRace = () =>
     runAction('undo', async () => {
@@ -290,6 +296,7 @@ export default function PlayingView() {
                 mapPoints={mapPoints}
                 busy={busy}
                 onResolve={resolveSelection}
+                onMapPointUpdated={handleMapPointUpdated}
               />
             )}
             {phase === 'confirm' && resolved && (
@@ -613,10 +620,12 @@ function CourseSelector({
   mapPoints,
   busy,
   onResolve,
+  onMapPointUpdated,
 }: {
   mapPoints: MapPoint[]
   busy: string | null
   onResolve: (fromId: string, toId: string) => void
+  onMapPointUpdated: (mp: MapPoint) => void
 }) {
   const [fromId, setFromId] = useState('')
   const [toId, setToId] = useState('')
@@ -638,6 +647,14 @@ function CourseSelector({
       <p className="hint">
         出発地点と到着地点を選びます。同じ地点を選ぶと通常3周コース、異なる地点を選ぶと道中コースになります。
       </p>
+      <WorldMapPicker
+        mapPoints={mapPoints}
+        fromId={fromId}
+        toId={toId}
+        onSelectFrom={setFromId}
+        onSelectTo={setToId}
+        onMapPointUpdated={onMapPointUpdated}
+      />
       <div className="field">
         <MapPointPicker
           id="from-mp"
