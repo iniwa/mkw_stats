@@ -300,7 +300,7 @@ Completed behavior:
 Design note:
 
 - Editing historical `rating_after` recalculates the record's `rating_delta`, but does not update `VrAccount.current_vr`. Current VR correction remains a separate Settings/account maintenance concern unless a later design explicitly couples it to Records edits.
-- Hidden/restore re-evaluates Lounge auto-finish status based on visible completed races. This is safe because `PlaySession.completion_reason` distinguishes auto-completed sessions (`"auto"`) from manually finished sessions (`"manual"` or `null`). Only auto-completed sessions can be reopened by hide/restore; manually finished sessions remain completed regardless of visible race count.
+- Hidden/restore re-evaluates Lounge auto-finish status based on visible completed races. This is verified on Pi and safe because `PlaySession.completion_reason` distinguishes auto-completed sessions (`"auto"`) from manually finished sessions (`"manual"` or `null`). Only auto-completed sessions can be reopened by hide/restore; manually finished sessions remain completed regardless of visible race count.
 
 ## Completed Foundation: Analytics Split
 
