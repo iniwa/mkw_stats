@@ -1,4 +1,5 @@
 """API-level tests for the v1 backend slice (SQLite-backed — see conftest.py)."""
+import json
 import uuid
 from datetime import datetime, timedelta, timezone
 from unittest.mock import patch
@@ -7,6 +8,7 @@ from sqlalchemy import select
 
 from app.models import PlaySession, RaceRecord, RatingSnapshot, VrAccount
 from app.models.enums import RaceStatus, SessionStatus, SourceType
+from app.services import lounge_mmr
 
 
 def test_health_still_ok(client):
@@ -1060,6 +1062,36 @@ def _completed_lounge_session(db_session, completed_at: datetime) -> PlaySession
     db_session.commit()
     db_session.refresh(s)
     return s
+
+
+def test_mmr_fetch_player_details_sends_browser_user_agent():
+    captured = {}
+
+    class FakeResponse:
+        def __enter__(self):
+            return self
+
+        def __exit__(self, exc_type, exc, tb):
+            return False
+
+        def read(self):
+            return json.dumps(_player_details()).encode()
+
+    def fake_urlopen(req, timeout):
+        captured["url"] = req.full_url
+        captured["accept"] = req.get_header("Accept")
+        captured["user_agent"] = req.get_header("User-agent")
+        captured["timeout"] = timeout
+        return FakeResponse()
+
+    with patch("urllib.request.urlopen", side_effect=fake_urlopen):
+        details = lounge_mmr._fetch_player_details("12345", 2, "mkworld24p")
+
+    assert details["mmr"] == 1000
+    assert "mkcId=12345" in captured["url"]
+    assert captured["accept"] == "application/json"
+    assert captured["user_agent"] == "Mozilla/5.0"
+    assert captured["timeout"] == lounge_mmr.REQUEST_TIMEOUT
 
 
 def test_mmr_sync_requires_player_id(client):

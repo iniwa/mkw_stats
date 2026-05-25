@@ -25,7 +25,13 @@ def _fetch_player_details(player_id: str, season: int, game: str) -> dict:
     params = urllib.parse.urlencode({param_key: player_id, "season": season, "game": game})
     url = f"{MKCENTRAL_BASE}/api/player/details?{params}"
 
-    req = urllib.request.Request(url, headers={"Accept": "application/json"})
+    req = urllib.request.Request(
+        url,
+        headers={
+            "Accept": "application/json",
+            "User-Agent": "Mozilla/5.0",
+        },
+    )
     try:
         with urllib.request.urlopen(req, timeout=REQUEST_TIMEOUT) as resp:
             return json.loads(resp.read().decode())
