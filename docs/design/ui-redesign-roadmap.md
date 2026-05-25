@@ -357,4 +357,10 @@ Completed behavior:
 
 The next implementation slice should be:
 
-**Lounge MMR Pi verification**
+**Records hidden race recovery**
+
+Scope:
+
+- Restore hidden race records from Records.
+- Keep hidden records excluded by default.
+- Add only the minimal recovery path; do not build a full trash-management view yet.
