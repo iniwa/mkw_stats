@@ -356,4 +356,4 @@ Completed behavior:
 - Repeated sync is idempotent by stored MKCentral `changeId`.
 - Lounge view exposes a manual MMR sync button and displays the latest synced values.
 
-The hidden race recovery UI has been verified on Pi. The next immediate step can be selected from the remaining product slices, such as Lounge MMR graphing, automatic MMR sync, map/image annotation editing, or final cleanup before broader daily use.
+The hidden race recovery UI has been verified on Pi. The next immediate step is a small Lounge MMR trend panel using the existing synced session-level MMR fields. Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and final cleanup remain later slices.
