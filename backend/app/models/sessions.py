@@ -27,6 +27,7 @@ class PlaySession(Base):
     lounge_mmr_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
     lounge_mmr_table_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     lounge_mmr_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lounge_mmr_game: Mapped[str | None] = mapped_column(String(64), nullable=True)
 
 
 class RaceRecord(Base):

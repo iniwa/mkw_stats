@@ -18,7 +18,7 @@ def mmr_sync(db: Session = Depends(get_db)) -> MmrSyncResponse:
             "lounge_player_id が設定されていません。設定画面で MKCentral ID またはプレイヤー名を設定してください。",
         )
     try:
-        result = sync_mmr(db, settings.lounge_player_id, settings.lounge_season, settings.lounge_game)
+        result = sync_mmr(db, settings.lounge_player_id, settings.lounge_season)
     except RuntimeError as e:
         raise HTTPException(502, f"MKCentral API エラー: {e}") from e
 
@@ -27,7 +27,9 @@ def mmr_sync(db: Session = Depends(get_db)) -> MmrSyncResponse:
         updated = PlaySessionRead.model_validate(result["updated_session"])
 
     return MmrSyncResponse(
-        current_mmr=result["current_mmr"],
+        current_mmr_12p=result["current_mmr_12p"],
+        current_mmr_24p=result["current_mmr_24p"],
         updated_session=updated,
+        updated_game=result["updated_game"],
         message=result["message"],
     )

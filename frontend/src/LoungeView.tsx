@@ -266,15 +266,26 @@ export default function LoungeView() {
         <div className="panel__title">MMR</div>
         {(() => {
           const synced = sessions.filter(s => s.lounge_mmr_after != null)
+          const synced12 = sessions.filter(s => s.lounge_mmr_game === 'mkworld' && s.lounge_mmr_after != null)
+          const synced24 = sessions.filter(s => s.lounge_mmr_game === 'mkworld24p' && s.lounge_mmr_after != null)
           const latest = synced[0]
+
+          const mmr12 = mmrSyncResult != null
+            ? mmrSyncResult.current_mmr_12p
+            : (synced12[0]?.lounge_mmr_after ?? null)
+          const mmr24 = mmrSyncResult != null
+            ? mmrSyncResult.current_mmr_24p
+            : (synced24[0]?.lounge_mmr_after ?? null)
+
+          const hasAnyMmr = mmr12 != null || mmr24 != null || synced.length > 0
           return (
             <>
-              {latest ? (
+              {hasAnyMmr ? (
                 <div className="analytics__grid analytics__grid--4">
                   {([
-                    ['現在 MMR', latest.lounge_mmr_after],
-                    ['前回変動', latest.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
-                    ['変動前', latest.lounge_mmr_before ?? '—'],
+                    ['12p MMR', mmr12 ?? '—'],
+                    ['24p MMR', mmr24 ?? '—'],
+                    ['前回変動', latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
                     ['同期済み', synced.length],
                   ] as [string, string | number][]).map(([label, value]) => (
                     <div key={label} className="analytics__metric">
@@ -293,7 +304,7 @@ export default function LoungeView() {
               </div>
               {mmrSyncResult && (
                 <p className="lounge__mmr-msg">
-                  {mmrSyncResult.current_mmr != null && `現在 MMR: ${mmrSyncResult.current_mmr} — `}
+                  {mmrSyncResult.updated_game && `[${mmrSyncResult.updated_game}] `}
                   {mmrSyncResult.message}
                 </p>
               )}

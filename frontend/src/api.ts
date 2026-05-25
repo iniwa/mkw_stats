@@ -81,6 +81,7 @@ export interface PlaySession {
   lounge_mmr_delta: number | null
   lounge_mmr_table_id: string | null
   lounge_mmr_synced_at: string | null
+  lounge_mmr_game: string | null
 }
 
 export interface RaceRecord {
@@ -128,8 +129,10 @@ export interface SettingsUpdateBody {
 }
 
 export interface MmrSyncResponse {
-  current_mmr: number | null
+  current_mmr_12p: number | null
+  current_mmr_24p: number | null
   updated_session: PlaySession | null
+  updated_game: string | null
   message: string
 }
 

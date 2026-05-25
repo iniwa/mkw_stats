@@ -1050,18 +1050,137 @@ def _player_details(mmr: int = 1000, changes: list | None = None) -> dict:
     return {"playerId": 1, "name": "Test", "mkcId": 1, "mmr": mmr, "mmrChanges": changes or []}
 
 
-def _completed_lounge_session(db_session, completed_at: datetime) -> PlaySession:
-    now = datetime.now(timezone.utc)
+def _completed_lounge_session(
+    db_session, completed_at: datetime, player_count: int = 12
+) -> PlaySession:
     s = PlaySession(
         source=SourceType.lounge,
         status=SessionStatus.completed,
         started_at=completed_at - timedelta(hours=1),
         completed_at=completed_at,
+        player_count=player_count,
     )
     db_session.add(s)
     db_session.commit()
     db_session.refresh(s)
     return s
+
+
+def test_lounge_game_for_player_count_12p_season2():
+    assert lounge_mmr.lounge_game_for_player_count(12, 2) == "mkworld"
+
+
+def test_lounge_game_for_player_count_24p_season2():
+    assert lounge_mmr.lounge_game_for_player_count(24, 2) == "mkworld24p"
+
+
+def test_lounge_game_for_player_count_24p_season1():
+    assert lounge_mmr.lounge_game_for_player_count(24, 1) == "mkworld"
+
+
+def test_lounge_game_for_player_count_12p_season1():
+    assert lounge_mmr.lounge_game_for_player_count(12, 1) == "mkworld"
+
+
+def test_lounge_game_for_player_count_none_returns_none():
+    assert lounge_mmr.lounge_game_for_player_count(None, 2) is None
+
+
+def test_lounge_game_for_player_count_unsupported_returns_none():
+    assert lounge_mmr.lounge_game_for_player_count(8, 2) is None
+
+
+def test_mmr_sync_12p_session_matches_mkworld_stream(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details_12p = _player_details(1100, [_mmr_change(5001, 1100, 100, hours_ago=0.5)])
+    details_24p = _player_details(2000, [])
+
+    call_games = []
+
+    def fake_fetch(player_id, season, game):
+        call_games.append(game)
+        return details_12p if game == "mkworld" else details_24p
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is not None
+    assert body["updated_game"] == "mkworld"
+    assert body["updated_session"]["lounge_mmr_game"] == "mkworld"
+    assert "mkworld" in call_games
+    assert "mkworld24p" in call_games
+
+
+def test_mmr_sync_24p_session_matches_mkworld24p_stream(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=24)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details_12p = _player_details(1100, [])
+    details_24p = _player_details(2000, [_mmr_change(6001, 2000, 50, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld" else details_24p
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is not None
+    assert body["updated_game"] == "mkworld24p"
+    assert body["updated_session"]["lounge_mmr_game"] == "mkworld24p"
+    assert body["current_mmr_24p"] == 2000
+
+
+def test_mmr_sync_mkworld24p_change_does_not_match_12p_session(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    # Only a 12p session exists; 24p change should not match it
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details_12p = _player_details(1100, [])
+    details_24p = _player_details(2000, [_mmr_change(7001, 2000, 50, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld" else details_24p
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is None
+
+
+def test_mmr_sync_season1_fetches_only_mkworld(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=24)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345", "lounge_season": 1})
+    details = _player_details(800, [_mmr_change(8001, 800, 30, hours_ago=0.5)])
+
+    call_games = []
+
+    def fake_fetch(player_id, season, game):
+        call_games.append(game)
+        return details
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    # Season 1 fetches only mkworld
+    assert call_games == ["mkworld"]
+    body = resp.json()
+    # 24p session is a valid match for mkworld in season 1
+    assert body["updated_session"] is not None
+    assert body["updated_game"] == "mkworld"
 
 
 def test_mmr_fetch_player_details_sends_browser_user_agent():
@@ -1108,13 +1227,14 @@ def test_mmr_sync_no_matching_session(seeded_client):
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["current_mmr"] == 1000
+    assert body["current_mmr_12p"] == 1000
     assert body["updated_session"] is None
+    assert body["updated_game"] is None
 
 
 def test_mmr_sync_updates_matching_session(seeded_client, db_session):
     now = datetime.now(timezone.utc)
-    session = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+    session = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
 
     seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
     details = _player_details(1100, [_mmr_change(2001, 1100, 100, hours_ago=0.5)])
@@ -1124,19 +1244,21 @@ def test_mmr_sync_updates_matching_session(seeded_client, db_session):
 
     assert resp.status_code == 200
     body = resp.json()
-    assert body["current_mmr"] == 1100
+    assert body["current_mmr_12p"] == 1100
     assert body["updated_session"] is not None
+    assert body["updated_game"] == "mkworld"
     s = body["updated_session"]
     assert s["lounge_mmr_after"] == 1100
     assert s["lounge_mmr_delta"] == 100
     assert s["lounge_mmr_before"] == 1000
     assert s["lounge_mmr_table_id"] == "2001"
     assert s["lounge_mmr_synced_at"] is not None
+    assert s["lounge_mmr_game"] == "mkworld"
 
 
 def test_mmr_sync_idempotent(seeded_client, db_session):
     now = datetime.now(timezone.utc)
-    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
 
     seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "TestPlayer"})
     details = _player_details(900, [_mmr_change(3001, 900, 50, hours_ago=0.5)])
@@ -1183,7 +1305,7 @@ def test_mmr_sync_no_changes_returns_null(seeded_client):
     assert resp.status_code == 200
     body = resp.json()
     assert body["updated_session"] is None
-    assert body["current_mmr"] == 500
+    assert body["current_mmr_12p"] == 500
 
 
 def test_mmr_sync_api_error_returns_502(seeded_client):
@@ -1200,12 +1322,13 @@ def test_mmr_sync_api_error_returns_502(seeded_client):
 
 def test_session_read_includes_mmr_fields(seeded_client, db_session):
     now = datetime.now(timezone.utc)
-    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
     s.lounge_mmr_after = 2000
     s.lounge_mmr_before = 1950
     s.lounge_mmr_delta = 50
     s.lounge_mmr_table_id = "9999"
     s.lounge_mmr_synced_at = now
+    s.lounge_mmr_game = "mkworld"
     db_session.commit()
 
     resp = seeded_client.get(f"/api/v1/play-sessions/{s.id}")
@@ -1215,3 +1338,4 @@ def test_session_read_includes_mmr_fields(seeded_client, db_session):
     assert body["lounge_mmr_before"] == 1950
     assert body["lounge_mmr_delta"] == 50
     assert body["lounge_mmr_table_id"] == "9999"
+    assert body["lounge_mmr_game"] == "mkworld"

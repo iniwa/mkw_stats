@@ -164,6 +164,7 @@ class PlaySessionRead(BaseModel):
     lounge_mmr_delta: int | None
     lounge_mmr_table_id: str | None
     lounge_mmr_synced_at: datetime | None
+    lounge_mmr_game: str | None
 
 
 # --------------------------------------------------------------------------
@@ -345,6 +346,8 @@ class MapAnnotationUpdate(BaseModel):
 # Lounge MMR sync
 # --------------------------------------------------------------------------
 class MmrSyncResponse(BaseModel):
-    current_mmr: int | None
+    current_mmr_12p: int | None
+    current_mmr_24p: int | None
     updated_session: PlaySessionRead | None
+    updated_game: str | None
     message: str

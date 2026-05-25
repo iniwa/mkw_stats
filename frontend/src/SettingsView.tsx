@@ -39,7 +39,6 @@ export default function SettingsView() {
     lounge_player_id: '',
     lounge_auto_sync: false,
     lounge_season: '2',
-    lounge_game: 'mkworld24p',
   })
   const [loungeSuccess, setLoungeSuccess] = useState(false)
 
@@ -58,7 +57,6 @@ export default function SettingsView() {
         lounge_player_id: sett.lounge_player_id ?? '',
         lounge_auto_sync: sett.lounge_auto_sync,
         lounge_season: String(sett.lounge_season),
-        lounge_game: sett.lounge_game,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '読み込みに失敗しました')
@@ -166,7 +164,6 @@ export default function SettingsView() {
         lounge_player_id: loungeDraft.lounge_player_id || null,
         lounge_auto_sync: loungeDraft.lounge_auto_sync,
         lounge_season: parseInt(loungeDraft.lounge_season, 10) || 2,
-        lounge_game: loungeDraft.lounge_game || 'mkworld24p',
       })
       setLoungeSuccess(true)
       await refresh()
@@ -393,17 +390,7 @@ export default function SettingsView() {
           </div>
           <div className="field">
             <label className="field__label">ゲームモード</label>
-            <select
-              className="input"
-              value={loungeDraft.lounge_game}
-              onChange={e => {
-                setLoungeDraft({ ...loungeDraft, lounge_game: e.target.value })
-                setLoungeSuccess(false)
-              }}
-            >
-              <option value="mkworld24p">シーズン2 (mkworld24p)</option>
-              <option value="mkworld">シーズン1 (mkworld)</option>
-            </select>
+            <p className="field__hint">12人 / 24人のゲームモードは Lounge セッションの参加人数から自動的に決まります（12人: mkworld、24人 シーズン2以降: mkworld24p）。</p>
           </div>
           <div className="toggle-row">
             <input
