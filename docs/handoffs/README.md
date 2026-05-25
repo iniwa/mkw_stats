@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-25-playing-lounge-auto-mmr-sync.md`
 
 Current UI redesign order:
 

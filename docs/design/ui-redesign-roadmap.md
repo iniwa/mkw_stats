@@ -382,4 +382,11 @@ Completed behavior:
 - Annotation unlabeled fallback corrected from `(untitled)` to `(無題)` in `AnnotationEditor.tsx` and `TargetAssist.tsx` for consistency with note unlabeled fallbacks.
 - Typecheck and build pass clean.
 
-Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
+The next immediate slice is Playing-driven Lounge MMR auto sync:
+
+- Use the existing `lounge_auto_sync` setting.
+- Trigger `POST /api/v1/lounge/mmr-sync` only when a Lounge session becomes completed from the Playing flow.
+- Keep manual sync in Lounge view.
+- Keep MMR sync non-blocking so race/session recording remains successful even when MKCentral is unavailable.
+
+Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
