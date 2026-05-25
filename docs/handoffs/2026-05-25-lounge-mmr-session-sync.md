@@ -1,5 +1,5 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has confirmed Lounge API/source details and says this handoff is ready.
+Queued handoff: do not implement until `2026-05-25-lounge-mmr-source-investigation.md` is complete and Codex has confirmed Lounge API/source details.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
@@ -109,4 +109,3 @@ Report in Japanese:
 - Verification results
 - Blocked checks
 - Design questions for Codex
-
