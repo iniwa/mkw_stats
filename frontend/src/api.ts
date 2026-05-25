@@ -11,6 +11,8 @@ export interface Settings {
   selected_vehicle_id: string | null
   lounge_player_id: string | null
   lounge_auto_sync: boolean
+  lounge_season: number
+  lounge_game: string
 }
 
 export interface VrAccount {
@@ -74,6 +76,11 @@ export interface PlaySession {
   format: string | null
   started_at: string
   completed_at: string | null
+  lounge_mmr_before: number | null
+  lounge_mmr_after: number | null
+  lounge_mmr_delta: number | null
+  lounge_mmr_table_id: string | null
+  lounge_mmr_synced_at: string | null
 }
 
 export interface RaceRecord {
@@ -116,6 +123,14 @@ export interface SettingsUpdateBody {
   selected_vr_account_id?: string | null
   lounge_player_id?: string | null
   lounge_auto_sync?: boolean | null
+  lounge_season?: number | null
+  lounge_game?: string | null
+}
+
+export interface MmrSyncResponse {
+  current_mmr: number | null
+  updated_session: PlaySession | null
+  message: string
 }
 
 export interface VrAccountCreateBody {
@@ -299,6 +314,8 @@ export const api = {
     request<MapAnnotation>(`/map-annotations/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
   deleteMapAnnotation: (id: string) =>
     request<void>(`/map-annotations/${id}`, { method: 'DELETE' }),
+  mmrSync: () =>
+    request<MmrSyncResponse>('/lounge/mmr-sync', { method: 'POST' }),
 }
 
 export interface CourseNote {

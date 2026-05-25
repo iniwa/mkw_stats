@@ -44,6 +44,8 @@ class AppSettings(Base):
     selected_vehicle_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True), ForeignKey("vehicles.id"), nullable=True)
     lounge_player_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     lounge_auto_sync: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    lounge_season: Mapped[int] = mapped_column(Integer, nullable=False, default=2, server_default="2")
+    lounge_game: Mapped[str] = mapped_column(String(64), nullable=False, default="mkworld24p", server_default="mkworld24p")
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 

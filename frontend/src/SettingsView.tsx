@@ -35,7 +35,12 @@ export default function SettingsView() {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [createDraft, setCreateDraft] = useState<CreateDraft>(EMPTY_CREATE)
-  const [loungeDraft, setLoungeDraft] = useState({ lounge_player_id: '', lounge_auto_sync: false })
+  const [loungeDraft, setLoungeDraft] = useState({
+    lounge_player_id: '',
+    lounge_auto_sync: false,
+    lounge_season: '2',
+    lounge_game: 'mkworld24p',
+  })
   const [loungeSuccess, setLoungeSuccess] = useState(false)
 
   const isBusy = (key: string) => busy.has(key)
@@ -52,6 +57,8 @@ export default function SettingsView() {
       setLoungeDraft({
         lounge_player_id: sett.lounge_player_id ?? '',
         lounge_auto_sync: sett.lounge_auto_sync,
+        lounge_season: String(sett.lounge_season),
+        lounge_game: sett.lounge_game,
       })
     } catch (e) {
       setError(e instanceof ApiError ? e.message : '読み込みに失敗しました')
@@ -158,6 +165,8 @@ export default function SettingsView() {
       await api.updateSettings({
         lounge_player_id: loungeDraft.lounge_player_id || null,
         lounge_auto_sync: loungeDraft.lounge_auto_sync,
+        lounge_season: parseInt(loungeDraft.lounge_season, 10) || 2,
+        lounge_game: loungeDraft.lounge_game || 'mkworld24p',
       })
       setLoungeSuccess(true)
       await refresh()
@@ -367,6 +376,34 @@ export default function SettingsView() {
                 setLoungeSuccess(false)
               }}
             />
+            <p className="field__hint">MKCentral ID（数値）推奨。プレイヤー名でも検索できます。</p>
+          </div>
+          <div className="field">
+            <label className="field__label">シーズン</label>
+            <input
+              className="input"
+              type="number"
+              min="1"
+              value={loungeDraft.lounge_season}
+              onChange={e => {
+                setLoungeDraft({ ...loungeDraft, lounge_season: e.target.value })
+                setLoungeSuccess(false)
+              }}
+            />
+          </div>
+          <div className="field">
+            <label className="field__label">ゲームモード</label>
+            <select
+              className="input"
+              value={loungeDraft.lounge_game}
+              onChange={e => {
+                setLoungeDraft({ ...loungeDraft, lounge_game: e.target.value })
+                setLoungeSuccess(false)
+              }}
+            >
+              <option value="mkworld24p">シーズン2 (mkworld24p)</option>
+              <option value="mkworld">シーズン1 (mkworld)</option>
+            </select>
           </div>
           <div className="toggle-row">
             <input

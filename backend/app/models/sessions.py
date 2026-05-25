@@ -22,6 +22,11 @@ class PlaySession(Base):
     format: Mapped[str | None] = mapped_column(String(16), nullable=True)
     started_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), nullable=False)
     completed_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    lounge_mmr_before: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lounge_mmr_after: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lounge_mmr_delta: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lounge_mmr_table_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    lounge_mmr_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
 
 class RaceRecord(Base):

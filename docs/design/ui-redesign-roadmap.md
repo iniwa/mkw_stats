@@ -313,7 +313,7 @@ Completed behavior:
 - Cancelled records are excluded from normal VR metrics.
 - VR Analytics shows active/current account VR from account data, not from historical record corrections.
 - Lounge shows Lounge-specific summaries for completed Lounge races, including average placement and average score.
-- Lounge includes an explicit MMR placeholder instead of inventing MMR values before sync exists.
+- Lounge can manually sync session-level MMR from MKCentral Lounge public JSON API and display the latest synced before/after/delta values.
 
 Design notes:
 
@@ -343,6 +343,18 @@ Completed behavior:
 - Map point coordinates can be calibrated by dragging markers in explicit calibration mode.
 - Calibration persists through `PATCH /api/v1/map-points/{map_point_id}`.
 
+The Lounge MMR session sync slice has been implemented.
+
+Completed behavior:
+
+- Settings stores `lounge_player_id`, `lounge_season`, and `lounge_game`.
+- `lounge_player_id` is treated as MKCentral ID when numeric, otherwise as player name.
+- Lounge MMR is stored on `play_sessions` as session-level `lounge_mmr_*` fields.
+- Manual sync calls MKCentral player details and attaches the newest unsynced MMR change to the closest completed Lounge session within the matching window.
+- Active Lounge sessions are not modified by sync.
+- Repeated sync is idempotent by stored MKCentral `changeId`.
+- Lounge view exposes a manual MMR sync button and displays the latest synced values.
+
 The next implementation slice should be:
 
-**Lounge MMR session sync**
+**Lounge MMR Pi verification**

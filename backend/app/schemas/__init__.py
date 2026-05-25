@@ -24,6 +24,8 @@ class SettingsRead(BaseModel):
     selected_vehicle_id: uuid.UUID | None
     lounge_player_id: str | None
     lounge_auto_sync: bool
+    lounge_season: int
+    lounge_game: str
 
 
 class SettingsUpdate(BaseModel):
@@ -32,6 +34,8 @@ class SettingsUpdate(BaseModel):
     selected_vehicle_id: uuid.UUID | None = None
     lounge_player_id: str | None = None
     lounge_auto_sync: bool | None = None
+    lounge_season: int | None = None
+    lounge_game: str | None = None
 
 
 # --------------------------------------------------------------------------
@@ -155,6 +159,11 @@ class PlaySessionRead(BaseModel):
     format: str | None
     started_at: datetime
     completed_at: datetime | None
+    lounge_mmr_before: int | None
+    lounge_mmr_after: int | None
+    lounge_mmr_delta: int | None
+    lounge_mmr_table_id: str | None
+    lounge_mmr_synced_at: datetime | None
 
 
 # --------------------------------------------------------------------------
@@ -330,3 +339,12 @@ class MapAnnotationUpdate(BaseModel):
     hover_text: str | None = None
     priority: int | None = None
     style: dict | None = None
+
+
+# --------------------------------------------------------------------------
+# Lounge MMR sync
+# --------------------------------------------------------------------------
+class MmrSyncResponse(BaseModel):
+    current_mmr: int | None
+    updated_session: PlaySessionRead | None
+    message: str

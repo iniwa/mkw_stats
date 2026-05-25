@@ -1,6 +1,7 @@
 """API-level tests for the v1 backend slice (SQLite-backed — see conftest.py)."""
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
+from unittest.mock import patch
 
 from sqlalchemy import select
 
@@ -1003,3 +1004,182 @@ def test_hidden_lounge_race_does_not_trigger_repick_warning(seeded_client):
     )
     assert second.status_code == 201
     assert "repick" not in second.json()["warnings"]
+
+
+# ---------------------------------------------------------------------------
+# Settings: lounge_season / lounge_game
+# ---------------------------------------------------------------------------
+
+def test_settings_read_includes_lounge_season_game(client):
+    resp = client.get("/api/v1/settings")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lounge_season"] == 2
+    assert body["lounge_game"] == "mkworld24p"
+
+
+def test_settings_patch_lounge_season_game(client):
+    resp = client.patch("/api/v1/settings", json={"lounge_season": 1, "lounge_game": "mkworld"})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lounge_season"] == 1
+    assert body["lounge_game"] == "mkworld"
+
+
+# ---------------------------------------------------------------------------
+# Lounge MMR sync
+# ---------------------------------------------------------------------------
+
+def _mmr_change(change_id: int, new_mmr: int, delta: int, hours_ago: float = 0.5) -> dict:
+    t = datetime.now(timezone.utc) - timedelta(hours=hours_ago)
+    return {
+        "changeId": change_id,
+        "newMmr": new_mmr,
+        "mmrDelta": delta,
+        "time": t.strftime("%Y-%m-%dT%H:%M:%S.000Z"),
+        "score": 40,
+        "rank": 6,
+        "tier": "SQ",
+        "numPlayers": 12,
+    }
+
+
+def _player_details(mmr: int = 1000, changes: list | None = None) -> dict:
+    return {"playerId": 1, "name": "Test", "mkcId": 1, "mmr": mmr, "mmrChanges": changes or []}
+
+
+def _completed_lounge_session(db_session, completed_at: datetime) -> PlaySession:
+    now = datetime.now(timezone.utc)
+    s = PlaySession(
+        source=SourceType.lounge,
+        status=SessionStatus.completed,
+        started_at=completed_at - timedelta(hours=1),
+        completed_at=completed_at,
+    )
+    db_session.add(s)
+    db_session.commit()
+    db_session.refresh(s)
+    return s
+
+
+def test_mmr_sync_requires_player_id(client):
+    resp = client.post("/api/v1/lounge/mmr-sync")
+    assert resp.status_code == 400
+
+
+def test_mmr_sync_no_matching_session(seeded_client):
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details = _player_details(1000, [_mmr_change(1001, 1000, 50)])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["current_mmr"] == 1000
+    assert body["updated_session"] is None
+
+
+def test_mmr_sync_updates_matching_session(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    session = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details = _player_details(1100, [_mmr_change(2001, 1100, 100, hours_ago=0.5)])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["current_mmr"] == 1100
+    assert body["updated_session"] is not None
+    s = body["updated_session"]
+    assert s["lounge_mmr_after"] == 1100
+    assert s["lounge_mmr_delta"] == 100
+    assert s["lounge_mmr_before"] == 1000
+    assert s["lounge_mmr_table_id"] == "2001"
+    assert s["lounge_mmr_synced_at"] is not None
+
+
+def test_mmr_sync_idempotent(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "TestPlayer"})
+    details = _player_details(900, [_mmr_change(3001, 900, 50, hours_ago=0.5)])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp1 = seeded_client.post("/api/v1/lounge/mmr-sync")
+        resp2 = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp1.status_code == 200
+    assert resp1.json()["updated_session"] is not None
+    assert resp2.status_code == 200
+    assert resp2.json()["updated_session"] is None
+
+
+def test_mmr_sync_active_session_not_modified(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    active = PlaySession(
+        source=SourceType.lounge,
+        status=SessionStatus.active,
+        started_at=now - timedelta(minutes=30),
+    )
+    db_session.add(active)
+    db_session.commit()
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details = _player_details(800, [_mmr_change(4001, 800, 30, hours_ago=0.5)])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    assert resp.json()["updated_session"] is None
+    db_session.refresh(active)
+    assert active.lounge_mmr_table_id is None
+
+
+def test_mmr_sync_no_changes_returns_null(seeded_client):
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details = _player_details(500, [])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", return_value=details):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is None
+    assert body["current_mmr"] == 500
+
+
+def test_mmr_sync_api_error_returns_502(seeded_client):
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+
+    with patch(
+        "app.services.lounge_mmr._fetch_player_details",
+        side_effect=RuntimeError("MKCentral unreachable: [Errno -2] Name or service not known"),
+    ):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 502
+
+
+def test_session_read_includes_mmr_fields(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30))
+    s.lounge_mmr_after = 2000
+    s.lounge_mmr_before = 1950
+    s.lounge_mmr_delta = 50
+    s.lounge_mmr_table_id = "9999"
+    s.lounge_mmr_synced_at = now
+    db_session.commit()
+
+    resp = seeded_client.get(f"/api/v1/play-sessions/{s.id}")
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["lounge_mmr_after"] == 2000
+    assert body["lounge_mmr_before"] == 1950
+    assert body["lounge_mmr_delta"] == 50
+    assert body["lounge_mmr_table_id"] == "9999"

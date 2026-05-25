@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Course, PlaySession, RaceRecord, Route, WARNING_LABELS } from './api'
+import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route, WARNING_LABELS } from './api'
 
 interface LoungeData {
   sessions: PlaySession[]
@@ -55,6 +55,9 @@ export default function LoungeView() {
   const [dateFrom, setDateFrom] = useState('')
   const [dateTo, setDateTo] = useState('')
   const [limit, setLimit] = useState(50)
+  const [mmrSyncing, setMmrSyncing] = useState(false)
+  const [mmrSyncResult, setMmrSyncResult] = useState<MmrSyncResponse | null>(null)
+  const [mmrSyncError, setMmrSyncError] = useState<string | null>(null)
 
   async function load() {
     setLoading(true)
@@ -78,6 +81,23 @@ export default function LoungeView() {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
     } finally {
       setLoading(false)
+    }
+  }
+
+  async function syncMmr() {
+    setMmrSyncing(true)
+    setMmrSyncError(null)
+    setMmrSyncResult(null)
+    try {
+      const result = await api.mmrSync()
+      setMmrSyncResult(result)
+      if (result.updated_session) {
+        await load()
+      }
+    } catch (e: unknown) {
+      setMmrSyncError(e instanceof ApiError ? e.message : 'MMR同期に失敗しました')
+    } finally {
+      setMmrSyncing(false)
     }
   }
 
@@ -244,7 +264,43 @@ export default function LoungeView() {
 
       <div className="panel">
         <div className="panel__title">MMR</div>
-        <p className="placeholder">未連携 — Lounge API 同期後に表示されます</p>
+        {(() => {
+          const synced = sessions.filter(s => s.lounge_mmr_after != null)
+          const latest = synced[0]
+          return (
+            <>
+              {latest ? (
+                <div className="analytics__grid analytics__grid--4">
+                  {([
+                    ['現在 MMR', latest.lounge_mmr_after],
+                    ['前回変動', latest.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
+                    ['変動前', latest.lounge_mmr_before ?? '—'],
+                    ['同期済み', synced.length],
+                  ] as [string, string | number][]).map(([label, value]) => (
+                    <div key={label} className="analytics__metric">
+                      <div className="analytics__metric-value">{value}</div>
+                      <div className="analytics__metric-label">{label}</div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="placeholder">未連携 — 下のボタンで Lounge MMR を同期できます</p>
+              )}
+              <div className="btn-row">
+                <button className="btn btn--primary" onClick={syncMmr} disabled={mmrSyncing || loading}>
+                  {mmrSyncing ? '同期中…' : 'MMR同期'}
+                </button>
+              </div>
+              {mmrSyncResult && (
+                <p className="lounge__mmr-msg">
+                  {mmrSyncResult.current_mmr != null && `現在 MMR: ${mmrSyncResult.current_mmr} — `}
+                  {mmrSyncResult.message}
+                </p>
+              )}
+              {mmrSyncError && <p className="notice notice--error">{mmrSyncError}</p>}
+            </>
+          )
+        })()}
       </div>
 
       {activeSessions.length > 0 && (
