@@ -41,7 +41,7 @@ export default function PlayingView() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [loadError, setLoadError] = useState<string | null>(null)
 
-  const [, setSettings] = useState<Settings | null>(null)
+  const [settings, setSettings] = useState<Settings | null>(null)
   const [vrAccounts, setVrAccounts] = useState<VrAccount[]>([])
   const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
   const [courses, setCourses] = useState<Course[]>([])
@@ -56,6 +56,8 @@ export default function PlayingView() {
 
   const [busy, setBusy] = useState<string | null>(null)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [autoSyncMsg, setAutoSyncMsg] = useState<string | null>(null)
+  const [autoSyncError, setAutoSyncError] = useState<string | null>(null)
 
   const coursesById = useMemo(() => new Map(courses.map(c => [c.id, c])), [courses])
   const routesById = useMemo(() => new Map(routes.map(r => [r.id, r])), [routes])
@@ -123,7 +125,28 @@ export default function PlayingView() {
     setRecordedRaces([])
     setLastWarnings([])
     setActionError(null)
+    setAutoSyncMsg(null)
+    setAutoSyncError(null)
   }, [])
+
+  // -- Auto MMR sync -------------------------------------------------------
+  const maybeAutoSyncLoungeMmr = async (nextSession: PlaySession): Promise<void> => {
+    if (nextSession.source !== 'lounge') return
+    if (nextSession.status !== 'completed') return
+    if (!settings?.lounge_auto_sync) return
+    setAutoSyncMsg('MMRを自動同期しています...')
+    setAutoSyncError(null)
+    try {
+      const result = await api.mmrSync()
+      setAutoSyncMsg(`MMR自動同期: ${result.message}`)
+      if (result.updated_session && result.updated_session.id === nextSession.id) {
+        setSession(result.updated_session)
+      }
+    } catch (err) {
+      setAutoSyncError(`MMR自動同期に失敗しました: ${err instanceof ApiError ? err.message : '通信エラー'}`)
+      setAutoSyncMsg(null)
+    }
+  }
 
   // -- Session lifecycle ---------------------------------------------------
   const createSession = (source: SourceType, playerCount?: number, format?: string) =>
@@ -158,7 +181,9 @@ export default function PlayingView() {
   const finishSession = () =>
     runAction('finish', async () => {
       if (!session) return
-      setSession(await api.finishSession(session.id))
+      const finished = await api.finishSession(session.id)
+      setSession(finished)
+      await maybeAutoSyncLoungeMmr(finished)
     })
 
   const leaveSession = () =>
@@ -215,7 +240,11 @@ export default function PlayingView() {
       setDraftRace(null)
       setLastWarnings([])
       await reloadRaces(session.id)
-      setSession(await api.getSession(session.id))
+      const fetchedSession = await api.getSession(session.id)
+      setSession(fetchedSession)
+      if (fetchedSession.status === 'completed') {
+        await maybeAutoSyncLoungeMmr(fetchedSession)
+      }
     })
 
   // -- Map point calibration -----------------------------------------------
@@ -277,6 +306,8 @@ export default function PlayingView() {
       )}
 
       {actionError && <p className="notice notice--error">{actionError}</p>}
+      {autoSyncMsg && <p className="notice">{autoSyncMsg}</p>}
+      {autoSyncError && <p className="notice notice--warn">{autoSyncError}</p>}
 
       {phase === 'start' && (
         <SessionStart

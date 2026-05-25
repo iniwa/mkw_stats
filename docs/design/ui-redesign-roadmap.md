@@ -382,11 +382,21 @@ Completed behavior:
 - Annotation unlabeled fallback corrected from `(untitled)` to `(無題)` in `AnnotationEditor.tsx` and `TargetAssist.tsx` for consistency with note unlabeled fallbacks.
 - Typecheck and build pass clean.
 
-The next immediate slice is Playing-driven Lounge MMR auto sync:
+The Playing-driven Lounge MMR auto-sync slice has been implemented.
 
-- Use the existing `lounge_auto_sync` setting.
-- Trigger `POST /api/v1/lounge/mmr-sync` only when a Lounge session becomes completed from the Playing flow.
-- Keep manual sync in Lounge view.
-- Keep MMR sync non-blocking so race/session recording remains successful even when MKCentral is unavailable.
+Completed behavior:
+
+- `PlayingView` now reads `Settings` state (previously unused getter was discarded).
+- When a Lounge session becomes `completed` from Playing (manual finish or 12th-race auto-complete) and `settings.lounge_auto_sync === true`, `maybeAutoSyncLoungeMmr` fires once.
+- Sync is non-blocking: recording and session completion succeed even if MKCentral is unreachable or returns no matching change.
+- On sync start, a neutral notice `MMRを自動同期しています...` is shown.
+- On sync success/info, the notice updates to `MMR自動同期: {message}`.
+- On sync failure, a `notice--warn` shows `MMR自動同期に失敗しました: {message}` without throwing into `runAction`.
+- If the returned `updated_session` matches the current session id, local session state is updated from it.
+- Auto-sync notices are cleared when creating, resuming, or leaving a session (`resetSessionState`).
+- Ranked sessions are never affected.
+- Manual sync in Lounge view is unchanged.
+- No new CSS, backend changes, or npm dependencies.
+- Typecheck and build pass clean.
 
 Deeper Lounge analytics, map/image annotation editing, and broader final cleanup remain later slices.
