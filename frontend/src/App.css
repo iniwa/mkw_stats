@@ -152,6 +152,21 @@ textarea.input { resize: vertical; font-family: inherit; }
 .stepper__btn { min-width: 2.4rem; padding: 0.35rem 0; font-size: 1rem; }
 .stepper__input { width: 5rem; text-align: center; }
 
+/* -- step indicator -------------------------------------------------------- */
+.step-indicator {
+  display: flex; align-items: center; gap: 0;
+  font-size: 0.78rem; padding: 0.1rem 0;
+}
+.step-indicator__step {
+  color: var(--text-faint); padding: 0.2rem 0.45rem;
+}
+.step-indicator__step::after { content: ' ›'; color: var(--text-faint); }
+.step-indicator__step:last-child::after { content: ''; }
+.step-indicator__step--active { color: var(--accent); font-weight: 600; }
+.step-indicator__step--done { color: var(--ok); }
+
+.playing__hint--warn { font-size: 0.78rem; color: var(--warn); margin-top: 0.25rem; }
+
 /* -- confirm --------------------------------------------------------------- */
 .confirm__kind { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
 .confirm__name { font-size: 1rem; font-weight: 600; }

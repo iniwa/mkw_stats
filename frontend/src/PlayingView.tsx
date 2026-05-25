@@ -265,6 +265,10 @@ export default function PlayingView() {
         )}
       </div>
 
+      {session && phase !== 'start' && phase !== 'finished' && (
+        <StepIndicator step={phase === 'select' ? 1 : phase === 'confirm' ? 2 : 3} />
+      )}
+
       {actionError && <p className="notice notice--error">{actionError}</p>}
 
       {phase === 'start' && (
@@ -353,6 +357,23 @@ export default function PlayingView() {
           </aside>
         </div>
       )}
+    </div>
+  )
+}
+
+// ---------------------------------------------------------------------------
+function StepIndicator({ step }: { step: 1 | 2 | 3 }) {
+  const labels: Record<1 | 2 | 3, string> = { 1: 'Target', 2: 'Assist', 3: 'Result' }
+  return (
+    <div className="step-indicator">
+      {([1, 2, 3] as const).map(n => (
+        <span
+          key={n}
+          className={`step-indicator__step${step === n ? ' step-indicator__step--active' : step > n ? ' step-indicator__step--done' : ''}`}
+        >
+          {labels[n]}
+        </span>
+      ))}
     </div>
   )
 }
@@ -709,7 +730,7 @@ function SelectionConfirm({
           選び直す
         </button>
         <button className="btn btn--primary" disabled={recording} onClick={onConfirm}>
-          はい、記録する
+          結果を入力する
         </button>
       </div>
     </div>
@@ -734,8 +755,15 @@ function RankedResultForm({
 }) {
   const [playerCount, setPlayerCount] = useState(defaultPlayerCount === 24 ? 24 : 12)
   const [placement, setPlacement] = useState(1)
+  const [placementHint, setPlacementHint] = useState(false)
   const [ratingAfter, setRatingAfter] = useState(account?.current_vr ?? 0)
   const saving = busy === 'complete-ranked'
+
+  const handlePlayerCountChange = (n: number) => {
+    setPlayerCount(n)
+    setPlacement(p => Math.min(p, n))
+    setPlacementHint(false)
+  }
 
   const currentVr = account?.current_vr ?? null
   const computedDelta = currentVr !== null ? ratingAfter - currentVr : null
@@ -752,14 +780,6 @@ function RankedResultForm({
       <h3 className="panel__title">{courseLabel} の結果</h3>
       <p className="result__race">Race #{draftRace.race_no ?? '-'}（draft）</p>
 
-      {assistTarget && (
-        <TargetAssist
-          kind={assistTarget.kind}
-          id={assistTarget.id}
-          displayName={courseLabel}
-        />
-      )}
-
       <div className="field">
         <span className="field__label">参加人数</span>
         <div className="seg">
@@ -767,7 +787,7 @@ function RankedResultForm({
             <button
               key={n}
               className={`seg__btn${playerCount === n ? ' seg__btn--on' : ''}`}
-              onClick={() => setPlayerCount(n)}
+              onClick={() => handlePlayerCountChange(n)}
             >
               {n}人
             </button>
@@ -780,7 +800,7 @@ function RankedResultForm({
         <div className="stepper">
           <button
             className="btn stepper__btn"
-            onClick={() => setPlacement(p => Math.max(1, p - 1))}
+            onClick={() => { setPlacement(p => Math.max(1, p - 1)); setPlacementHint(false) }}
           >
             −
           </button>
@@ -790,15 +810,23 @@ function RankedResultForm({
             min={1}
             max={playerCount}
             value={placement}
-            onChange={e => setPlacement(Math.min(playerCount, Math.max(1, Number(e.target.value) || 1)))}
+            onChange={e => {
+              const n = Number(e.target.value)
+              const clamped = Math.min(playerCount, Math.max(1, n || 1))
+              setPlacementHint(e.target.value !== '' && n !== clamped)
+              setPlacement(clamped)
+            }}
           />
           <button
             className="btn stepper__btn"
-            onClick={() => setPlacement(p => Math.min(playerCount, p + 1))}
+            onClick={() => { setPlacement(p => Math.min(playerCount, p + 1)); setPlacementHint(false) }}
           >
             ＋
           </button>
         </div>
+        {placementHint && (
+          <p className="playing__hint--warn">1〜{playerCount}位の範囲で入力してください</p>
+        )}
       </div>
 
       <div className="field">
@@ -830,6 +858,14 @@ function RankedResultForm({
           </span>
         )}
       </p>
+
+      {assistTarget && (
+        <TargetAssist
+          kind={assistTarget.kind}
+          id={assistTarget.id}
+          displayName={courseLabel}
+        />
+      )}
 
       <button
         className="btn btn--primary"

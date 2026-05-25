@@ -1,5 +1,5 @@
 Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until Codex has reviewed the result-model and Playing-flow implementations and explicitly says this handoff is ready.
+This handoff is ready for implementation after Codex review of the result-model and Playing-flow implementations.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
@@ -12,8 +12,9 @@ This is not a broad Records redesign. It is the correction/maintenance UI for th
 
 Depends on:
 
-- `docs/handoffs/2026-05-25-result-model-redesign.md`
-- `docs/handoffs/2026-05-25-playing-flow-redesign.md`
+- `docs/handoffs/archive/2026-05-25-result-model-redesign.md`
+- `docs/handoffs/archive/2026-05-25-result-model-pi-verification.md`
+- `docs/handoffs/archive/2026-05-25-playing-flow-redesign.md`
 - `docs/design/ui-redesign-roadmap.md`
 
 Expected prior state:
@@ -145,4 +146,3 @@ Report in Japanese:
 - Blocked checks
 - Any temporary files/screenshots created and removed
 - Design questions for Codex
-

@@ -19,6 +19,11 @@ The current MVP has useful foundations:
 - Playing already has `TargetAssist` for notes and annotations.
 - Records can list sessions and races, edit race memo, and cancel race records.
 - Dashboard, Records, Analytics, Lounge, Courses, and Settings views exist.
+- The result model redesign is implemented and verified on Pi:
+  - ranked records use numeric `placement` and user-entered `rating_after`
+  - `rating_delta` is calculated from `rating_after - rating_before`
+  - Lounge race records use manual `placement` and `score`
+  - race records can be hidden from default history and analytics
 
 The next redesign should build on these foundations instead of replacing the whole app at once.
 
@@ -51,13 +56,14 @@ Do not attempt the full UI redesign in one implementation slice.
 
 Recommended order:
 
-1. Redesign result data model and APIs.
-2. Redesign Playing result input around the new model.
-3. Update Records to edit/delete the new result shape.
+1. Completed: redesign result data model and APIs.
+2. Redesign Playing flow around the new model.
+3. Update Records to correct and hide/delete the new result shape.
 4. Split Analytics into VR and Lounge analytics.
-5. Improve course/route visual selection and map-image note editing.
+5. Improve course/route target browsing and notes.
+6. Improve course/route visual selection and map-image note editing.
 
-This order avoids building polished UI on top of result fields that will soon be removed.
+This order avoids building polished UI on top of unstable result fields. Since the result model is now stable enough for the next pass, Playing and Records should be tightened before deeper analytics and map-image work.
 
 ## Playing: Shared Flow
 
@@ -239,19 +245,34 @@ Do not bundle all of these into the next implementation:
 
 These need separate handoffs after the data model and result input model are settled.
 
+## Completed Foundation: Result Model Redesign
+
+The result model redesign has been implemented and verified on Pi.
+
+Completed behavior:
+
+- Ranked no longer uses the active three-band placement input.
+- Ranked records store numeric `placement`.
+- Ranked result input uses `rating_after`; the server calculates `rating_delta`.
+- Lounge records store per-race `placement` and `score`.
+- Race records support hidden state for records entered by mistake.
+- Default race listing and analytics exclude hidden records.
+
+`placement_band` may remain in the database only as a legacy or unrelated compatibility field. New UI and analytics work should not depend on it.
+
 ## Recommended Next Slice
 
 The next implementation slice should be:
 
-**Ranked and Lounge result model redesign**
+**Playing flow redesign**
 
 Goals:
 
-- Replace ranked `placement_band` input with numeric `placement`.
-- Change ranked VR input from delta to `rating_after`.
-- Add Lounge per-race `placement` and `score`.
-- Define how old records are handled during migration.
-- Update backend tests around the new model.
+- Make the Playing flow explicitly follow: target selection -> assist review -> result input.
+- Reuse the existing result-model API wiring; do not redesign backend models in this slice.
+- Keep `TargetAssist` visible and useful in the assist/review step.
+- Keep ranked input centered on numeric `placement` and resulting VR (`rating_after`).
+- Keep Lounge input centered on per-race `placement` and `score`.
+- Reduce duplicate or confusing panels now that the result model is settled.
 
-After that, update Playing UI to use the new fields.
-
+After that, update Records correction UI around the same result shape.
