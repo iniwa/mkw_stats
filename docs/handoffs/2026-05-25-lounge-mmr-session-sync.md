@@ -1,10 +1,10 @@
-Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, and this handoff file before implementation.
-Queued handoff: do not implement until `2026-05-25-lounge-mmr-source-investigation.md` is complete and Codex has confirmed Lounge API/source details.
+Read AGENTS.md, CLAUDE.md, docs/design/ui-redesign-roadmap.md, docs/handoffs/archive/2026-05-25-lounge-mmr-source-investigation.md, and this handoff file before implementation.
+This handoff is ready for implementation after the Lounge MMR source investigation.
 If implementation would violate constraints or require files outside this handoff, stop and ask before editing.
 
 ## Goal
 
-Add the first Lounge MMR session-level sync path.
+Add the first Lounge MMR session-level sync path using MKCentral Lounge public JSON API.
 
 MMR should be associated with Lounge sessions, not individual race records.
 
@@ -16,7 +16,31 @@ Roadmap decision:
 - MMR is session-level and should be obtained automatically.
 - When MMR movement is retrieved, attach it to the latest completed Lounge session that does not yet have MMR data unless a later design requires a stricter match key.
 
-This handoff is intentionally queued because Lounge API details may need separate confirmation.
+Source investigation result:
+
+- Recommendation: `public_json_api`.
+- Base URL: `https://lounge.mkcentral.com`.
+- Primary endpoint: `GET /api/player/details`.
+- Confirmed query shape:
+  - `season=<number>`
+  - `game=<game_key>`
+  - player lookup should use `mkcId=<id>` when `settings.lounge_player_id` is numeric, otherwise `name=<value>`.
+- Current known season/game:
+  - Season 1: `game=mkworld`
+  - Season 2: `game=mkworld24p`
+- Relevant response fields:
+  - `mmr`
+  - `mmrChanges[].changeId`
+  - `mmrChanges[].newMmr`
+  - `mmrChanges[].mmrDelta`
+  - `mmrChanges[].time`
+  - `mmrChanges[].score`
+  - `mmrChanges[].rank`
+  - `mmrChanges[].tier`
+  - `mmrChanges[].numPlayers`
+- `changeId` is the MKCentral table id. Treat it as an external integer/string table id, not the existing UUID `lounge_table_id` FK.
+- `mmr_before = newMmr - mmrDelta`.
+- Auth is not required for these GET endpoints.
 
 ## Files To Inspect
 
@@ -34,45 +58,104 @@ This handoff is intentionally queued because Lounge API details may need separat
 
 ## Files To Edit
 
-Exact scope depends on confirmed Lounge source/API details. Likely:
-
-- backend models/schemas/services/API for Lounge MMR sync
-- Alembic migration if session-level MMR fields are added
-- backend tests
-- frontend Lounge/Settings small UI additions
-
-Do not start without Codex confirming the external data source and expected fields.
+- `backend/app/models/vr.py`
+- `backend/app/models/sessions.py`
+- `backend/app/schemas/__init__.py`
+- `backend/app/api/settings.py` if needed
+- `backend/app/api/lounge.py` or another focused lounge API module
+- `backend/app/api/__init__.py`
+- `backend/app/services/lounge_mmr.py` or another focused service module
+- `backend/alembic/versions/003_lounge_mmr_sync.py`
+- `backend/tests/test_api.py`
+- `frontend/src/api.ts`
+- `frontend/src/LoungeView.tsx`
+- `frontend/src/SettingsView.tsx`
+- `frontend/src/App.css` if needed
 
 ## Candidate Data Direction
 
-Possible session-level fields:
+Use direct session-level fields on `PlaySession`.
 
-- `lounge_mmr_before`
-- `lounge_mmr_after`
-- `lounge_mmr_delta`
-- `lounge_mmr_synced_at`
+Add:
 
-Alternatively, use `rating_snapshots` with `source = lounge` and `lounge_table_id`/session link if that fits better after inspection.
+- `lounge_mmr_before: int | None`
+- `lounge_mmr_after: int | None`
+- `lounge_mmr_delta: int | None`
+- `lounge_mmr_table_id: str | None`
+- `lounge_mmr_synced_at: datetime | None`
 
-Do not choose between these without reviewing the current model and confirming with Codex.
+Do not use existing `PlaySession.lounge_table_id` for MKCentral `changeId`; that column is a UUID FK to local `lounge_tables`.
+
+Do not use `RatingSnapshot` in this slice. It has no session FK and its `lounge_table_id` is also a UUID FK, so it does not fit the MKCentral numeric table id cleanly.
+
+Add settings fields:
+
+- `lounge_season: int`, default `2`
+- `lounge_game: str`, default `mkworld24p`
+
+Keep existing `lounge_player_id` as a string. For this slice:
+
+- if `lounge_player_id` contains only digits, call MKCentral with `mkcId=<value>`.
+- otherwise call with `name=<value>`.
+- Settings UI should explain that MKCentral ID is preferred, but name also works.
 
 ## Constraints
 
-- Do not scrape or call external services unless the endpoint/source is explicitly confirmed.
+- Do not scrape HTML.
+- Do not call endpoints beyond `https://lounge.mkcentral.com/api/player/details`.
 - Do not expose services outside LAN.
 - Do not store credentials in source.
 - Do not break manual Lounge race recording.
 - Do not assign MMR to race records.
+- Avoid adding a new dependency if stdlib HTTP is sufficient. If you add a dependency, explain why.
+- External API failures must return a clear 502/503-style error and must not modify local data.
 
 ## Required Behavior
 
-Once scoped:
+Add:
 
-- fetch or accept latest Lounge MMR movement for configured `lounge_player_id`.
-- attach MMR before/after/delta to the latest completed Lounge session without MMR data.
-- make operation idempotent.
-- show current MMR and latest delta in Lounge view.
-- report clearly when no matching completed session exists.
+```text
+POST /api/v1/lounge/mmr-sync
+```
+
+Behavior:
+
+1. Load settings.
+2. Require `lounge_player_id`; return 400 if missing.
+3. Use `settings.lounge_season` and `settings.lounge_game`.
+4. Fetch `GET https://lounge.mkcentral.com/api/player/details?...`.
+5. Sort `mmrChanges` newest first by `time`.
+6. For each change:
+   - skip if `changeId` is already stored in any `play_sessions.lounge_mmr_table_id`.
+   - find a completed Lounge session with no `lounge_mmr_table_id`.
+   - match by time window:
+     - prefer sessions where `completed_at` is within ±2 hours of `mmrChanges[].time`.
+     - if multiple match, choose the closest `completed_at`.
+     - do not attach to active sessions.
+7. Store:
+   - `lounge_mmr_table_id = str(changeId)`
+   - `lounge_mmr_before = newMmr - mmrDelta`
+   - `lounge_mmr_after = newMmr`
+   - `lounge_mmr_delta = mmrDelta`
+   - `lounge_mmr_synced_at = now()`
+8. Return a response indicating:
+   - current MMR from player details
+   - whether a session was updated
+   - updated session if any
+   - message when no matching completed session exists.
+
+Idempotency:
+
+- repeated sync with the same API data must not attach the same `changeId` twice.
+- if no unsynced matching completed session exists, return 200 with `updated_session = null` and a clear message.
+
+Frontend:
+
+- Settings should expose `lounge_player_id`, `lounge_season`, and `lounge_game`.
+- Lounge view should have a manual "MMR同期" button.
+- Lounge MMR panel should display latest synced MMR before/after/delta from recent sessions when present.
+- If no synced data exists, keep the current "未連携" placeholder.
+- Do not auto-sync on page load in this slice, even if `lounge_auto_sync` is true. Manual button only.
 
 ## Non Goals
 
@@ -80,10 +163,11 @@ Once scoped:
 - Team/opponent/player roster modeling.
 - Matchmaking or Discord integration.
 - Graphing beyond simple display.
+- Auto background sync.
+- HTML scraping.
+- Credential handling.
 
 ## Verification
-
-Expected once scoped:
 
 ```text
 python -m py_compile <changed backend files>
@@ -94,9 +178,14 @@ npm run build
 
 Manual/API check:
 
-- sync with configured test data.
+- settings default/read/update for `lounge_season` and `lounge_game`.
+- sync service with mocked MKCentral response.
+- numeric `lounge_player_id` uses `mkcId`.
+- non-numeric `lounge_player_id` uses `name`.
+- matching completed Lounge session is updated.
 - no duplicate MMR attachment on repeated sync.
-- no active session is modified unexpectedly.
+- active session is not modified.
+- no matching session returns updated null.
 - Lounge view shows synced values.
 
 ## Expected Report

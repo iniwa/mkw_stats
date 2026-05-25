@@ -23,6 +23,12 @@ Known public pages may expose player and table information, for example:
 - `https://lounge.mkcentral.com/mk8dx/PlayerDetails/<player_id>`
 - `https://lounge.mkcentral.com/TableDetails/<table_id>`
 
+User-provided reference implementation:
+
+- `https://github.com/fuyu-neko/StatsBot_MKWorld`
+
+Treat this repository as the primary reference for how public MKWorld Lounge stats are currently retrieved. Inspect it for endpoints, request parameters, parsing logic, auth requirements, rate-limit behavior, and data fields. Do not copy large chunks of code; use it to identify the source contract and implementation constraints.
+
 However, the project has not confirmed whether there is a stable public JSON API, whether scraping HTML is acceptable, or whether MKWorld Lounge uses different paths/fields from MK8DX.
 
 ## Files To Inspect
@@ -58,6 +64,7 @@ Check and report:
 4. Whether querying by `lounge_player_id` is enough, or whether username/search is also needed.
 5. Whether table IDs can be linked to a locally recorded Lounge session by time window.
 6. Rate-limit, robots/terms, or practical scraping concerns.
+7. What `StatsBot_MKWorld` uses as its source of truth and whether that approach is suitable for this LAN-only personal tool.
 
 Use browser/devtools or safe read-only HTTP requests only. Do not brute-force endpoints. Do not store credentials.
 
