@@ -27,6 +27,11 @@ Expected prior state:
 - `TargetAssist` already exists and should be reused.
 - Result model redesign has been verified on the Pi deployment.
 
+Current implementation note:
+
+- `frontend/src/PlayingView.tsx` already contains the result-model API wiring, including ranked result VR input, Lounge draft/result completion, resume handling for drafts, and `TargetAssist` rendering in multiple places.
+- This handoff is therefore a user-flow/layout cleanup slice, not an API redesign or backend slice. Reuse the existing API calls and state where possible.
+
 ## Files To Inspect
 
 - `AGENTS.md`
