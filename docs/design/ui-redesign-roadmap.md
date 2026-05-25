@@ -79,12 +79,14 @@ Desired future behavior:
 - Hide or disable impossible route choices.
 - Continue to support text search as a fallback for speed and accessibility.
 
-Image sourcing is unresolved. Before implementing image-based selection, decide:
+Image sourcing is scoped by `docs/decisions/2026-05-25-map-image-asset-policy.md`.
 
-- whether images can be bundled locally
-- where assets should live in the repo or data directory
-- whether fan-site images are acceptable for private LAN use
-- how coordinates map to the existing `map_points.x` and `map_points.y`
+Before implementing image-based selection, remember:
+
+- do not scrape, download, or commit fan-site images without an explicit user decision
+- use optional local frontend assets under `frontend/public/assets/`
+- keep the text/search picker as fallback when images are missing
+- keep coordinates normalized to the existing `map_points.x` and `map_points.y`
 
 ### Play Assist Review
 

@@ -14,6 +14,10 @@ After Claude Code reports back and Codex review is complete, move the handoff to
 
 Large redesign work may be split into several active handoff files ahead of implementation. When doing this, Codex must still re-check the next handoff after each Claude Code report before handing it over.
 
+## Active Verification Handoffs
+
+- `2026-05-25-analytics-split-pi-verification.md`
+
 Current UI redesign order:
 
 1. `2026-05-25-course-notes-target-view.md`
