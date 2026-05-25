@@ -300,6 +300,7 @@ Completed behavior:
 Design note:
 
 - Editing historical `rating_after` recalculates the record's `rating_delta`, but does not update `VrAccount.current_vr`. Current VR correction remains a separate Settings/account maintenance concern unless a later design explicitly couples it to Records edits.
+- Hidden/restore now re-evaluates Lounge auto-finish status based on visible completed races. This is correct for automatic 12-race completion, but it can move a manually finished Lounge session back to active if that session has fewer than 12 visible completed races. If manual finish should be authoritative, add a separate session-level marker before changing this behavior.
 
 ## Completed Foundation: Analytics Split
 
@@ -355,4 +356,4 @@ Completed behavior:
 - Repeated sync is idempotent by stored MKCentral `changeId`.
 - Lounge view exposes a manual MMR sync button and displays the latest synced values.
 
-The next immediate step should be Pi verification of the hidden race recovery UI before starting another implementation slice.
+The hidden race recovery UI has been verified on Pi. The next immediate step can be selected from the remaining product slices, such as Lounge MMR graphing, automatic MMR sync, map/image annotation editing, or final cleanup before broader daily use.
