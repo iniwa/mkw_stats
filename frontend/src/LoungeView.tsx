@@ -48,6 +48,80 @@ function toToISO(d: string): string {
   return new Date(y, m - 1, day + 1).toISOString()
 }
 
+const MMR_TREND_LIMIT = 20
+
+function buildTrendPoints(sessions: PlaySession[], game: string): PlaySession[] {
+  return sessions
+    .filter(s => s.lounge_mmr_after != null && s.lounge_mmr_game === game)
+    .sort((a, b) => {
+      const ta = a.completed_at ?? a.started_at
+      const tb = b.completed_at ?? b.started_at
+      return ta < tb ? -1 : ta > tb ? 1 : 0
+    })
+    .slice(-MMR_TREND_LIMIT)
+}
+
+function MmrTrendChart({ trend12, trend24 }: { trend12: PlaySession[]; trend24: PlaySession[] }) {
+  const W = 480, H = 130
+  const padL = 46, padR = 8, padT = 10, padB = 14
+  const chartW = W - padL - padR
+  const chartH = H - padT - padB
+
+  const allVals: number[] = [
+    ...trend12.map(s => s.lounge_mmr_after!),
+    ...trend24.map(s => s.lounge_mmr_after!),
+  ]
+  const allTimes: number[] = [
+    ...trend12.map(s => new Date(s.completed_at ?? s.started_at).getTime()),
+    ...trend24.map(s => new Date(s.completed_at ?? s.started_at).getTime()),
+  ]
+
+  const vMin = Math.min(...allVals)
+  const vMax = Math.max(...allVals)
+  const tMin = Math.min(...allTimes)
+  const tMax = Math.max(...allTimes)
+  const vRange = vMax === vMin ? 1 : vMax - vMin
+  const tRange = tMax === tMin ? 1 : tMax - tMin
+
+  const tx = (iso: string): number =>
+    padL + ((new Date(iso).getTime() - tMin) / tRange) * chartW
+  const ty = (v: number): number =>
+    padT + (1 - (v - vMin) / vRange) * chartH
+  const toPoints = (pts: PlaySession[]): string =>
+    pts.map(s => `${tx(s.completed_at ?? s.started_at)},${ty(s.lounge_mmr_after!)}`).join(' ')
+
+  const yTicks = vMax === vMin ? [vMin] : [vMax, Math.round((vMax + vMin) / 2), vMin]
+  const c12 = '#5b8bf0'
+  const c24 = '#e6b24d'
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} aria-hidden="true">
+      {yTicks.map((v, i) => (
+        <g key={i}>
+          <line x1={padL} y1={ty(v)} x2={W - padR} y2={ty(v)} stroke="#2e2e3e" strokeWidth={1} />
+          <text x={padL - 4} y={ty(v) + 3.5} textAnchor="end" fontSize={10} fill="#6a6a7e">{v}</text>
+        </g>
+      ))}
+      {trend12.length > 1 && (
+        <polyline points={toPoints(trend12)} fill="none" stroke={c12} strokeWidth={2} strokeLinejoin="round" />
+      )}
+      {trend24.length > 1 && (
+        <polyline points={toPoints(trend24)} fill="none" stroke={c24} strokeWidth={2} strokeLinejoin="round" />
+      )}
+      {trend12.map((s, i) => (
+        <circle key={i} cx={tx(s.completed_at ?? s.started_at)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c12} />
+      ))}
+      {trend24.map((s, i) => (
+        <circle key={i} cx={tx(s.completed_at ?? s.started_at)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c24} />
+      ))}
+      <circle cx={W - padR - 62} cy={padT + 5} r={4} fill={c12} />
+      <text x={W - padR - 54} y={padT + 9} fontSize={10} fill="#9a9aae">12p</text>
+      <circle cx={W - padR - 32} cy={padT + 5} r={4} fill={c24} />
+      <text x={W - padR - 24} y={padT + 9} fontSize={10} fill="#9a9aae">24p</text>
+    </svg>
+  )
+}
+
 export default function LoungeView() {
   const [data, setData] = useState<LoungeData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -118,6 +192,21 @@ export default function LoungeView() {
   }
 
   const { sessions, racesBySession, courses, routes } = data
+
+  const trend12 = buildTrendPoints(sessions, 'mkworld')
+  const trend24 = buildTrendPoints(sessions, 'mkworld24p')
+  const hasTrend = trend12.length > 0 || trend24.length > 0
+  const syncedAll = sessions
+    .filter(s =>
+      s.lounge_mmr_after != null
+      && (s.lounge_mmr_game === 'mkworld' || s.lounge_mmr_game === 'mkworld24p')
+    )
+    .sort((a, b) => {
+      const ta = a.completed_at ?? a.started_at
+      const tb = b.completed_at ?? b.started_at
+      return ta > tb ? -1 : ta < tb ? 1 : 0
+    })
+    .slice(0, 6)
 
   const windowLabel = (dateFrom || dateTo) ? 'Filtered sessions' : `Recent ${limit} Lounge sessions`
 
@@ -312,6 +401,38 @@ export default function LoungeView() {
             </>
           )
         })()}
+      </div>
+
+      <div className="panel">
+        <div className="panel__title">MMR 推移</div>
+        {!hasTrend ? (
+          <p className="placeholder">同期済みのMMR履歴がありません</p>
+        ) : (
+          <>
+            <MmrTrendChart trend12={trend12} trend24={trend24} />
+            <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>直近の同期履歴</div>
+            <ul className="lounge__mmr-list">
+              {syncedAll.map(s => {
+                const is24 = s.lounge_mmr_game === 'mkworld24p'
+                const delta = s.lounge_mmr_delta
+                const deltaStr = delta != null ? (delta >= 0 ? `+${delta}` : String(delta)) : '—'
+                const deltaPos = delta != null && delta >= 0
+                return (
+                  <li key={s.id} className="lounge__mmr-item">
+                    <span className="lounge__meta">{fmtTime(s.completed_at ?? s.started_at)}</span>
+                    <span className={`tag ${is24 ? 'tag--mmr24' : 'tag--mmr12'}`}>{is24 ? '24p' : '12p'}</span>
+                    <span className="lounge__mmr-range">
+                      {s.lounge_mmr_before ?? '?'} → {s.lounge_mmr_after ?? '?'}
+                    </span>
+                    <span className={deltaPos ? 'lounge__mmr-delta--pos' : 'lounge__mmr-delta--neg'}>
+                      {deltaStr}
+                    </span>
+                  </li>
+                )
+              })}
+            </ul>
+          </>
+        )}
       </div>
 
       {activeSessions.length > 0 && (

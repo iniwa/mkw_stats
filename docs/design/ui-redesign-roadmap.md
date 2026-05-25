@@ -356,4 +356,19 @@ Completed behavior:
 - Repeated sync is idempotent by stored MKCentral `changeId`.
 - Lounge view exposes a manual MMR sync button and displays the latest synced values.
 
-The hidden race recovery UI has been verified on Pi. The next immediate step is a small Lounge MMR trend panel using the existing synced session-level MMR fields. Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and final cleanup remain later slices.
+The hidden race recovery UI has been verified on Pi.
+
+The Lounge MMR trend panel has been implemented.
+
+Completed behavior:
+
+- Lounge view shows a `MMR 推移` panel after the existing MMR sync panel.
+- The panel contains an inline SVG line chart with two streams: 12p (`lounge_mmr_game === "mkworld"`) and 24p (`lounge_mmr_game === "mkworld24p"`).
+- Each stream uses distinct colors (blue / amber) with a text legend so the chart does not rely on color alone.
+- The chart handles one-point streams (dot only, no broken polyline) and equal min/max (flat line).
+- Up to 20 most-recent data points per stream are charted.
+- Under the chart, the 6 most recently synced sessions are listed with date/time, game label, before → after, and signed delta.
+- If no synced sessions exist, an empty state is shown.
+- No new backend APIs or database columns; frontend-only change.
+
+Automatic MMR sync, deeper Lounge analytics, map/image annotation editing, and final cleanup remain later slices.

@@ -728,6 +728,17 @@ textarea.input { resize: vertical; font-family: inherit; }
 .lounge__warn-item:last-child { border-bottom: none; }
 .lounge__warn-target { flex-shrink: 0; }
 .lounge__warn-flags { color: var(--warn); }
+.lounge__mmr-list { list-style: none; display: flex; flex-direction: column; gap: 0.2rem; margin-top: 0.5rem; }
+.lounge__mmr-item {
+  display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;
+  padding: 0.3rem 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.83rem;
+}
+.lounge__mmr-item:last-child { border-bottom: none; }
+.lounge__mmr-range { font-variant-numeric: tabular-nums; color: var(--text-dim); }
+.lounge__mmr-delta--pos { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--ok); min-width: 3rem; text-align: right; }
+.lounge__mmr-delta--neg { font-variant-numeric: tabular-nums; font-weight: 600; color: var(--danger); min-width: 3rem; text-align: right; }
+.tag--mmr12 { background: #1f3556; color: #9bbcf5; }
+.tag--mmr24 { background: #3a2000; color: #d4a040; }
 
 /* -- world map picker ------------------------------------------------------ */
 .wmp { margin-bottom: 0.7rem; }
