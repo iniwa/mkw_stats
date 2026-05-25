@@ -17,6 +17,7 @@ Large redesign work may be split into several active handoff files ahead of impl
 ## Active Verification Handoffs
 
 - `2026-05-25-analytics-split-pi-verification.md`
+- `2026-05-25-lounge-mmr-pi-verification.md`
 
 Current UI redesign order:
 
