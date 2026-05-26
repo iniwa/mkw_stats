@@ -16,7 +16,7 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 ## Active Verification Handoffs
 
-- `2026-05-26-empty-db-e2e-smoke.md`
+None.
 
 ## Active Implementation Handoffs
 
