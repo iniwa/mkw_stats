@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-26-lounge-score-autofill.md`
 
 Current UI redesign order:
 
