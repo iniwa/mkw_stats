@@ -46,38 +46,42 @@ Route targets continue to use `/assets/routes/<route_id>.png` directly with no f
 
 | course_id | Expected path | Status |
 |-----------|--------------|--------|
-| mario_bros_circuit | `frontend/public/assets/courses/mario_bros_circuit.png` | missing |
-| crown_city | `frontend/public/assets/courses/crown_city.png` | missing |
-| whistlestop_summit | `frontend/public/assets/courses/whistlestop_summit.png` | missing |
-| dk_spaceport | `frontend/public/assets/courses/dk_spaceport.png` | missing |
-| desert_hills | `frontend/public/assets/courses/desert_hills.png` | missing |
-| shy_guy_bazaar | `frontend/public/assets/courses/shy_guy_bazaar.png` | missing |
-| wario_stadium | `frontend/public/assets/courses/wario_stadium.png` | missing |
-| airship_fortress | `frontend/public/assets/courses/airship_fortress.png` | missing |
-| dk_pass | `frontend/public/assets/courses/dk_pass.png` | missing |
-| starview_peak | `frontend/public/assets/courses/starview_peak.png` | missing |
-| sky_high_sundae | `frontend/public/assets/courses/sky_high_sundae.png` | missing |
-| wario_shipyard | `frontend/public/assets/courses/wario_shipyard.png` | missing |
-| koopa_troopa_beach | `frontend/public/assets/courses/koopa_troopa_beach.png` | missing |
-| faraway_oasis | `frontend/public/assets/courses/faraway_oasis.png` | missing |
-| peach_beach | `frontend/public/assets/courses/peach_beach.png` | missing |
-| salty_salty_speedway | `frontend/public/assets/courses/salty_salty_speedway.png` | missing |
-| dino_dino_jungle | `frontend/public/assets/courses/dino_dino_jungle.png` | missing |
-| great_block_ruins | `frontend/public/assets/courses/great_block_ruins.png` | missing |
-| cheep_cheep_falls | `frontend/public/assets/courses/cheep_cheep_falls.png` | missing |
-| dandelion_depths | `frontend/public/assets/courses/dandelion_depths.png` | missing |
-| boo_cinema | `frontend/public/assets/courses/boo_cinema.png` | missing |
-| dry_bones_burnout | `frontend/public/assets/courses/dry_bones_burnout.png` | missing |
-| moo_moo_meadows | `frontend/public/assets/courses/moo_moo_meadows.png` | missing |
-| choco_mountain | `frontend/public/assets/courses/choco_mountain.png` | missing |
-| toads_factory | `frontend/public/assets/courses/toads_factory.png` | missing |
-| bowsers_castle | `frontend/public/assets/courses/bowsers_castle.png` | missing |
-| acorn_heights | `frontend/public/assets/courses/acorn_heights.png` | missing |
-| mario_circuit | `frontend/public/assets/courses/mario_circuit.png` | missing |
-| peach_stadium | `frontend/public/assets/courses/peach_stadium.png` | missing |
-| rainbow_road | `frontend/public/assets/courses/rainbow_road.png` | missing |
+| mario_bros_circuit | `frontend/public/assets/courses/mario_bros_circuit.png` | present |
+| crown_city | `frontend/public/assets/courses/crown_city.png` | present |
+| whistlestop_summit | `frontend/public/assets/courses/whistlestop_summit.png` | present |
+| dk_spaceport | `frontend/public/assets/courses/dk_spaceport.png` | present |
+| desert_hills | `frontend/public/assets/courses/desert_hills.png` | present |
+| shy_guy_bazaar | `frontend/public/assets/courses/shy_guy_bazaar.png` | present |
+| wario_stadium | `frontend/public/assets/courses/wario_stadium.png` | present |
+| airship_fortress | `frontend/public/assets/courses/airship_fortress.png` | present |
+| dk_pass | `frontend/public/assets/courses/dk_pass.png` | present |
+| starview_peak | `frontend/public/assets/courses/starview_peak.png` | present |
+| sky_high_sundae | `frontend/public/assets/courses/sky_high_sundae.png` | present |
+| wario_shipyard | `frontend/public/assets/courses/wario_shipyard.png` | present |
+| koopa_troopa_beach | `frontend/public/assets/courses/koopa_troopa_beach.png` | present |
+| faraway_oasis | `frontend/public/assets/courses/faraway_oasis.png` | present |
+| peach_beach | `frontend/public/assets/courses/peach_beach.png` | present |
+| salty_salty_speedway | `frontend/public/assets/courses/salty_salty_speedway.png` | present |
+| dino_dino_jungle | `frontend/public/assets/courses/dino_dino_jungle.png` | present |
+| great_block_ruins | `frontend/public/assets/courses/great_block_ruins.png` | present |
+| cheep_cheep_falls | `frontend/public/assets/courses/cheep_cheep_falls.png` | present |
+| dandelion_depths | `frontend/public/assets/courses/dandelion_depths.png` | present |
+| boo_cinema | `frontend/public/assets/courses/boo_cinema.png` | present |
+| dry_bones_burnout | `frontend/public/assets/courses/dry_bones_burnout.png` | present |
+| moo_moo_meadows | `frontend/public/assets/courses/moo_moo_meadows.png` | present |
+| choco_mountain | `frontend/public/assets/courses/choco_mountain.png` | present |
+| toads_factory | `frontend/public/assets/courses/toads_factory.png` | present |
+| bowsers_castle | `frontend/public/assets/courses/bowsers_castle.png` | present |
+| acorn_heights | `frontend/public/assets/courses/acorn_heights.png` | present |
+| mario_circuit | `frontend/public/assets/courses/mario_circuit.png` | present |
+| peach_stadium | `frontend/public/assets/courses/peach_stadium.png` | present |
+| rainbow_road | `frontend/public/assets/courses/rainbow_road.png` | present |
 
-**Present: 0 / 30**
+**Present: 30 / 30**
+
+Note: 5 of the 30 files contain JPEG bytes saved under the `.png` extension. This is because MarioWiki's 1200px thumbnail URL ends in `.png` while serving JPEG bytes for `.jpg` source images. Browsers detect by Content-Type, so display works correctly. Files: `acorn_heights.png`, `boo_cinema.png`, `dry_bones_burnout.png`, `mario_circuit.png`, `peach_stadium.png`.
+
+Acquisition: run `python scripts/download_course_images.py` from repo root. See `docs/design/image-asset-candidates.md` for source strategy.
 
 ## Related Docs
 

@@ -8,6 +8,8 @@
     - 例：マリオブラザーズサーキット ← トロフィーシティのようなコース画像
     - ファンサイトから自動で取得したい
     - コース画像表示の配管済み（TargetImage コンポーネント、PlayingView 確認ステップ、AnnotationEditor フォールバックチェーン）
+    - コース画像 30/30 取得済み（MarioWiki から自動取得、`scripts/download_course_images.py`）
+    - 道中ルート画像は 11/203 取得済み（残り 192 は seed `image_url` 未設定のため未取得）
 
 ## Playing
 ### 野良VR

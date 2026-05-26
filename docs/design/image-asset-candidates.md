@@ -9,7 +9,7 @@ Last updated: 2026-05-26
 | Asset type | Total | Local present | Local missing |
 |---|---|---|---|
 | Route images | 203 routes | 11 | 192 |
-| Course images | 30 courses | 0 | 30 |
+| Course images | 30 courses | 30 | 0 |
 | Course icons | 30 courses | 0 | 30 |
 
 - Route images with known `image_url` in seed data: 11 of 203
@@ -72,7 +72,7 @@ To get route images for the remaining 192 routes:
 
 ### Status
 
-0 of 30 course images are present locally. Display plumbing is in place:
+30 of 30 course images are present locally (acquired 2026-05-26 via `scripts/download_course_images.py` from MarioWiki). Display plumbing is in place:
 
 - Component: `frontend/src/TargetImage.tsx` with `kind="course"`
 - Used in: `PlayingView` confirmation step, `AnnotationEditor` surface
@@ -96,13 +96,20 @@ Results go into `mariowiki_course_candidates` in the JSON output.
 
 Course images are screenshot/track overview images (similar to the existing route images), not icons.
 
-### Acquisition Steps
+### Acquisition (Completed 2026-05-26)
 
-1. Run `scripts/collect_image_asset_candidates.py --source mariowiki --out-file report.json`
-2. Review `report.json` → `mariowiki_course_candidates`
-3. Download candidates manually (verify each URL is appropriate before saving)
-4. Save to `frontend/public/assets/courses/<course_id>.png`
-5. Update `docs/design/course-image-assets.md` checklist
+Acquired via `scripts/download_course_images.py`. The script:
+1. Maps each course to known MarioWiki page slug(s) — see `COURSE_PAGE_SLUGS` in the script.
+2. Fetches each page, finds the largest MKWorld-tagged thumbnail (filters out vehicles/icons/older-game prefixes like MKWii/MK7/MK8/MKT/MKDD/GCN/DS).
+3. Downloads to `frontend/public/assets/courses/<course_id>.png`.
+
+Notes:
+- Image sizes range from 280px (battle minimap) up to 1200px (full screenshots). Highest-res available was selected.
+- 5 files contain JPEG bytes with `.png` extension (MarioWiki thumbnail server quirk). Browsers detect by Content-Type so this works at runtime.
+- To re-download or update: `python scripts/download_course_images.py --force`.
+
+For candidate inventory only (no downloads):
+`python scripts/collect_image_asset_candidates.py --source mariowiki`
 
 ## Course Icons
 
