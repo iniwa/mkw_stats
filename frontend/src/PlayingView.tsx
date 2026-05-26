@@ -16,7 +16,7 @@ import {
   type VrAccount,
 } from './api'
 import { RouteDetail } from './RouteDetail'
-import { RouteImage } from './RouteImage'
+import { TargetImage } from './TargetImage'
 import { TargetAssist } from './TargetAssist'
 import { WorldMapPicker } from './WorldMapPicker'
 
@@ -774,9 +774,12 @@ function SelectionConfirm({
       <p className="confirm__msg">{resolved.confirm_message}</p>
       {resolved.kind === 'route' && resolved.route && (
         <>
-          <RouteImage routeId={resolved.route.id} />
+          <TargetImage kind="route" id={resolved.route.id} />
           <RouteDetail route={resolved.route} />
         </>
+      )}
+      {resolved.kind === 'course' && resolved.course && (
+        <TargetImage kind="course" id={resolved.course.id} />
       )}
       <TargetAssist
         kind={resolved.kind}

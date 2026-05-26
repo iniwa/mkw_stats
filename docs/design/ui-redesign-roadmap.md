@@ -480,6 +480,27 @@ Completed behavior:
 - No backend changes, no new npm dependencies.
 - Typecheck and build pass clean.
 
+The course image display plumbing slice has been implemented.
+
+Completed behavior:
+
+- `frontend/src/TargetImage.tsx` exports `TargetImage({ kind, id })`.
+- `kind="course"` → `/assets/courses/<course_id>.png`; `kind="route"` → `/assets/routes/<route_id>.png`.
+- Missing image: `onError` fires → component returns `null` (no broken image, no error text).
+- Changing `kind` or `id` resets failure state via `useEffect`.
+- `PlayingView` confirmation step (`SelectionConfirm`) now shows `TargetImage` for both route and course targets.
+  - Route: `TargetImage kind="route"` + `RouteDetail` (unchanged behavior).
+  - Course: `TargetImage kind="course"` (shows image if present, no-op if missing).
+- `AnnotationEditor` surface (`AnnotationSurface`) now uses a fallback chain for course targets:
+  1. Try `/assets/courses/<course_id>.png`
+  2. On error → try `/assets/maps/world.png`
+  3. On error → show `ann__surface-wrap--fallback` panel (clean surface, no broken image)
+- Route annotation surface behavior is unchanged.
+- `frontend/public/assets/courses/.gitkeep` added; directory is ready for course image files.
+- `docs/design/course-image-assets.md` created with path convention, runtime URL, no-hotlink rule, source note, and a checklist for all 30 course ids (all currently missing).
+- No CSS changes (`.route-image` class reused), no backend changes, no npm dependencies.
+- Typecheck and build pass clean.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix

@@ -1,17 +1,18 @@
 import { useEffect, useState } from 'react'
 
-export function RouteImage({ routeId }: { routeId: string }) {
+export function TargetImage({ kind, id }: { kind: 'course' | 'route'; id: string }) {
   const [failed, setFailed] = useState(false)
 
   useEffect(() => {
     setFailed(false)
-  }, [routeId])
+  }, [kind, id])
 
   if (failed) return null
+  const src = kind === 'course' ? `/assets/courses/${id}.png` : `/assets/routes/${id}.png`
   return (
     <img
       className="route-image"
-      src={`/assets/routes/${routeId}.png`}
+      src={src}
       alt=""
       onError={() => setFailed(true)}
     />

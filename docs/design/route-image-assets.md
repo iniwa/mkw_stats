@@ -39,4 +39,4 @@ Images are sourced from approved reference page URLs stored in `backend/app/seed
 
 ## Remaining Routes
 
-192 routes have no `image_url` in seed metadata. These intentionally fall back to text-only display in `RouteImage` (`onError` → `return null`) and in `AnnotationEditor`. No action needed unless new `image_url` values are added to seed metadata.
+192 routes have no `image_url` in seed metadata. These intentionally fall back to text-only display in `TargetImage` (`onError` → `return null`) and in `AnnotationEditor`. No action needed unless new `image_url` values are added to seed metadata.

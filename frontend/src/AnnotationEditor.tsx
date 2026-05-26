@@ -47,12 +47,14 @@ function AnnotationSurface({
   onEditDragEnd,
 }: SurfaceProps) {
   const [imgFailed, setImgFailed] = useState(false)
+  const [useFallbackMap, setUseFallbackMap] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
     setImgFailed(false)
+    setUseFallbackMap(false)
   }, [selectedTargetId, selectedTargetType])
 
   useEffect(() => {
@@ -63,7 +65,9 @@ function AnnotationSurface({
   const imgSrc =
     selectedTargetType === 'route'
       ? `/assets/routes/${selectedTargetId}.png`
-      : `/assets/maps/world.png`
+      : useFallbackMap
+        ? `/assets/maps/world.png`
+        : `/assets/courses/${selectedTargetId}.png`
 
   const computeNorm = (clientX: number, clientY: number) => {
     if (!surfaceRef.current) return null
@@ -96,7 +100,13 @@ function AnnotationSurface({
           className="ann__surface-img"
           src={imgSrc}
           alt=""
-          onError={() => setImgFailed(true)}
+          onError={() => {
+              if (selectedTargetType === 'course' && !useFallbackMap) {
+                setUseFallbackMap(true)
+              } else {
+                setImgFailed(true)
+              }
+            }}
         />
       )}
 
