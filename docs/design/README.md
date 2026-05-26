@@ -6,6 +6,7 @@ The initial v0.1 design proposal remains in `mkworld_stats_manager_docs_v0_1/`. 
 
 Recommended files:
 
+- `user-guide.md`
 - `architecture.md`
 - `database.md`
 - `api.md`
