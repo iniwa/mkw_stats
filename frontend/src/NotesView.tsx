@@ -5,10 +5,12 @@ import {
   type CourseNote,
   type CourseNoteCreateBody,
   type CourseNoteUpdateBody,
+  type MapPoint,
   type Route,
 } from './api'
 import AnnotationEditor from './AnnotationEditor'
 import { RouteDetail } from './RouteDetail'
+import { WorldMapPicker } from './WorldMapPicker'
 
 type TargetType = 'course' | 'route'
 
@@ -28,6 +30,12 @@ export default function NotesView() {
   const [selectedType, setSelectedType] = useState<TargetType>('course')
   const [selectedId, setSelectedId] = useState('')
 
+  const [mapPoints, setMapPoints] = useState<MapPoint[]>([])
+  const [fromMapPointId, setFromMapPointId] = useState('')
+  const [toMapPointId, setToMapPointId] = useState('')
+  const [resolveError, setResolveError] = useState<string | null>(null)
+  const [resolving, setResolving] = useState(false)
+
   const [createTitle, setCreateTitle] = useState('')
   const [createBody, setCreateBody] = useState('')
   const [createPinned, setCreatePinned] = useState(false)
@@ -44,11 +52,12 @@ export default function NotesView() {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getRoutes(), api.getNotes()])
-      .then(([c, r, n]) => {
+    Promise.all([api.getCourses(), api.getRoutes(), api.getNotes(), api.getMapPoints()])
+      .then(([c, r, n, mp]) => {
         setCourses(c)
         setRoutes(r)
         setNotes(n)
+        setMapPoints(mp)
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
@@ -88,6 +97,36 @@ export default function NotesView() {
     () => (selectedType === 'route' && selectedId ? (routeMap.get(selectedId) ?? null) : null),
     [selectedType, selectedId, routeMap],
   )
+
+  function handleMapPointUpdated(updated: MapPoint) {
+    setMapPoints(prev => prev.map(mp => mp.id === updated.id ? updated : mp))
+  }
+
+  useEffect(() => {
+    if (!fromMapPointId || !toMapPointId) return
+    setResolveError(null)
+    setResolving(true)
+    let cancelled = false
+    api.resolveSelection(fromMapPointId, toMapPointId)
+      .then(result => {
+        if (cancelled) return
+        setResolving(false)
+        if (result.kind === 'course') {
+          setSelectedType('course')
+          setSelectedId(result.course!.id)
+        } else {
+          setSelectedType('route')
+          setSelectedId(result.route!.id)
+        }
+        setEditingId(null)
+      })
+      .catch((e: Error) => {
+        if (cancelled) return
+        setResolving(false)
+        setResolveError(e.message)
+      })
+    return () => { cancelled = true }
+  }, [fromMapPointId, toMapPointId])
 
   function handleTypeChange(type: TargetType) {
     setSelectedType(type)
@@ -172,6 +211,21 @@ export default function NotesView() {
       <div className="notes__head">
         <span className="notes__title">コースノート</span>
       </div>
+
+      {mapPoints.length > 0 && (
+        <>
+          <WorldMapPicker
+            mapPoints={mapPoints}
+            fromId={fromMapPointId}
+            toId={toMapPointId}
+            onSelectFrom={id => { setFromMapPointId(id); setResolveError(null) }}
+            onSelectTo={id => { setToMapPointId(id); setResolveError(null) }}
+            onMapPointUpdated={handleMapPointUpdated}
+          />
+          {resolving && <p className="hint">コースを解決中...</p>}
+          {resolveError && <p className="notice notice--error">{resolveError}</p>}
+        </>
+      )}
 
       <div className="notes__target">
         <div className="seg">

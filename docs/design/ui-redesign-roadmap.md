@@ -501,6 +501,24 @@ Completed behavior:
 - No CSS changes (`.route-image` class reused), no backend changes, no npm dependencies.
 - Typecheck and build pass clean.
 
+The Courses world-map target picker slice has been implemented.
+
+Completed behavior:
+
+- `NotesView` now loads `api.getMapPoints()` alongside courses, routes, and notes.
+- `WorldMapPicker` is rendered at the top of the Courses view when map points are available.
+- Clicking a map point sets "from"; the picker auto-advances to "to" mode.
+- When both from and to are selected, `api.resolveSelection` is called automatically.
+- On success: `selectedType` and `selectedId` are updated to the resolved course/route; notes and annotations update immediately.
+- On error: a compact `notice--error` is shown near the picker; the existing select box remains functional.
+- The existing segmented type button + select box remain fully functional in parallel.
+- Calibration mode (drag markers to update coordinates) is preserved; `onMapPointUpdated` updates local mapPoints state in place.
+- If the world map image is missing (`WorldMapPicker` returns `null`), the select box continues to work.
+- No CSS additions needed; `.wmp` already has correct spacing within `.notes` flex container.
+- No backend changes, no npm dependencies.
+- Typecheck and build pass clean.
+- `issues.md` Courses item marked complete.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix

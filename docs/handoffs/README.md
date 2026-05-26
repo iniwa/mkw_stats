@@ -20,13 +20,11 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-05-26-courses-world-map-target-picker.md`
 - `2026-05-26-image-asset-candidate-inventory.md`
 
 Current UI redesign order (next after Codex review):
 
-1. `2026-05-26-courses-world-map-target-picker.md`
-2. `2026-05-26-image-asset-candidate-inventory.md`
+1. `2026-05-26-image-asset-candidate-inventory.md`
 
 Next queued verification handoff:
 
