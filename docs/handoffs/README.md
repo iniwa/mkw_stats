@@ -16,7 +16,7 @@ Large redesign work may be split into several active handoff files ahead of impl
 
 ## Active Verification Handoffs
 
-None.
+- `2026-05-26-release-readiness-final-check.md`
 
 ## Active Implementation Handoffs
 
