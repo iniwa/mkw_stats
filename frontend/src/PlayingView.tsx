@@ -811,15 +811,16 @@ function RankedResultForm({
   busy: string | null
   onComplete: (body: CompleteRankedBody) => void
 }) {
-  const [playerCount, setPlayerCount] = useState(defaultPlayerCount === 24 ? 24 : 12)
+  const [playerCount, setPlayerCount] = useState(Math.min(24, Math.max(1, defaultPlayerCount || 12)))
   const [placement, setPlacement] = useState(1)
   const [placementHint, setPlacementHint] = useState(false)
   const [ratingAfter, setRatingAfter] = useState(account?.current_vr ?? 0)
   const saving = busy === 'complete-ranked'
 
-  const handlePlayerCountChange = (n: number) => {
-    setPlayerCount(n)
-    setPlacement(p => Math.min(p, n))
+  const handlePlayerCountChange = (next: number) => {
+    const clamped = Math.min(24, Math.max(1, next || 1))
+    setPlayerCount(clamped)
+    setPlacement(p => Math.min(p, clamped))
     setPlacementHint(false)
   }
 
@@ -840,17 +841,29 @@ function RankedResultForm({
 
       <div className="field">
         <span className="field__label">参加人数</span>
-        <div className="seg">
-          {[12, 24].map(n => (
-            <button
-              key={n}
-              className={`seg__btn${playerCount === n ? ' seg__btn--on' : ''}`}
-              onClick={() => handlePlayerCountChange(n)}
-            >
-              {n}人
-            </button>
-          ))}
+        <div className="stepper">
+          <button
+            className="btn stepper__btn"
+            onClick={() => handlePlayerCountChange(playerCount - 1)}
+          >
+            −
+          </button>
+          <input
+            className="input stepper__input"
+            type="number"
+            min={1}
+            max={24}
+            value={playerCount}
+            onChange={e => handlePlayerCountChange(Number(e.target.value))}
+          />
+          <button
+            className="btn stepper__btn"
+            onClick={() => handlePlayerCountChange(playerCount + 1)}
+          >
+            ＋
+          </button>
         </div>
+        <p className="hint">1〜24人で入力できます。</p>
       </div>
 
       <div className="field">

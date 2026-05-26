@@ -8,7 +8,7 @@ import PlayingView from './PlayingView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 
-const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'Analytics', 'Courses', 'Lounge', 'Settings']
+const NAV_ITEMS = ['Dashboard', 'Playing', 'Records', 'VR Analytics', 'Courses', 'Lounge', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
@@ -48,7 +48,7 @@ export default function App() {
           <PlayingView />
         ) : active === 'Records' ? (
           <RecordsView />
-        ) : active === 'Analytics' ? (
+        ) : active === 'VR Analytics' ? (
           <AnalyticsView />
         ) : active === 'Lounge' ? (
           <LoungeView />

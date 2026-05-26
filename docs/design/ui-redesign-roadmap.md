@@ -449,6 +449,16 @@ Completed behavior:
 - No new npm dependencies, no DB migration.
 - 127 backend tests pass; typecheck and build pass clean.
 
+The small Playing / navigation polish slice has been implemented.
+
+Completed behavior:
+
+- The navigation tab formerly labeled `Analytics` is now labeled `VR Analytics`, matching the page title and its ranked-only scope.
+- The Ranked result form now accepts free numeric player counts from 1 to 24 instead of only 12 / 24 segmented choices.
+- Changing player count clamps placement to the new valid range.
+- The existing Ranked save payload continues to send `player_count`, `placement`, and `rating_after`.
+- No backend changes, no new dependencies.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix
