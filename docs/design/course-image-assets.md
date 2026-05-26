@@ -83,3 +83,4 @@ Route targets continue to use `/assets/routes/<route_id>.png` directly with no f
 
 - Route image assets: `docs/design/route-image-assets.md`
 - Course icon assets (WorldMapPicker): `docs/design/course-icon-assets.md`
+- Image asset candidates and acquisition guide: `docs/design/image-asset-candidates.md`

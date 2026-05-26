@@ -20,11 +20,11 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-05-26-image-asset-candidate-inventory.md`
+None.
 
 Current UI redesign order (next after Codex review):
 
-1. `2026-05-26-image-asset-candidate-inventory.md`
+None.
 
 Next queued verification handoff:
 

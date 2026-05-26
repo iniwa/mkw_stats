@@ -51,3 +51,9 @@ Runtime URL: `/assets/course-icons/<course_id>.png`
 | rainbow_road | `frontend/public/assets/course-icons/rainbow_road.png` | missing |
 
 **Present: 0 / 30**
+
+## Related Docs
+
+- Image asset candidates and acquisition guide: `docs/design/image-asset-candidates.md`
+- Course image assets: `docs/design/course-image-assets.md`
+- Route image assets: `docs/design/route-image-assets.md`

@@ -40,3 +40,9 @@ Images are sourced from approved reference page URLs stored in `backend/app/seed
 ## Remaining Routes
 
 192 routes have no `image_url` in seed metadata. These intentionally fall back to text-only display in `TargetImage` (`onError` → `return null`) and in `AnnotationEditor`. No action needed unless new `image_url` values are added to seed metadata.
+
+## Related Docs
+
+- Image asset candidates and acquisition guide: `docs/design/image-asset-candidates.md`
+- Course image assets: `docs/design/course-image-assets.md`
+- Course icon assets: `docs/design/course-icon-assets.md`
