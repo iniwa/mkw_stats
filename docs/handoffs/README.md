@@ -21,8 +21,12 @@ None.
 ## Active Implementation Handoffs
 
 - `2026-05-26-vr-analytics-trends-targets.md`
+- `2026-05-26-course-image-display.md`
 
 Current UI redesign order:
+
+1. `2026-05-26-vr-analytics-trends-targets.md`
+2. `2026-05-26-course-image-display.md`
 
 Next queued verification handoff:
 
