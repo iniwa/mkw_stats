@@ -10,6 +10,17 @@ interface AnalyticsData {
   vrAccounts: VrAccount[]
 }
 
+interface TargetAccum {
+  kind: 'course' | 'route'
+  id: string
+  count: number
+  completedCount: number
+  placementSum: number
+  placementCount: number
+  vrDeltaSum: number
+  vrDeltaCount: number
+}
+
 function resolveName(kind: 'course' | 'route', id: string, courses: Course[], routes: Route[]): string {
   if (kind === 'course') {
     const c = courses.find(c => c.id === id)
@@ -38,6 +49,45 @@ function toFromISO(d: string): string {
 function toToISO(d: string): string {
   const [y, m, day] = d.split('-').map(Number)
   return new Date(y, m - 1, day + 1).toISOString()
+}
+
+function VrTrendChart({ races }: { races: RaceRecord[] }) {
+  const W = 480, H = 130
+  const padL = 46, padR = 8, padT = 10, padB = 14
+  const chartW = W - padL - padR
+  const chartH = H - padT - padB
+
+  const vals = races.map(r => r.rating_after!)
+  const vMin = Math.min(...vals)
+  const vMax = Math.max(...vals)
+  const isFlatLine = vMax === vMin
+
+  const n = races.length
+  const tx = (i: number) => padL + (n === 1 ? chartW / 2 : (i / (n - 1)) * chartW)
+  const ty = (v: number) => isFlatLine
+    ? padT + chartH / 2
+    : padT + (1 - (v - vMin) / (vMax - vMin)) * chartH
+
+  const points = vals.map((v, i) => `${tx(i)},${ty(v)}`).join(' ')
+  const yTicks = isFlatLine ? [vMin] : [vMax, Math.round((vMax + vMin) / 2), vMin]
+  const color = '#5b8bf0'
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', height: 'auto', display: 'block' }} aria-hidden="true">
+      {yTicks.map((v, i) => (
+        <g key={i}>
+          <line x1={padL} y1={ty(v)} x2={W - padR} y2={ty(v)} stroke="#2e2e3e" strokeWidth={1} />
+          <text x={padL - 4} y={ty(v) + 3.5} textAnchor="end" fontSize={10} fill="#6a6a7e">{v}</text>
+        </g>
+      ))}
+      {n > 1 && (
+        <polyline points={points} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      )}
+      {vals.map((v, i) => (
+        <circle key={i} cx={tx(i)} cy={ty(v)} r={3} fill={color} />
+      ))}
+    </svg>
+  )
 }
 
 export default function AnalyticsView() {
@@ -154,23 +204,52 @@ export default function AnalyticsView() {
     .sort((a, b) => a[0] - b[0])
     .slice(0, 12)
 
-  // Top targets (non-cancelled)
-  const targetMap = new Map<string, { kind: 'course' | 'route'; id: string; count: number }>()
-  for (const r of allRaces) {
-    if (r.status === 'cancelled') continue
-    if (r.course_id) {
-      const key = `course:${r.course_id}`
-      const entry = targetMap.get(key)
-      if (entry) entry.count++
-      else targetMap.set(key, { kind: 'course', id: r.course_id, count: 1 })
-    } else if (r.route_id) {
-      const key = `route:${r.route_id}`
-      const entry = targetMap.get(key)
-      if (entry) entry.count++
-      else targetMap.set(key, { kind: 'route', id: r.route_id, count: 1 })
+  // VR trend: completed ranked races sorted chronologically by session start then race_no
+  const sessionMap = new Map(sessions.map(s => [s.id, s]))
+  const trendRaces = allRaces
+    .filter(r => r.status === 'completed' && r.rating_after != null)
+    .sort((a, b) => {
+      const ta = sessionMap.get(a.session_id)?.started_at ?? ''
+      const tb = sessionMap.get(b.session_id)?.started_at ?? ''
+      if (ta !== tb) return ta < tb ? -1 : 1
+      return (a.race_no ?? 0) - (b.race_no ?? 0)
+    })
+
+  // Enhanced target stats from ranked non-cancelled races
+  const targetAccumMap = new Map<string, TargetAccum>()
+  for (const r of effectiveRanked) {
+    const kind: 'course' | 'route' | null = r.course_id ? 'course' : r.route_id ? 'route' : null
+    const id = r.course_id ?? r.route_id ?? null
+    if (!kind || !id) continue
+    const key = `${kind}:${id}`
+    if (!targetAccumMap.has(key)) {
+      targetAccumMap.set(key, { kind, id, count: 0, completedCount: 0, placementSum: 0, placementCount: 0, vrDeltaSum: 0, vrDeltaCount: 0 })
+    }
+    const acc = targetAccumMap.get(key)!
+    acc.count++
+    if (r.status === 'completed') {
+      acc.completedCount++
+      if (r.placement != null) { acc.placementSum += r.placement; acc.placementCount++ }
+      if (r.rating_delta != null) { acc.vrDeltaSum += r.rating_delta; acc.vrDeltaCount++ }
     }
   }
-  const topTargets = [...targetMap.values()].sort((a, b) => b.count - a.count).slice(0, 8)
+  const validTargetRaceCount = effectiveRanked.filter(r => r.course_id || r.route_id).length
+  const topTargetStats = [...targetAccumMap.values()]
+    .map(acc => ({
+      ...acc,
+      pickRate: validTargetRaceCount > 0 ? (acc.count / validTargetRaceCount) * 100 : 0,
+      avgPlacement: acc.placementCount > 0 ? acc.placementSum / acc.placementCount : null,
+      avgVrDelta: acc.vrDeltaCount > 0 ? acc.vrDeltaSum / acc.vrDeltaCount : null,
+      name: resolveName(acc.kind, acc.id, courses, routes),
+    }))
+    .sort((a, b) => {
+      if (b.count !== a.count) return b.count - a.count
+      if (a.avgPlacement != null && b.avgPlacement != null) return a.avgPlacement - b.avgPlacement
+      if (a.avgPlacement != null) return -1
+      if (b.avgPlacement != null) return 1
+      return a.name.localeCompare(b.name)
+    })
+    .slice(0, 10)
 
   const recentSessions = sessions.slice(0, 10)
   const sessionStatusLabel = (s: PlaySession) =>
@@ -226,6 +305,15 @@ export default function AnalyticsView() {
         </div>
       </div>
 
+      <div className="panel">
+        <div className="panel__title">VR 推移</div>
+        {trendRaces.length === 0 ? (
+          <p className="placeholder">完了済みランクレースがありません</p>
+        ) : (
+          <VrTrendChart races={trendRaces} />
+        )}
+      </div>
+
       {placementEntries.length > 0 && (
         <div className="panel">
           <div className="panel__title">順位分布</div>
@@ -248,19 +336,40 @@ export default function AnalyticsView() {
       )}
 
       <div className="panel">
-        <div className="panel__title">よく使うコース/ルート（上位8件）</div>
-        {topTargets.length === 0 ? (
+        <div className="panel__title">コース/ルート別スタッツ（上位10件）</div>
+        {topTargetStats.length === 0 ? (
           <p className="placeholder">データなし</p>
         ) : (
-          <ul className="analytics__target-list">
-            {topTargets.map((t, i) => (
-              <li key={`${t.kind}:${t.id}`} className="analytics__target-row">
-                <span className="analytics__target-rank">{i + 1}</span>
-                <span className={`tag tag--${t.kind}`}>{t.kind === 'course' ? 'コース' : 'ルート'}</span>
-                <span className="analytics__target-name">
-                  {resolveName(t.kind, t.id, courses, routes)}
-                </span>
-                <span className="analytics__target-count">{t.count}</span>
+          <ul className="analytics__target-ext-list">
+            {topTargetStats.map((t, i) => (
+              <li key={`${t.kind}:${t.id}`} className="analytics__target-ext-item">
+                <div className="analytics__target-ext-top">
+                  <span className="analytics__target-rank">{i + 1}</span>
+                  <span className={`tag tag--${t.kind}`}>{t.kind === 'course' ? 'コース' : 'ルート'}</span>
+                  <span className="analytics__target-name">{t.name}</span>
+                  <span className="analytics__target-count">{t.count}</span>
+                </div>
+                <div className="analytics__target-ext-bot">
+                  <span className="analytics__target-ext-stat">
+                    <span className="analytics__target-ext-label">ピック率</span>
+                    <span className="analytics__target-ext-value">{t.pickRate.toFixed(1)}%</span>
+                  </span>
+                  {t.avgPlacement != null && (
+                    <span className="analytics__target-ext-stat">
+                      <span className="analytics__target-ext-label">平均順位</span>
+                      <span className="analytics__target-ext-value">{t.avgPlacement.toFixed(1)}</span>
+                    </span>
+                  )}
+                  {t.avgVrDelta != null && (
+                    <span className="analytics__target-ext-stat">
+                      <span className="analytics__target-ext-label">平均VR</span>
+                      <span className="analytics__target-ext-value"
+                        style={{ color: t.avgVrDelta >= 0 ? 'var(--ok)' : 'var(--danger)' }}>
+                        {t.avgVrDelta >= 0 ? '+' : ''}{t.avgVrDelta.toFixed(1)}
+                      </span>
+                    </span>
+                  )}
+                </div>
               </li>
             ))}
           </ul>

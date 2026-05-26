@@ -20,13 +20,11 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-05-26-vr-analytics-trends-targets.md`
 - `2026-05-26-course-image-display.md`
 
-Current UI redesign order:
+Current UI redesign order (next after Codex review):
 
-1. `2026-05-26-vr-analytics-trends-targets.md`
-2. `2026-05-26-course-image-display.md`
+1. `2026-05-26-course-image-display.md`
 
 Next queued verification handoff:
 

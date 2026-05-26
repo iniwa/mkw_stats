@@ -459,6 +459,27 @@ Completed behavior:
 - The existing Ranked save payload continues to send `player_count`, `placement`, and `rating_after`.
 - No backend changes, no new dependencies.
 
+The VR Analytics trends and target stats slice has been implemented.
+
+Completed behavior:
+
+- VR Analytics shows a `VR 推移` panel immediately after the VR デルタ panel.
+- The panel renders an inline SVG line chart: completed ranked races sorted chronologically (session `started_at`, then `race_no`) with `rating_after` as the y-value.
+- Y-axis shows three grid lines with labels (max, mid, min). Identical-value flat lines center vertically.
+- 0-race empty state shows a `placeholder` message without chart rendering.
+- 1-race state shows a single centered dot without NaN layout.
+- The chart is responsive (`width: 100%`, `viewBox`-based) and does not overflow at 375px.
+- The old "よく使うコース/ルート（上位8件）" panel is replaced by "コース/ルート別スタッツ（上位10件）".
+- Each entry shows: pick count, pick rate (`count / validTargetRaceCount × 100`), completed count, average placement (from completed races with non-null placement), average VR delta (from completed races with non-null `rating_delta`).
+- Sort order: pick count desc → average placement asc (null last) → display name asc.
+- Top 10 entries shown; empty state shows `データなし`.
+- `validTargetRaceCount` = non-cancelled ranked races that have a course_id or route_id.
+- Average VR is colored green (positive) or red (negative).
+- All calculations are client-side from already-loaded `sessions` and `allRaces`; no additional fetches.
+- New CSS classes added: `.analytics__target-ext-*` for the two-row item layout.
+- No backend changes, no new npm dependencies.
+- Typecheck and build pass clean.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix

@@ -831,6 +831,22 @@ textarea.input { resize: vertical; font-family: inherit; }
 .wmp-marker--dragging { cursor: grabbing; z-index: 20; }
 .wmp-marker--saving { opacity: 0.55; }
 
+/* -- analytics target extended stats --------------------------------------- */
+.analytics__target-ext-list { list-style: none; display: flex; flex-direction: column; gap: 0; }
+.analytics__target-ext-item {
+  display: flex; flex-direction: column; gap: 0.1rem;
+  padding: 0.4rem 0.4rem; border-bottom: 1px solid var(--border); font-size: 0.85rem;
+}
+.analytics__target-ext-item:last-child { border-bottom: none; }
+.analytics__target-ext-top { display: flex; align-items: center; gap: 0.5rem; }
+.analytics__target-ext-bot {
+  display: flex; gap: 0.2rem 0.9rem; flex-wrap: wrap;
+  font-size: 0.76rem; margin-top: 0.1rem;
+}
+.analytics__target-ext-stat { display: inline-flex; gap: 0.2rem; align-items: baseline; }
+.analytics__target-ext-label { color: var(--text-faint); }
+.analytics__target-ext-value { font-variant-numeric: tabular-nums; font-weight: 500; }
+
 /* -- route image ----------------------------------------------------------- */
 .route-image {
   display: block; max-width: 100%; height: auto; border-radius: 4px;
