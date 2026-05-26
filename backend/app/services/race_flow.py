@@ -137,6 +137,32 @@ def list_session_races(
     return list(db.scalars(stmt))
 
 
+def delete_session(db: Session, session_id: uuid.UUID) -> None:
+    session = get_session(db, session_id)
+
+    all_races = list(db.scalars(
+        select(RaceRecord).where(RaceRecord.session_id == session_id)
+    ))
+
+    # Revert ranked completed races newest-first so current_vr rewinds safely
+    for race in sorted(
+        (r for r in all_races if r.source == SourceType.ranked and r.status == RaceStatus.completed),
+        key=lambda r: (r.race_no or 0, r.created_at),
+        reverse=True,
+    ):
+        _revert_race_effects(db, race)
+
+    # Clean up snapshots on draft, cancelled, and lounge races
+    for race in all_races:
+        if not (race.source == SourceType.ranked and race.status == RaceStatus.completed):
+            _revert_race_effects(db, race)
+
+    for race in all_races:
+        db.delete(race)
+    db.delete(session)
+    db.commit()
+
+
 # --------------------------------------------------------------------------
 # Races
 # --------------------------------------------------------------------------

@@ -431,6 +431,24 @@ Completed behavior:
 - No backend changes, no npm dependencies, no CSS additions.
 - Typecheck and build pass clean.
 
+The Records session delete slice has been implemented.
+
+Completed behavior:
+
+- `DELETE /api/v1/play-sessions/{session_id}` hard-deletes the session, its race records, and linked rating snapshots.
+- Ranked completed races are processed newest-first; `VrAccount.current_vr` is rewound only when the deleted race was the last VR change.
+- Deleting an older ranked session does not corrupt current VR when a later race already moved the account beyond it.
+- Snapshots on draft, cancelled, and Lounge races are cleaned up as part of the same transaction.
+- Lounge MMR fields stored on the session are deleted with the session.
+- `api.deleteSession` added to the frontend API client.
+- In Records detail panel, a compact "削除" button appears in the session header when a session is selected.
+- Clicking "削除" shows a confirmation dialog: "このセッションを削除しますか？レース記録も削除され、元に戻せません。"
+- On confirm: API called → selection cleared → session list reloaded; deleted session disappears from list.
+- On cancel: no API call, selection unchanged.
+- On failure: error shown in detail panel; no crash.
+- No new npm dependencies, no DB migration.
+- 127 backend tests pass; typecheck and build pass clean.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix

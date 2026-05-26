@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-05-26-records-session-delete.md`
+None.
 
 Current UI redesign order:
 

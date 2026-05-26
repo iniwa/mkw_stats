@@ -83,6 +83,11 @@ def draft_race(
     return RaceResponse(race=RaceRecordRead.model_validate(race), warnings=warnings)
 
 
+@router.delete("/play-sessions/{session_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_play_session(session_id: uuid.UUID, db: Session = Depends(get_db)):
+    race_flow.delete_session(db, session_id)
+
+
 @router.post("/play-sessions/{session_id}/undo-last-race", response_model=RaceRecordRead)
 def undo_last_race(session_id: uuid.UUID, db: Session = Depends(get_db)):
     return race_flow.undo_last_race(db, session_id)

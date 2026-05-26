@@ -1676,3 +1676,122 @@ def test_mmr_sync_current_mmr_populated_when_changes_unusable(seeded_client):
     assert body["current_mmr_12p"] == 1500
     assert body["current_mmr_24p"] == 1500
     assert body["updated_session"] is None
+
+
+# ---------------------------------------------------------------------------
+# Session delete
+# ---------------------------------------------------------------------------
+
+def test_delete_session_unknown_returns_404(client):
+    resp = client.delete(f"/api/v1/play-sessions/{uuid.uuid4()}")
+    assert resp.status_code == 404
+
+
+def test_delete_session_removes_session_and_races(seeded_client, db_session):
+    session = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    session_id = session["id"]
+
+    for _ in range(3):
+        draft_id = seeded_client.post(
+            f"/api/v1/play-sessions/{session_id}/races/draft",
+            json={"course_id": "dk_pass"},
+        ).json()["race"]["id"]
+        seeded_client.patch(
+            f"/api/v1/race-records/{draft_id}/complete-lounge",
+            json={"placement": 1, "score": 15},
+        )
+
+    resp = seeded_client.delete(f"/api/v1/play-sessions/{session_id}")
+    assert resp.status_code == 204
+
+    assert seeded_client.get(f"/api/v1/play-sessions/{session_id}").status_code == 404
+    races = db_session.scalars(
+        select(RaceRecord).where(RaceRecord.session_id == uuid.UUID(session_id))
+    ).all()
+    assert races == []
+
+
+def test_delete_ranked_session_removes_rating_snapshots(seeded_client, db_session):
+    session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    session_id = session["id"]
+
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session_id}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft['race']['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 1, "rating_after": 48},
+    )
+
+    assert db_session.scalars(select(RatingSnapshot)).all() != []
+
+    resp = seeded_client.delete(f"/api/v1/play-sessions/{session_id}")
+    assert resp.status_code == 204
+
+    assert db_session.scalars(select(RatingSnapshot)).all() == []
+
+
+def test_delete_latest_ranked_session_rewinds_vr(seeded_client, db_session):
+    session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    session_id = session["id"]
+    account_id = uuid.UUID(session["vr_account_id"])
+
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session_id}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft['race']['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 1, "rating_after": 100},
+    )
+
+    account = db_session.scalars(
+        select(VrAccount).where(VrAccount.id == account_id)
+    ).one()
+    assert account.current_vr == 100
+
+    resp = seeded_client.delete(f"/api/v1/play-sessions/{session_id}")
+    assert resp.status_code == 204
+
+    db_session.refresh(account)
+    assert account.current_vr == 0
+
+
+def test_delete_older_ranked_session_does_not_corrupt_current_vr(seeded_client, db_session):
+    # Two ranked sessions: older then newer.
+    session1 = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    account_id = uuid.UUID(session1["vr_account_id"])
+
+    draft1 = seeded_client.post(
+        f"/api/v1/play-sessions/{session1['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft1['race']['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 3, "rating_after": 50},
+    )
+
+    session2 = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    draft2 = seeded_client.post(
+        f"/api/v1/play-sessions/{session2['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()
+    seeded_client.patch(
+        f"/api/v1/race-records/{draft2['race']['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 1, "rating_after": 80},
+    )
+
+    account = db_session.scalars(
+        select(VrAccount).where(VrAccount.id == account_id)
+    ).one()
+    assert account.current_vr == 80
+
+    # Deleting older session must NOT rewind VR (newer race already moved it past 50)
+    resp = seeded_client.delete(f"/api/v1/play-sessions/{session1['id']}")
+    assert resp.status_code == 204
+
+    db_session.refresh(account)
+    assert account.current_vr == 80

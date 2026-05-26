@@ -57,6 +57,8 @@ export default function RecordsView() {
   const [editScore, setEditScore] = useState('')
   const [pendingId, setPendingId] = useState<string | null>(null)
   const [rowErrors, setRowErrors] = useState<Record<string, string>>({})
+  const [sessionDeleteError, setSessionDeleteError] = useState<string | null>(null)
+  const [sessionDeletePending, setSessionDeletePending] = useState(false)
 
   function onClearSelection() {
     setSelectedId(null)
@@ -64,6 +66,7 @@ export default function RecordsView() {
     setEditingId(null)
     setRowErrors({})
     setShowHidden(false)
+    setSessionDeleteError(null)
   }
 
   async function loadRaces(id: string, includeHidden = false) {
@@ -119,6 +122,7 @@ export default function RecordsView() {
     setEditingId(null)
     setRowErrors({})
     setShowHidden(false)
+    setSessionDeleteError(null)
     await loadRaces(id, false)
   }
 
@@ -197,6 +201,22 @@ export default function RecordsView() {
       setRowErrors(prev => ({ ...prev, [raceId]: e instanceof Error ? e.message : '復元エラー' }))
     } finally {
       setPendingId(null)
+    }
+  }
+
+  async function deleteSession() {
+    if (!selectedId) return
+    if (!window.confirm('このセッションを削除しますか？レース記録も削除され、元に戻せません。')) return
+    setSessionDeletePending(true)
+    setSessionDeleteError(null)
+    try {
+      await api.deleteSession(selectedId)
+      onClearSelection()
+      await load()
+    } catch (e: unknown) {
+      setSessionDeleteError(e instanceof Error ? e.message : 'セッション削除エラー')
+    } finally {
+      setSessionDeletePending(false)
     }
   }
 
@@ -344,14 +364,27 @@ export default function RecordsView() {
 
           {selectedId && (
             <div className="panel">
-              <div className="panel__title">
-                レース詳細
-                {selectedSession && (
-                  <span className="session-list__meta" style={{ marginLeft: '0.5rem' }}>
-                    {fmtTime(selectedSession.started_at)}
-                  </span>
-                )}
+              <div className="panel__title" style={{ display: 'flex', alignItems: 'center' }}>
+                <span>
+                  レース詳細
+                  {selectedSession && (
+                    <span className="session-list__meta" style={{ marginLeft: '0.5rem' }}>
+                      {fmtTime(selectedSession.started_at)}
+                    </span>
+                  )}
+                </span>
+                <button
+                  className="btn btn--sm btn--danger"
+                  style={{ marginLeft: 'auto' }}
+                  disabled={sessionDeletePending || racesLoading}
+                  onClick={deleteSession}
+                >
+                  削除
+                </button>
               </div>
+              {sessionDeleteError && (
+                <div className="records__row-error" style={{ marginBottom: '0.4rem' }}>{sessionDeleteError}</div>
+              )}
               <div className="records__hidden-toggle">
                 <label>
                   <input

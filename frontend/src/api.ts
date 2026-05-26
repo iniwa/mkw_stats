@@ -290,6 +290,8 @@ export const api = {
     request<RaceRecord>(`/race-records/${raceId}/hide`, { method: 'POST' }),
   restoreRaceRecord: (raceId: string) =>
     request<RaceRecord>(`/race-records/${raceId}/restore`, { method: 'POST' }),
+  deleteSession: (sessionId: string) =>
+    request<void>(`/play-sessions/${sessionId}`, { method: 'DELETE' }),
   finishSession: (sessionId: string) =>
     request<PlaySession>(`/play-sessions/${sessionId}/finish`, { method: 'POST' }),
   getNotes: (options?: { course_id?: string; route_id?: string; include_inactive?: boolean }) => {
