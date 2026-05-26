@@ -24,6 +24,12 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 const LOUNGE_FORMATS = ['FFA', '2v2', '3v3', '4v4', '6v6']
 
+const LOUNGE_SCORE_TABLE: Readonly<Record<number, number>> = {
+  1: 15, 2: 12, 3: 10, 4: 9, 5: 9, 6: 8, 7: 8, 8: 7, 9: 7, 10: 6,
+  11: 6, 12: 6, 13: 5, 14: 5, 15: 5, 16: 4, 17: 4, 18: 4, 19: 3, 20: 3,
+  21: 3, 22: 2, 23: 2, 24: 1,
+}
+
 function courseName(course: Course | undefined): string {
   if (!course) return '不明なコース'
   return course.name_ja || course.name_en || course.id
@@ -953,9 +959,15 @@ function LoungeResultForm({
   onComplete: (body: CompleteLoungeBody) => void
 }) {
   const [placement, setPlacement] = useState(1)
-  const [score, setScore] = useState(0)
+  const [score, setScore] = useState(LOUNGE_SCORE_TABLE[1] ?? 0)
   const maxPlacement = session.player_count ?? 99
   const saving = busy === 'complete-lounge'
+
+  const handlePlacementChange = (newPlacement: number) => {
+    setPlacement(newPlacement)
+    const tableScore = LOUNGE_SCORE_TABLE[newPlacement]
+    if (tableScore !== undefined) setScore(tableScore)
+  }
 
   const assistTarget: { kind: 'course' | 'route'; id: string } | null =
     draftRace.course_id
@@ -993,7 +1005,7 @@ function LoungeResultForm({
         <div className="stepper">
           <button
             className="btn stepper__btn"
-            onClick={() => setPlacement(p => Math.max(1, p - 1))}
+            onClick={() => handlePlacementChange(Math.max(1, placement - 1))}
           >
             −
           </button>
@@ -1003,11 +1015,11 @@ function LoungeResultForm({
             min={1}
             max={maxPlacement}
             value={placement}
-            onChange={e => setPlacement(Math.min(maxPlacement, Math.max(1, Number(e.target.value) || 1)))}
+            onChange={e => handlePlacementChange(Math.min(maxPlacement, Math.max(1, Number(e.target.value) || 1)))}
           />
           <button
             className="btn stepper__btn"
-            onClick={() => setPlacement(p => Math.min(maxPlacement, p + 1))}
+            onClick={() => handlePlacementChange(Math.min(maxPlacement, placement + 1))}
           >
             ＋
           </button>
@@ -1031,6 +1043,7 @@ function LoungeResultForm({
             ＋
           </button>
         </div>
+        <p className="hint">順位から自動入力されます。必要なら修正できます。</p>
       </div>
 
       <button

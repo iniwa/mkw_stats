@@ -419,6 +419,18 @@ Completed behavior:
 - No new backend calls, no new npm dependencies, no new image downloads.
 - Typecheck and build pass clean.
 
+The Lounge score auto-fill slice has been implemented.
+
+Completed behavior:
+
+- `LoungeResultForm` initializes score to 15 (table value for placement 1).
+- When placement changes via stepper buttons or numeric input, score is automatically updated from `LOUNGE_SCORE_TABLE` (placements 1–24).
+- If placement is outside the table range, score is not changed and remains manually editable.
+- Manual score edits are always accepted; placement changes after a manual edit recalculate score from the table.
+- A compact hint "順位から自動入力されます。必要なら修正できます。" is shown below the score stepper.
+- No backend changes, no npm dependencies, no CSS additions.
+- Typecheck and build pass clean.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix
