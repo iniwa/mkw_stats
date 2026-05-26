@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-05-26-world-map-asset-verification.md`
 
 Current UI redesign order:
 
