@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { MapAnnotation } from './api'
 
 interface ImageWithFallbackProps {
   src: string
@@ -35,17 +36,66 @@ function ImageWithFallback({ src, fallback, alt = '', className, rotate180 }: Im
   )
 }
 
+function Markers({ annotations }: { annotations?: MapAnnotation[] }) {
+  const positioned = (annotations ?? []).filter(a => a.x !== null && a.y !== null)
+  if (positioned.length === 0) return null
+  return (
+    <>
+      {positioned.map(a => (
+        <div
+          key={a.id}
+          className="target-marker"
+          style={{ left: `${(a.x ?? 0) * 100}%`, top: `${(a.y ?? 0) * 100}%` }}
+          title={a.hover_text ?? a.label ?? ''}
+        >
+          <span className="ann__marker-dot" />
+          {a.label && <span className="ann__marker-label">{a.label}</span>}
+        </div>
+      ))}
+    </>
+  )
+}
+
+function WithMarkers({
+  annotations,
+  children,
+}: {
+  annotations?: MapAnnotation[]
+  children: React.ReactNode
+}) {
+  const hasMarkers = (annotations ?? []).some(a => a.x !== null && a.y !== null)
+  if (!hasMarkers) return <>{children}</>
+  return (
+    <div className="target-image-with-markers">
+      {children}
+      <Markers annotations={annotations} />
+    </div>
+  )
+}
+
 interface TargetImageProps {
   kind: 'course' | 'route'
   id: string
   fallbackCourseId?: string
   isThreeLap?: boolean
   goalReverse?: boolean
+  annotations?: MapAnnotation[]
 }
 
-export function TargetImage({ kind, id, fallbackCourseId, isThreeLap, goalReverse }: TargetImageProps) {
+export function TargetImage({
+  kind,
+  id,
+  fallbackCourseId,
+  isThreeLap,
+  goalReverse,
+  annotations,
+}: TargetImageProps) {
   if (kind === 'course') {
-    return <ImageWithFallback src={`/assets/courses/${id}.png`} className="route-image" />
+    return (
+      <WithMarkers annotations={annotations}>
+        <ImageWithFallback src={`/assets/courses/${id}.png`} className="route-image" />
+      </WithMarkers>
+    )
   }
 
   const courseFallback = fallbackCourseId ? `/assets/courses/${fallbackCourseId}.png` : undefined
@@ -60,17 +110,23 @@ export function TargetImage({ kind, id, fallbackCourseId, isThreeLap, goalRevers
   )
 
   if (isThreeLap) {
-    return <div className="route-image-pair">{goalImg}</div>
+    return (
+      <div className="route-image-pair">
+        <WithMarkers annotations={annotations}>{goalImg}</WithMarkers>
+      </div>
+    )
   }
 
   return (
     <div className="route-image-pair">
-      <ImageWithFallback
-        src={`/assets/routes/${id}.png`}
-        fallback={courseFallback}
-        className="route-image"
-        alt="道中の道"
-      />
+      <WithMarkers annotations={annotations}>
+        <ImageWithFallback
+          src={`/assets/routes/${id}.png`}
+          fallback={courseFallback}
+          className="route-image"
+          alt="道中の道"
+        />
+      </WithMarkers>
       {goalImg}
     </div>
   )

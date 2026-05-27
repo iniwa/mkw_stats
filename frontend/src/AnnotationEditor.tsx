@@ -23,6 +23,7 @@ interface SurfaceProps {
   selectedTargetType: 'course' | 'route'
   selectedTargetId: string
   fromCourseId?: string
+  isThreeLap?: boolean
   positioned: MapAnnotation[]
   editingId: string | null
   createX: string
@@ -38,6 +39,7 @@ function AnnotationSurface({
   selectedTargetType,
   selectedTargetId,
   fromCourseId,
+  isThreeLap,
   positioned,
   editingId,
   createX: createXStr,
@@ -66,11 +68,12 @@ function AnnotationSurface({
     setDragPos(null)
   }, [editingId])
 
+  const routeImgSuffix = isThreeLap ? '_goal' : ''
   const imgSrc =
     selectedTargetType === 'route'
       ? useFallbackCourse && fromCourseId
         ? `/assets/courses/${fromCourseId}.png`
-        : `/assets/routes/${selectedTargetId}.png`
+        : `/assets/routes/${selectedTargetId}${routeImgSuffix}.png`
       : useFallbackMap
         ? `/assets/maps/world.png`
         : `/assets/courses/${selectedTargetId}.png`
@@ -375,6 +378,14 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
             selectedTargetType={selectedTargetType}
             selectedTargetId={selectedTargetId}
             fromCourseId={selectedTargetType === 'route' ? routeMap.get(selectedTargetId)?.from_course_id : undefined}
+            isThreeLap={
+              selectedTargetType === 'route'
+                ? (() => {
+                    const r = routeMap.get(selectedTargetId)
+                    return r ? r.from_course_id === r.to_course_id : false
+                  })()
+                : false
+            }
             positioned={positioned}
             editingId={editingId}
             createX={createX}

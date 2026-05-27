@@ -6,6 +6,8 @@ import {
   type CompleteLoungeBody,
   type CompleteRankedBody,
   type Course,
+  type CourseNote,
+  type MapAnnotation,
   type MapPoint,
   type PlaySession,
   type RaceRecord,
@@ -762,6 +764,31 @@ function SelectionConfirm({
   onReselect: () => void
 }) {
   const recording = busy === 'confirm'
+  const targetId = resolved.kind === 'course' ? resolved.course!.id : resolved.route!.id
+  const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
+  const [notes, setNotes] = useState<CourseNote[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const params = resolved.kind === 'course' ? { course_id: targetId } : { route_id: targetId }
+    Promise.all([api.getMapAnnotations(params), api.getNotes(params)])
+      .then(([anns, ns]) => {
+        if (cancelled) return
+        setAnnotations(anns)
+        setNotes(ns.filter(n => n.is_active).sort((a, b) => {
+          if (a.is_pinned !== b.is_pinned) return a.is_pinned ? -1 : 1
+          if (a.priority !== b.priority) return b.priority - a.priority
+          return b.created_at.localeCompare(a.created_at)
+        }))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setAnnotations([])
+        setNotes([])
+      })
+    return () => { cancelled = true }
+  }, [resolved.kind, targetId])
+
   return (
     <div className="confirm">
       <h3 className="panel__title">コース確認</h3>
@@ -782,16 +809,33 @@ function SelectionConfirm({
             goalReverse={
               (resolved.route.tags as { goal_simple?: string } | null | undefined)?.goal_simple === '逆'
             }
+            annotations={annotations}
           />
           <RouteDetail route={resolved.route} />
         </>
       )}
       {resolved.kind === 'course' && resolved.course && (
-        <TargetImage kind="course" id={resolved.course.id} />
+        <TargetImage kind="course" id={resolved.course.id} annotations={annotations} />
+      )}
+      {notes.length > 0 && (
+        <div className="confirm__notes">
+          <div className="confirm__notes-title">ノート ({notes.length})</div>
+          <ul className="confirm__notes-list">
+            {notes.map(n => (
+              <li key={n.id} className="confirm__notes-item">
+                <div className="confirm__notes-head">
+                  {n.is_pinned && <span className="tag tag--warn">📌</span>}
+                  <span className="confirm__notes-name">{n.title ?? '(無題)'}</span>
+                </div>
+                {n.body_markdown && <div className="confirm__notes-body">{n.body_markdown}</div>}
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
       <TargetAssist
         kind={resolved.kind}
-        id={resolved.kind === 'course' ? resolved.course!.id : resolved.route!.id}
+        id={targetId}
         displayName={resolved.display_name}
       />
       <div className="btn-row">

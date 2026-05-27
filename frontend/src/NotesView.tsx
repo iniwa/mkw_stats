@@ -10,6 +10,7 @@ import {
 } from './api'
 import AnnotationEditor from './AnnotationEditor'
 import { RouteDetail } from './RouteDetail'
+import { TargetImage } from './TargetImage'
 import { WorldMapPicker } from './WorldMapPicker'
 
 type TargetType = 'course' | 'route'
@@ -258,6 +259,20 @@ export default function NotesView() {
         </select>
       </div>
 
+      {selectedId && selectedType === 'route' && selectedRoute && (
+        <TargetImage
+          kind="route"
+          id={selectedRoute.id}
+          fallbackCourseId={selectedRoute.from_course_id}
+          isThreeLap={selectedRoute.from_course_id === selectedRoute.to_course_id}
+          goalReverse={
+            (selectedRoute.tags as { goal_simple?: string } | null | undefined)?.goal_simple === '逆'
+          }
+        />
+      )}
+      {selectedId && selectedType === 'course' && (
+        <TargetImage kind="course" id={selectedId} />
+      )}
       {selectedRoute && <RouteDetail route={selectedRoute} compact />}
 
       {!selectedId ? (
