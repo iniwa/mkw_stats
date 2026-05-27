@@ -45,8 +45,24 @@ def resolve_selection(
     if from_course is None or to_course is None:
         raise HTTPException(400, "map point references a missing course")
 
-    # Same course on both ends -> a normal 3-lap course.
+    # Same course on both ends -> 3-lap route if defined, else fall back to course.
     if from_course.id == to_course.id:
+        three_lap = db.scalars(
+            select(Route).where(
+                Route.from_course_id == from_course.id,
+                Route.to_course_id == from_course.id,
+            )
+        ).first()
+        if three_lap is not None:
+            display = three_lap.name_ja or three_lap.name_en or route_label(
+                three_lap, from_course, from_course
+            )
+            return CourseSelectionResolveResponse(
+                kind="route",
+                route=RouteRead.model_validate(three_lap),
+                display_name=display,
+                confirm_message=f"{display} でいいですか？",
+            )
         name = course_label(from_course)
         display = f"{name} → {name}"
         return CourseSelectionResolveResponse(

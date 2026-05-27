@@ -59,16 +59,18 @@ def test_delete_active_vr_account_rejected(seeded_client):
     assert resp.status_code == 400
 
 
-def test_course_selection_resolve_same_point_is_course(seeded_client):
+def test_course_selection_resolve_same_point_is_3lap_route(seeded_client):
     resp = seeded_client.post(
         "/api/v1/course-selection/resolve",
         json={"from_map_point_id": "mp_dk_pass", "to_map_point_id": "mp_dk_pass"},
     )
     assert resp.status_code == 200
     body = resp.json()
-    assert body["kind"] == "course"
-    assert body["course"]["id"] == "dk_pass"
-    assert body["route"] is None
+    assert body["kind"] == "route"
+    assert body["route"]["id"] == "rt_dk_pass_3lap"
+    assert body["route"]["from_course_id"] == "dk_pass"
+    assert body["route"]["to_course_id"] == "dk_pass"
+    assert body["course"] is None
     assert body["confirm_message"].endswith("でいいですか？")
 
 

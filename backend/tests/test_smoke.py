@@ -160,10 +160,10 @@ def test_seed_routes_all_reference_valid_courses():
 
 
 def test_seed_route_count():
-    """Seed contains the expected number of routes (202 reference + 1 fixture)."""
+    """Seed contains the expected number of routes (202 transit + 30 same-course 3-lap)."""
     from app.seed.initial_data import ROUTES
 
-    assert len(ROUTES) == 203, f"Expected 203 routes, got {len(ROUTES)}"
+    assert len(ROUTES) == 232, f"Expected 232 routes, got {len(ROUTES)}"
 
 
 def test_seed_routes_tags_have_required_fields():
