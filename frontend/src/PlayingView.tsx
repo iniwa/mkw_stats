@@ -774,7 +774,15 @@ function SelectionConfirm({
       <p className="confirm__msg">{resolved.confirm_message}</p>
       {resolved.kind === 'route' && resolved.route && (
         <>
-          <TargetImage kind="route" id={resolved.route.id} />
+          <TargetImage
+            kind="route"
+            id={resolved.route.id}
+            fallbackCourseId={resolved.route.from_course_id}
+            isThreeLap={resolved.route.from_course_id === resolved.route.to_course_id}
+            goalReverse={
+              (resolved.route.tags as { goal_simple?: string } | null | undefined)?.goal_simple === '逆'
+            }
+          />
           <RouteDetail route={resolved.route} />
         </>
       )}

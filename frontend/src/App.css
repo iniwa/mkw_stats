@@ -852,3 +852,10 @@ textarea.input { resize: vertical; font-family: inherit; }
   display: block; max-width: 100%; height: auto; border-radius: 4px;
   margin-bottom: 0.6rem; border: 1px solid var(--border);
 }
+.route-image-pair {
+  display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.6rem;
+}
+.route-image-pair .route-image { margin-bottom: 0; }
+@media (min-width: 640px) {
+  .route-image-pair { grid-template-columns: 1fr 1fr; }
+}

@@ -22,6 +22,7 @@ function annotationSortComparator(a: MapAnnotation, b: MapAnnotation): number {
 interface SurfaceProps {
   selectedTargetType: 'course' | 'route'
   selectedTargetId: string
+  fromCourseId?: string
   positioned: MapAnnotation[]
   editingId: string | null
   createX: string
@@ -36,6 +37,7 @@ interface SurfaceProps {
 function AnnotationSurface({
   selectedTargetType,
   selectedTargetId,
+  fromCourseId,
   positioned,
   editingId,
   createX: createXStr,
@@ -48,6 +50,7 @@ function AnnotationSurface({
 }: SurfaceProps) {
   const [imgFailed, setImgFailed] = useState(false)
   const [useFallbackMap, setUseFallbackMap] = useState(false)
+  const [useFallbackCourse, setUseFallbackCourse] = useState(false)
   const [dragging, setDragging] = useState(false)
   const [dragPos, setDragPos] = useState<{ x: number; y: number } | null>(null)
   const surfaceRef = useRef<HTMLDivElement>(null)
@@ -55,6 +58,7 @@ function AnnotationSurface({
   useEffect(() => {
     setImgFailed(false)
     setUseFallbackMap(false)
+    setUseFallbackCourse(false)
   }, [selectedTargetId, selectedTargetType])
 
   useEffect(() => {
@@ -64,7 +68,9 @@ function AnnotationSurface({
 
   const imgSrc =
     selectedTargetType === 'route'
-      ? `/assets/routes/${selectedTargetId}.png`
+      ? useFallbackCourse && fromCourseId
+        ? `/assets/courses/${fromCourseId}.png`
+        : `/assets/routes/${selectedTargetId}.png`
       : useFallbackMap
         ? `/assets/maps/world.png`
         : `/assets/courses/${selectedTargetId}.png`
@@ -101,7 +107,9 @@ function AnnotationSurface({
           src={imgSrc}
           alt=""
           onError={() => {
-              if (selectedTargetType === 'course' && !useFallbackMap) {
+              if (selectedTargetType === 'route' && !useFallbackCourse && fromCourseId) {
+                setUseFallbackCourse(true)
+              } else if (selectedTargetType === 'course' && !useFallbackMap) {
                 setUseFallbackMap(true)
               } else {
                 setImgFailed(true)
@@ -366,6 +374,7 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
           <AnnotationSurface
             selectedTargetType={selectedTargetType}
             selectedTargetId={selectedTargetId}
+            fromCourseId={selectedTargetType === 'route' ? routeMap.get(selectedTargetId)?.from_course_id : undefined}
             positioned={positioned}
             editingId={editingId}
             createX={createX}
