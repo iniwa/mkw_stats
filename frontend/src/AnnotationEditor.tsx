@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import {
+  ANNOTATION_ICONS,
+  annotationIconSrc,
   api,
   type AnnotationType,
   type Course,
@@ -11,6 +13,46 @@ import {
 } from './api'
 
 const ANNOTATION_TYPES: AnnotationType[] = ['pin', 'icon', 'arrow', 'text', 'area']
+
+// Renders the visual part of a marker (icon image or fallback dot).
+function MarkerVisual({ annotation, isCreate }: { annotation: MapAnnotation | null; isCreate?: boolean }) {
+  // For create-preview, annotation is null and we just show the dot placeholder.
+  const [iconFailed, setIconFailed] = useState(false)
+  const showIcon =
+    !isCreate &&
+    annotation !== null &&
+    annotation.type === 'icon' &&
+    annotation.icon_type !== null &&
+    !iconFailed
+  if (showIcon) {
+    return (
+      <img
+        className="ann__marker-icon"
+        src={annotationIconSrc(annotation!.icon_type!)}
+        alt={annotation!.icon_type ?? ''}
+        onError={() => setIconFailed(true)}
+      />
+    )
+  }
+  return <span className="ann__marker-dot" />
+}
+
+// Create-preview with optional icon.
+function CreatePreviewVisual({ createType, createIconType }: { createType: AnnotationType; createIconType: string }) {
+  const [iconFailed, setIconFailed] = useState(false)
+  const showIcon = createType === 'icon' && createIconType !== '' && !iconFailed
+  if (showIcon) {
+    return (
+      <img
+        className="ann__marker-icon"
+        src={annotationIconSrc(createIconType)}
+        alt={createIconType}
+        onError={() => setIconFailed(true)}
+      />
+    )
+  }
+  return <span className="ann__marker-dot" />
+}
 
 function annotationSortComparator(a: MapAnnotation, b: MapAnnotation): number {
   if (a.priority !== b.priority) return b.priority - a.priority
@@ -32,6 +74,8 @@ interface SurfaceProps {
   editingId: string | null
   createX: string
   createY: string
+  createType: AnnotationType
+  createIconType: string
   editX: string
   editY: string
   onSurfaceClick: (x: number, y: number) => void
@@ -50,6 +94,8 @@ function AnnotationSurface({
   editingId,
   createX: createXStr,
   createY: createYStr,
+  createType,
+  createIconType,
   editX: editXStr,
   editY: editYStr,
   onSurfaceClick,
@@ -185,7 +231,7 @@ function AnnotationSurface({
               }
             }}
           >
-            <span className="ann__marker-dot" />
+            <MarkerVisual annotation={a} />
             {a.label && <span className="ann__marker-label">{a.label}</span>}
           </button>
         )
@@ -196,7 +242,7 @@ function AnnotationSurface({
           className="ann__marker-create"
           style={{ left: `${createXNum * 100}%`, top: `${createYNum * 100}%` }}
         >
-          <span className="ann__marker-dot" />
+          <CreatePreviewVisual createType={createType} createIconType={createIconType} />
         </div>
       )}
     </div>
@@ -226,6 +272,7 @@ export default function AnnotationEditor({
   const [error] = useState<string | null>(null)
 
   const [createType, setCreateType] = useState<AnnotationType>('pin')
+  const [createIconType, setCreateIconType] = useState('')
   const [createLabel, setCreateLabel] = useState('')
   const [createHoverText, setCreateHoverText] = useState('')
   const [createX, setCreateX] = useState('')
@@ -241,6 +288,7 @@ export default function AnnotationEditor({
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editType, setEditType] = useState<AnnotationType>('pin')
+  const [editIconType, setEditIconType] = useState('')
   const [editLabel, setEditLabel] = useState('')
   const [editHoverText, setEditHoverText] = useState('')
   const [editX, setEditX] = useState('')
@@ -255,6 +303,7 @@ export default function AnnotationEditor({
     setCreateNoteId('')
     setCreateX('')
     setCreateY('')
+    setCreateIconType('')
     setImageSide('mid')
   }, [selectedTargetType, selectedTargetId])
 
@@ -336,6 +385,7 @@ export default function AnnotationEditor({
           ? { course_id: selectedTargetId }
           : { route_id: selectedTargetId, is_goal_image: effectiveSide === 'goal' }
       body.type = createType
+      body.icon_type = createType === 'icon' && createIconType ? createIconType : null
       if (createLabel) body.label = createLabel
       if (createHoverText) body.hover_text = createHoverText
       if (createX !== '') body.x = parseFloat(createX)
@@ -350,6 +400,7 @@ export default function AnnotationEditor({
       setCreateY('')
       setCreatePriority(0)
       setCreateNoteId('')
+      setCreateIconType('')
     } catch (e: unknown) {
       setCreateError(e instanceof Error ? e.message : '作成に失敗しました')
     } finally {
@@ -364,6 +415,7 @@ export default function AnnotationEditor({
     }
     setEditingId(a.id)
     setEditType(a.type)
+    setEditIconType(a.icon_type ?? '')
     setEditLabel(a.label ?? '')
     setEditHoverText(a.hover_text ?? '')
     setEditX(a.x !== null ? String(a.x) : '')
@@ -382,6 +434,7 @@ export default function AnnotationEditor({
     try {
       const body: MapAnnotationUpdateBody = {
         type: editType,
+        icon_type: editType === 'icon' ? (editIconType || null) : null,
         label: editLabel || null,
         hover_text: editHoverText || null,
         x: editX !== '' ? parseFloat(editX) : null,
@@ -452,6 +505,8 @@ export default function AnnotationEditor({
             editingId={editingId}
             createX={createX}
             createY={createY}
+            createType={createType}
+            createIconType={createIconType}
             editX={editX}
             editY={editY}
             onSurfaceClick={(x, y) => {
@@ -472,13 +527,30 @@ export default function AnnotationEditor({
               <select
                 className="input"
                 value={createType}
-                onChange={e => setCreateType(e.target.value as AnnotationType)}
+                onChange={e => { setCreateType(e.target.value as AnnotationType); setCreateIconType('') }}
               >
                 {ANNOTATION_TYPES.map(t => (
                   <option key={t} value={t}>{t}</option>
                 ))}
               </select>
             </div>
+            {createType === 'icon' && (
+              <div className="field">
+                <label className="field__label">アイコン</label>
+                <div className="seg">
+                  {ANNOTATION_ICONS.map(ic => (
+                    <button
+                      key={ic.value}
+                      className={`seg__btn${createIconType === ic.value ? ' seg__btn--on' : ''}`}
+                      onClick={() => setCreateIconType(ic.value)}
+                      type="button"
+                    >
+                      {ic.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="field">
               <label className="field__label">ラベル</label>
               <input
@@ -597,13 +669,30 @@ export default function AnnotationEditor({
                           <select
                             className="input"
                             value={editType}
-                            onChange={e => setEditType(e.target.value as AnnotationType)}
+                            onChange={e => { setEditType(e.target.value as AnnotationType); setEditIconType('') }}
                           >
                             {ANNOTATION_TYPES.map(t => (
                               <option key={t} value={t}>{t}</option>
                             ))}
                           </select>
                         </div>
+                        {editType === 'icon' && (
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label className="field__label">アイコン</label>
+                            <div className="seg">
+                              {ANNOTATION_ICONS.map(ic => (
+                                <button
+                                  key={ic.value}
+                                  className={`seg__btn${editIconType === ic.value ? ' seg__btn--on' : ''}`}
+                                  onClick={() => setEditIconType(ic.value)}
+                                  type="button"
+                                >
+                                  {ic.label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div className="field" style={{ marginBottom: 0 }}>
                           <label className="field__label">ラベル</label>
                           <input

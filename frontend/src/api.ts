@@ -367,6 +367,16 @@ export const WARNING_LABELS: Record<string, string> = {
 
 export type AnnotationType = 'pin' | 'icon' | 'arrow' | 'text' | 'area'
 
+export interface AnnotationIconDef { value: string; label: string }
+export const ANNOTATION_ICONS: AnnotationIconDef[] = [
+  { value: 'mushroom', label: 'キノコ' },
+  { value: 'bullet', label: 'キラー' },
+  { value: 'golden_mushroom', label: '金キノ' },
+  { value: 'feather', label: '羽' },
+]
+export const annotationIconSrc = (iconType: string): string =>
+  `/assets/annotation-icons/${iconType}.png`
+
 export interface MapAnnotation {
   id: string
   course_id: string | null

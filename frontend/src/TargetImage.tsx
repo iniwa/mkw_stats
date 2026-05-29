@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { annotationIconSrc } from './api'
 import type { MapAnnotation } from './api'
 
 interface ImageWithFallbackProps {
@@ -36,6 +37,21 @@ function ImageWithFallback({ src, fallback, alt = '', className, rotate180 }: Im
   )
 }
 
+function MarkerDotOrIcon({ a }: { a: MapAnnotation }) {
+  const [iconFailed, setIconFailed] = useState(false)
+  const showIcon = a.type === 'icon' && a.icon_type !== null && !iconFailed
+  return showIcon ? (
+    <img
+      className="ann__marker-icon"
+      src={annotationIconSrc(a.icon_type!)}
+      alt={a.icon_type ?? ''}
+      onError={() => setIconFailed(true)}
+    />
+  ) : (
+    <span className="ann__marker-dot" />
+  )
+}
+
 function Markers({ annotations }: { annotations?: MapAnnotation[] }) {
   const positioned = (annotations ?? []).filter(a => a.x !== null && a.y !== null)
   if (positioned.length === 0) return null
@@ -48,7 +64,7 @@ function Markers({ annotations }: { annotations?: MapAnnotation[] }) {
           style={{ left: `${(a.x ?? 0) * 100}%`, top: `${(a.y ?? 0) * 100}%` }}
           title={a.hover_text ?? a.label ?? ''}
         >
-          <span className="ann__marker-dot" />
+          <MarkerDotOrIcon a={a} />
           {a.label && <span className="ann__marker-label">{a.label}</span>}
         </div>
       ))}

@@ -66,6 +66,16 @@
        goal 画像も WithMarkers で包むよう修正。goalFallbackCourseId prop 追加。
     5. NotesView: annotations を親で一括管理し AnnotationEditor・TargetImage 両方に
        供給。プレビュー（TargetImage）にもマーカーが表示されるように。
-- [ ] アノテーションに画像付与
+- [x] アノテーションに画像付与
   - キノコ/キラー/金キノ/羽あたり
-  - 画像の取得元探す（私が渡してAIで設置でも可）
+  → バックエンド（icon_type カラム・スキーマ）は001初期マイグレーションから実装済みだったため変更不要。
+    フロントエンドのみ実装:
+    1. api.ts に ANNOTATION_ICONS（mushroom/bullet/golden_mushroom/feather）定数と
+       annotationIconSrc() ヘルパーを追加。
+    2. AnnotationEditor: createType/editType が 'icon' のときアイコンピッカー（セグボタン）を表示。
+       作成・保存時に icon_type を API へ送信。
+    3. AnnotationSurface・TargetImage の Markers: type==='icon' かつ icon_type がある場合は
+       ドットの代わりにアイコン画像を表示（失敗時はドットへフォールバック）。
+       作成プレビューピンもアイコン選択中は画像プレビューで表示。
+    4. App.css に .ann__marker-icon (26×26px, drop-shadow) を追加。
+    5. 画像配置先: frontend/public/assets/annotation-icons/{value}.png
