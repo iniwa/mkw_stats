@@ -860,6 +860,45 @@ textarea.input { resize: vertical; font-family: inherit; }
 .analytics__target-ext-label { color: var(--text-faint); }
 .analytics__target-ext-value { font-variant-numeric: tabular-nums; font-weight: 500; }
 
+/* -- analytics highlights + bands ------------------------------------------ */
+.analytics__hl-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 0.8rem 1.2rem;
+}
+@media (max-width: 640px) { .analytics__hl-grid { grid-template-columns: 1fr; } }
+.analytics__hl-col { display: flex; flex-direction: column; gap: 0.2rem; }
+.analytics__hl-list {
+  list-style: none; margin: 0 0 0.3rem; padding: 0;
+  display: flex; flex-direction: column; gap: 0.15rem;
+}
+.analytics__hl-item {
+  display: flex; align-items: center; gap: 0.4rem; font-size: 0.82rem;
+}
+.analytics__hl-value {
+  margin-left: auto; font-variant-numeric: tabular-nums; font-weight: 600;
+  color: var(--text); white-space: nowrap;
+}
+.analytics__hl-empty { font-size: 0.78rem; color: var(--text-faint); margin: 0 0 0.3rem; }
+.analytics__list-head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; flex-wrap: wrap; margin-bottom: 0.5rem;
+}
+.analytics__band-wrap { margin-top: 0.3rem; }
+.analytics__band-bar {
+  display: flex; width: 100%; height: 8px; border-radius: 4px; overflow: hidden;
+  background: var(--border);
+}
+.analytics__band-seg { height: 100%; }
+.analytics__band-seg--top { background: var(--ok); }
+.analytics__band-seg--mid { background: #6a6a7e; }
+.analytics__band-seg--bottom { background: var(--danger); }
+.analytics__band-legend {
+  display: flex; gap: 0.7rem; margin-top: 0.2rem;
+  font-size: 0.72rem; font-variant-numeric: tabular-nums;
+}
+.analytics__band-tag--top { color: var(--ok); }
+.analytics__band-tag--mid { color: var(--text-dim); }
+.analytics__band-tag--bottom { color: var(--danger); }
+
 /* -- route image ----------------------------------------------------------- */
 .route-image {
   display: block; max-width: 100%; height: auto; border-radius: 4px;

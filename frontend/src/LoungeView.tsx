@@ -1,18 +1,11 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route, WARNING_LABELS } from './api'
+import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route } from './api'
 
 interface LoungeData {
   sessions: PlaySession[]
   racesBySession: Map<string, RaceRecord[]>
   courses: Course[]
   routes: Route[]
-}
-
-interface WarnEntry {
-  sessionStartedAt: string
-  raceNo: number | null
-  targetName: string
-  flags: string[]
 }
 
 function resolveName(
@@ -259,48 +252,6 @@ export default function LoungeView() {
     ? scoreRaces.reduce((s, r) => s + r.score!, 0) / scoreRaces.length
     : null
 
-  // Warning aggregation — sessions in returned order (newest first), races in race order
-  const warnCounts: Record<string, number> = {}
-  const warnEntries: WarnEntry[] = []
-  for (const s of sessions) {
-    const races = racesBySession.get(s.id) ?? []
-    for (const r of races) {
-      if (!r.warning_flags?.length) continue
-      for (const f of r.warning_flags) warnCounts[f] = (warnCounts[f] ?? 0) + 1
-      const kind = r.course_id ? 'course' : r.route_id ? 'route' : null
-      warnEntries.push({
-        sessionStartedAt: s.started_at,
-        raceNo: r.race_no,
-        targetName: kind
-          ? resolveName(kind, r.course_id ?? r.route_id!, courses, routes)
-          : '不明',
-        flags: r.warning_flags,
-      })
-    }
-  }
-  const warnFlagEntries = Object.entries(warnCounts).sort((a, b) => b[1] - a[1])
-
-  // Most-used targets: completed + draft, exclude cancelled
-  const targetMap = new Map<string, { kind: 'course' | 'route'; id: string; count: number }>()
-  for (const s of sessions) {
-    const races = racesBySession.get(s.id) ?? []
-    for (const r of races) {
-      if (r.status === 'cancelled') continue
-      if (r.course_id) {
-        const key = `course:${r.course_id}`
-        const e = targetMap.get(key)
-        if (e) e.count++
-        else targetMap.set(key, { kind: 'course', id: r.course_id, count: 1 })
-      } else if (r.route_id) {
-        const key = `route:${r.route_id}`
-        const e = targetMap.get(key)
-        if (e) e.count++
-        else targetMap.set(key, { kind: 'route', id: r.route_id, count: 1 })
-      }
-    }
-  }
-  const topTargets = [...targetMap.values()].sort((a, b) => b.count - a.count).slice(0, 8)
-
   const statusLabel = (s: PlaySession) =>
     s.status === 'active' ? '進行中' : s.status === 'completed' ? '完了' : '中止'
 
@@ -540,60 +491,6 @@ export default function LoungeView() {
         </ul>
       </div>
 
-      <div className="panel">
-        <div className="panel__title">警告レコード</div>
-        {warnFlagEntries.length === 0 ? (
-          <p className="placeholder">警告レコードなし</p>
-        ) : (
-          <>
-            <div className="lounge__warn-summary">
-              {warnFlagEntries.map(([flag, count]) => (
-                <div key={flag} className="analytics__warn-row">
-                  <span className="analytics__warn-label">{WARNING_LABELS[flag] ?? flag}</span>
-                  <span className="analytics__warn-count">{count}</span>
-                </div>
-              ))}
-            </div>
-            <div className="lounge__section-label">詳細</div>
-            <ul className="lounge__warn-detail">
-              {warnEntries.map((entry, i) => (
-                <li key={i} className="lounge__warn-item">
-                  <span className="lounge__meta">{fmtTime(entry.sessionStartedAt)}</span>
-                  {entry.raceNo != null && (
-                    <span className="lounge__meta">Race {entry.raceNo}</span>
-                  )}
-                  <span className="lounge__warn-target">{entry.targetName}</span>
-                  <span className="lounge__warn-flags">
-                    {entry.flags.map(f => WARNING_LABELS[f] ?? f).join('、')}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </>
-        )}
-      </div>
-
-      <div className="panel">
-        <div className="panel__title">よく使う Lounge コース/ルート（上位8件）</div>
-        {topTargets.length === 0 ? (
-          <p className="placeholder">データなし</p>
-        ) : (
-          <ul className="analytics__target-list">
-            {topTargets.map((t, i) => (
-              <li key={`${t.kind}:${t.id}`} className="analytics__target-row">
-                <span className="analytics__target-rank">{i + 1}</span>
-                <span className={`tag tag--${t.kind}`}>
-                  {t.kind === 'course' ? 'コース' : 'ルート'}
-                </span>
-                <span className="analytics__target-name">
-                  {resolveName(t.kind, t.id, courses, routes)}
-                </span>
-                <span className="analytics__target-count">{t.count}</span>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
     </div>
   )
 }
