@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route } from './api'
+import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route, Settings } from './api'
 
 interface LoungeData {
   sessions: PlaySession[]
   racesBySession: Map<string, RaceRecord[]>
   courses: Course[]
   routes: Route[]
+  settings: Settings | null
 }
 
 function resolveName(
@@ -43,9 +44,17 @@ function toToISO(d: string): string {
 
 const MMR_TREND_LIMIT = 20
 
-function buildTrendPoints(sessions: PlaySession[], game: string): PlaySession[] {
+// Classify a synced session's MKCentral game string into a player-count bucket.
+// Season 2+: mkworld12p / mkworld24p. Season 0/1 legacy: combined "mkworld" → treated as 12p.
+function mmrGameKind(game: string | null): '12p' | '24p' | null {
+  if (game === 'mkworld24p') return '24p'
+  if (game === 'mkworld12p' || game === 'mkworld') return '12p'
+  return null
+}
+
+function buildTrendPoints(sessions: PlaySession[], kind: '12p' | '24p'): PlaySession[] {
   return sessions
-    .filter(s => s.lounge_mmr_after != null && s.lounge_mmr_game === game)
+    .filter(s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) === kind)
     .sort((a, b) => {
       const ta = a.completed_at ?? a.started_at
       const tb = b.completed_at ?? b.started_at
@@ -130,7 +139,7 @@ export default function LoungeView() {
     setLoading(true)
     setError(null)
     try {
-      const [sessions, courses, routes] = await Promise.all([
+      const [sessions, courses, routes, settings] = await Promise.all([
         api.getSessions({
           source: 'lounge',
           limit,
@@ -139,11 +148,12 @@ export default function LoungeView() {
         }),
         api.getCourses(),
         api.getRoutes(),
+        api.getSettings().catch((): Settings | null => null),
       ])
       const raceArrays = await Promise.all(sessions.map(s => api.getSessionRaces(s.id, true)))
       const racesBySession = new Map<string, RaceRecord[]>()
       sessions.forEach((s, i) => racesBySession.set(s.id, raceArrays[i]))
-      setData({ sessions, racesBySession, courses, routes })
+      setData({ sessions, racesBySession, courses, routes, settings })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
     } finally {
@@ -184,16 +194,13 @@ export default function LoungeView() {
     )
   }
 
-  const { sessions, racesBySession, courses, routes } = data
+  const { sessions, racesBySession, courses, routes, settings } = data
 
-  const trend12 = buildTrendPoints(sessions, 'mkworld')
-  const trend24 = buildTrendPoints(sessions, 'mkworld24p')
+  const trend12 = buildTrendPoints(sessions, '12p')
+  const trend24 = buildTrendPoints(sessions, '24p')
   const hasTrend = trend12.length > 0 || trend24.length > 0
   const syncedAll = sessions
-    .filter(s =>
-      s.lounge_mmr_after != null
-      && (s.lounge_mmr_game === 'mkworld' || s.lounge_mmr_game === 'mkworld24p')
-    )
+    .filter(s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null)
     .sort((a, b) => {
       const ta = a.completed_at ?? a.started_at
       const tb = b.completed_at ?? b.started_at
@@ -203,6 +210,78 @@ export default function LoungeView() {
 
   const windowLabel = (dateFrom || dateTo) ? 'Filtered sessions' : `Recent ${limit} Lounge sessions`
 
+  const dateFilter = (
+    <div className="date-filter">
+      <div className="date-filter__group">
+        <span className="date-filter__label">開始日</span>
+        <input type="date" className="date-filter__input" value={dateFrom} disabled={loading}
+          onChange={e => setDateFrom(e.target.value)} />
+      </div>
+      <div className="date-filter__group">
+        <span className="date-filter__label">終了日</span>
+        <input type="date" className="date-filter__input" value={dateTo} disabled={loading}
+          onChange={e => setDateTo(e.target.value)} />
+      </div>
+      <div className="date-filter__group">
+        <span className="date-filter__label">件数</span>
+        <select className="date-filter__select" value={limit} disabled={loading}
+          onChange={e => setLimit(Number(e.target.value))}>
+          {[25, 50, 100, 200].map(v => <option key={v} value={v}>{v}</option>)}
+        </select>
+      </div>
+      <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
+        onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
+    </div>
+  )
+
+  // MMR panel — rendered regardless of session count so the synced MMR persists
+  // across navigation and shows even when no Lounge session is recorded yet.
+  const synced = sessions.filter(s => s.lounge_mmr_after != null)
+  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
+  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
+  const latest = synced[0]
+  const mmr12 = mmrSyncResult != null
+    ? mmrSyncResult.current_mmr_12p
+    : (settings?.lounge_mmr_12p ?? synced12[0]?.lounge_mmr_after ?? null)
+  const mmr24 = mmrSyncResult != null
+    ? mmrSyncResult.current_mmr_24p
+    : (settings?.lounge_mmr_24p ?? synced24[0]?.lounge_mmr_after ?? null)
+  const hasAnyMmr = mmr12 != null || mmr24 != null || synced.length > 0
+  const mmrPanel = (
+    <div className="panel">
+      <div className="panel__title">MMR</div>
+      {hasAnyMmr ? (
+        <div className="analytics__grid analytics__grid--4">
+          {([
+            ['12p MMR', mmr12 ?? '—'],
+            ['24p MMR', mmr24 ?? '—'],
+            ['前回変動', latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
+            ['同期済み', synced.length],
+          ] as [string, string | number][]).map(([label, value]) => (
+            <div key={label} className="analytics__metric">
+              <div className="analytics__metric-value">{value}</div>
+              <div className="analytics__metric-label">{label}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <p className="placeholder">未連携 — 下のボタンで Lounge MMR を同期できます</p>
+      )}
+      <div className="btn-row">
+        <button className="btn btn--primary" onClick={syncMmr} disabled={mmrSyncing || loading}>
+          {mmrSyncing ? '同期中…' : 'MMR同期'}
+        </button>
+      </div>
+      {mmrSyncResult && (
+        <p className="lounge__mmr-msg">
+          {mmrSyncResult.updated_game && `[${mmrSyncResult.updated_game}] `}
+          {mmrSyncResult.message}
+        </p>
+      )}
+      {mmrSyncError && <p className="notice notice--error">{mmrSyncError}</p>}
+    </div>
+  )
+
   if (sessions.length === 0) {
     return (
       <div className="lounge">
@@ -211,27 +290,8 @@ export default function LoungeView() {
           <span className="lounge__window">{windowLabel}</span>
           <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
         </div>
-        <div className="date-filter">
-          <div className="date-filter__group">
-            <span className="date-filter__label">開始日</span>
-            <input type="date" className="date-filter__input" value={dateFrom} disabled={loading}
-              onChange={e => setDateFrom(e.target.value)} />
-          </div>
-          <div className="date-filter__group">
-            <span className="date-filter__label">終了日</span>
-            <input type="date" className="date-filter__input" value={dateTo} disabled={loading}
-              onChange={e => setDateTo(e.target.value)} />
-          </div>
-          <div className="date-filter__group">
-            <span className="date-filter__label">件数</span>
-            <select className="date-filter__select" value={limit} disabled={loading}
-              onChange={e => setLimit(Number(e.target.value))}>
-              {[25, 50, 100, 200].map(v => <option key={v} value={v}>{v}</option>)}
-            </select>
-          </div>
-          <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
-            onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
-        </div>
+        {dateFilter}
+        {mmrPanel}
         <p className="placeholder">Lounge セッションがありません。</p>
       </div>
     )
@@ -263,27 +323,7 @@ export default function LoungeView() {
         <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
       </div>
 
-      <div className="date-filter">
-        <div className="date-filter__group">
-          <span className="date-filter__label">開始日</span>
-          <input type="date" className="date-filter__input" value={dateFrom} disabled={loading}
-            onChange={e => setDateFrom(e.target.value)} />
-        </div>
-        <div className="date-filter__group">
-          <span className="date-filter__label">終了日</span>
-          <input type="date" className="date-filter__input" value={dateTo} disabled={loading}
-            onChange={e => setDateTo(e.target.value)} />
-        </div>
-        <div className="date-filter__group">
-          <span className="date-filter__label">件数</span>
-          <select className="date-filter__select" value={limit} disabled={loading}
-            onChange={e => setLimit(Number(e.target.value))}>
-            {[25, 50, 100, 200].map(v => <option key={v} value={v}>{v}</option>)}
-          </select>
-        </div>
-        <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
-          onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
-      </div>
+      {dateFilter}
 
       <div className="panel">
         <div className="panel__title">Lounge サマリー</div>
@@ -302,57 +342,7 @@ export default function LoungeView() {
         </div>
       </div>
 
-      <div className="panel">
-        <div className="panel__title">MMR</div>
-        {(() => {
-          const synced = sessions.filter(s => s.lounge_mmr_after != null)
-          const synced12 = sessions.filter(s => s.lounge_mmr_game === 'mkworld' && s.lounge_mmr_after != null)
-          const synced24 = sessions.filter(s => s.lounge_mmr_game === 'mkworld24p' && s.lounge_mmr_after != null)
-          const latest = synced[0]
-
-          const mmr12 = mmrSyncResult != null
-            ? mmrSyncResult.current_mmr_12p
-            : (synced12[0]?.lounge_mmr_after ?? null)
-          const mmr24 = mmrSyncResult != null
-            ? mmrSyncResult.current_mmr_24p
-            : (synced24[0]?.lounge_mmr_after ?? null)
-
-          const hasAnyMmr = mmr12 != null || mmr24 != null || synced.length > 0
-          return (
-            <>
-              {hasAnyMmr ? (
-                <div className="analytics__grid analytics__grid--4">
-                  {([
-                    ['12p MMR', mmr12 ?? '—'],
-                    ['24p MMR', mmr24 ?? '—'],
-                    ['前回変動', latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
-                    ['同期済み', synced.length],
-                  ] as [string, string | number][]).map(([label, value]) => (
-                    <div key={label} className="analytics__metric">
-                      <div className="analytics__metric-value">{value}</div>
-                      <div className="analytics__metric-label">{label}</div>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <p className="placeholder">未連携 — 下のボタンで Lounge MMR を同期できます</p>
-              )}
-              <div className="btn-row">
-                <button className="btn btn--primary" onClick={syncMmr} disabled={mmrSyncing || loading}>
-                  {mmrSyncing ? '同期中…' : 'MMR同期'}
-                </button>
-              </div>
-              {mmrSyncResult && (
-                <p className="lounge__mmr-msg">
-                  {mmrSyncResult.updated_game && `[${mmrSyncResult.updated_game}] `}
-                  {mmrSyncResult.message}
-                </p>
-              )}
-              {mmrSyncError && <p className="notice notice--error">{mmrSyncError}</p>}
-            </>
-          )
-        })()}
-      </div>
+      {mmrPanel}
 
       <div className="panel">
         <div className="panel__title">MMR 推移</div>

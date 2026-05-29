@@ -46,6 +46,11 @@ class AppSettings(Base):
     lounge_auto_sync: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     lounge_season: Mapped[int] = mapped_column(Integer, nullable=False, default=2, server_default="2")
     lounge_game: Mapped[str] = mapped_column(String(64), nullable=False, default="mkworld24p", server_default="mkworld24p")
+    # Latest current MMR snapshot from the most recent manual sync. Persisted here so the
+    # value survives navigation and is shown even when no Lounge session is recorded yet.
+    lounge_mmr_12p: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lounge_mmr_24p: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    lounge_mmr_synced_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False)
 
 

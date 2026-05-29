@@ -19,12 +19,21 @@ REQUEST_TIMEOUT = 10
 def lounge_game_for_player_count(player_count: int | None, season: int) -> str | None:
     """Return the MKCentral game string for a given player count and season.
 
+    MKCentral game strings (verified against lounge.mkcentral.com):
+    - Season 0/1: single combined stream ``mkworld`` (12p and 24p shared).
+    - Season 2+: ``mkworld12p`` for 12-player, ``mkworld24p`` for 24-player.
+
+    Note: ``mkworld`` has no Season 2+; querying it for Season 2 makes the API
+    silently fall back to ``mkworld24p`` data, so 12p must use ``mkworld12p``.
+
     Returns None for unsupported or missing player counts — callers should skip those sessions.
     """
+    if season <= 1:
+        return "mkworld" if player_count in (12, 24) else None
     if player_count == 12:
-        return "mkworld"
+        return "mkworld12p"
     if player_count == 24:
-        return "mkworld" if season <= 1 else "mkworld24p"
+        return "mkworld24p"
     return None
 
 
@@ -115,8 +124,7 @@ def _find_best_session(
     # Determine which player_counts are valid for this game+season combination.
     if game == "mkworld24p":
         valid_counts = [24]
-    elif game == "mkworld" and season >= 2:
-        # Season 2+ mkworld is 12p only; 24p uses mkworld24p.
+    elif game == "mkworld12p":
         valid_counts = [12]
     else:
         # mkworld season 0/1: shared stream for both 12p and 24p.
@@ -151,13 +159,14 @@ def _find_best_session(
 def sync_mmr(db: Session, player_id: str, season: int) -> dict:
     """Fetch the latest unsynced MMR change and attach it to the best-matching session.
 
-    Fetches mkworld (12p) and, for Season 2+, also mkworld24p (24p).
+    Season 2+: fetches mkworld12p (12p) and mkworld24p (24p) as separate streams.
+    Season 0/1: fetches the single combined mkworld stream for both player counts.
     Matches each change only to sessions whose player_count maps to the same game.
 
     Returns dict with keys: current_mmr_12p, current_mmr_24p, updated_session, updated_game, message.
     Raises RuntimeError on external API failures (caller converts to 502).
     """
-    games_to_fetch = ["mkworld", "mkworld24p"] if season >= 2 else ["mkworld"]
+    games_to_fetch = ["mkworld12p", "mkworld24p"] if season >= 2 else ["mkworld"]
 
     all_changes: list[tuple[str, dict]] = []
     current_mmr_12p: int | None = None
@@ -168,9 +177,11 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
         data = _fetch_player_details(player_id, season, game)
         mmr_val: int | None = data.get("mmr")
         if game == "mkworld":
+            # Season 0/1 combined stream applies to both player counts.
             current_mmr_12p = mmr_val
-            if season <= 1:
-                current_mmr_24p = mmr_val
+            current_mmr_24p = mmr_val
+        elif game == "mkworld12p":
+            current_mmr_12p = mmr_val
         elif game == "mkworld24p":
             current_mmr_24p = mmr_val
         for change in (data.get("mmrChanges") or []):

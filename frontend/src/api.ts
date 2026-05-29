@@ -13,6 +13,9 @@ export interface Settings {
   lounge_auto_sync: boolean
   lounge_season: number
   lounge_game: string
+  lounge_mmr_12p: number | null
+  lounge_mmr_24p: number | null
+  lounge_mmr_synced_at: string | null
 }
 
 export interface VrAccount {

@@ -1,3 +1,5 @@
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
@@ -21,6 +23,16 @@ def mmr_sync(db: Session = Depends(get_db)) -> MmrSyncResponse:
         result = sync_mmr(db, settings.lounge_player_id, settings.lounge_season)
     except RuntimeError as e:
         raise HTTPException(502, f"MKCentral API エラー: {e}") from e
+
+    # Persist the current MMR snapshot so it survives navigation and is shown
+    # even when no Lounge session has been recorded/matched yet.
+    if result["current_mmr_12p"] is not None or result["current_mmr_24p"] is not None:
+        if result["current_mmr_12p"] is not None:
+            settings.lounge_mmr_12p = result["current_mmr_12p"]
+        if result["current_mmr_24p"] is not None:
+            settings.lounge_mmr_24p = result["current_mmr_24p"]
+        settings.lounge_mmr_synced_at = datetime.now(timezone.utc)
+        db.commit()
 
     updated = None
     if result["updated_session"] is not None:

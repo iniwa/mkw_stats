@@ -26,6 +26,9 @@ class SettingsRead(BaseModel):
     lounge_auto_sync: bool
     lounge_season: int
     lounge_game: str
+    lounge_mmr_12p: int | None
+    lounge_mmr_24p: int | None
+    lounge_mmr_synced_at: datetime | None
 
 
 class SettingsUpdate(BaseModel):
