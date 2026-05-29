@@ -123,6 +123,12 @@ class MapAnnotation(Base):
     hover_text: Mapped[str | None] = mapped_column(Text, nullable=True)
     priority: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     style: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    # Discriminates which image a route annotation belongs to:
+    # False = mid-route image (道中), True = goal/final-lap image (道後).
+    # Always False for course annotations.
+    is_goal_image: Mapped[bool] = mapped_column(
+        Boolean, nullable=False, default=False, server_default="false"
+    )
 
     __table_args__ = (
         CheckConstraint(

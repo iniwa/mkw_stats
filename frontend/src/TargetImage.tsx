@@ -77,6 +77,8 @@ interface TargetImageProps {
   kind: 'course' | 'route'
   id: string
   fallbackCourseId?: string
+  /** Fallback course for the goal image; defaults to fallbackCourseId if omitted. */
+  goalFallbackCourseId?: string
   isThreeLap?: boolean
   goalReverse?: boolean
   annotations?: MapAnnotation[]
@@ -86,6 +88,7 @@ export function TargetImage({
   kind,
   id,
   fallbackCourseId,
+  goalFallbackCourseId,
   isThreeLap,
   goalReverse,
   annotations,
@@ -98,31 +101,43 @@ export function TargetImage({
     )
   }
 
-  const courseFallback = fallbackCourseId ? `/assets/courses/${fallbackCourseId}.png` : undefined
+  // Split annotations by image side so markers land on the correct image.
+  const midAnnotations = (annotations ?? []).filter(a => !a.is_goal_image)
+  const goalAnnotations = (annotations ?? []).filter(a => a.is_goal_image)
+
+  const goalFallback =
+    goalFallbackCourseId
+      ? `/assets/courses/${goalFallbackCourseId}.png`
+      : fallbackCourseId
+        ? `/assets/courses/${fallbackCourseId}.png`
+        : undefined
+
   const goalImg = (
-    <ImageWithFallback
-      src={`/assets/routes/${id}_goal.png`}
-      fallback={courseFallback}
-      className="route-image"
-      alt="最後のコース1周"
-      rotate180={goalReverse}
-    />
+    <WithMarkers annotations={goalAnnotations}>
+      <ImageWithFallback
+        src={`/assets/routes/${id}_goal.png`}
+        fallback={goalFallback}
+        className="route-image"
+        alt="最後のコース1周"
+        rotate180={goalReverse}
+      />
+    </WithMarkers>
   )
 
   if (isThreeLap) {
     return (
       <div className="route-image-pair">
-        <WithMarkers annotations={annotations}>{goalImg}</WithMarkers>
+        {goalImg}
       </div>
     )
   }
 
   return (
     <div className="route-image-pair">
-      <WithMarkers annotations={annotations}>
+      <WithMarkers annotations={midAnnotations}>
         <ImageWithFallback
           src={`/assets/routes/${id}.png`}
-          fallback={courseFallback}
+          fallback={fallbackCourseId ? `/assets/courses/${fallbackCourseId}.png` : undefined}
           className="route-image"
           alt="道中の道"
         />

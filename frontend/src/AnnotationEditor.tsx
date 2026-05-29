@@ -19,10 +19,14 @@ function annotationSortComparator(a: MapAnnotation, b: MapAnnotation): number {
   return a.id.localeCompare(b.id)
 }
 
+type ImageSide = 'mid' | 'goal'
+
 interface SurfaceProps {
   selectedTargetType: 'course' | 'route'
   selectedTargetId: string
   fromCourseId?: string
+  toCourseId?: string
+  imageSide: ImageSide
   isThreeLap?: boolean
   positioned: MapAnnotation[]
   editingId: string | null
@@ -39,6 +43,8 @@ function AnnotationSurface({
   selectedTargetType,
   selectedTargetId,
   fromCourseId,
+  toCourseId,
+  imageSide,
   isThreeLap,
   positioned,
   editingId,
@@ -61,19 +67,25 @@ function AnnotationSurface({
     setImgFailed(false)
     setUseFallbackMap(false)
     setUseFallbackCourse(false)
-  }, [selectedTargetId, selectedTargetType])
+  }, [selectedTargetId, selectedTargetType, imageSide])
 
   useEffect(() => {
     setDragging(false)
     setDragPos(null)
   }, [editingId])
 
-  const routeImgSuffix = isThreeLap ? '_goal' : ''
+  // For a route: goal side shows _goal image (fallback: to_course),
+  //              mid side shows the route image (fallback: from_course).
+  const showGoal = selectedTargetType === 'route' && (isThreeLap || imageSide === 'goal')
+  const fallbackCourseId = showGoal ? toCourseId : fromCourseId
+
   const imgSrc =
     selectedTargetType === 'route'
-      ? useFallbackCourse && fromCourseId
-        ? `/assets/courses/${fromCourseId}.png`
-        : `/assets/routes/${selectedTargetId}${routeImgSuffix}.png`
+      ? useFallbackCourse && fallbackCourseId
+        ? `/assets/courses/${fallbackCourseId}.png`
+        : showGoal
+          ? `/assets/routes/${selectedTargetId}_goal.png`
+          : `/assets/routes/${selectedTargetId}.png`
       : useFallbackMap
         ? `/assets/maps/world.png`
         : `/assets/courses/${selectedTargetId}.png`
@@ -110,14 +122,14 @@ function AnnotationSurface({
           src={imgSrc}
           alt=""
           onError={() => {
-              if (selectedTargetType === 'route' && !useFallbackCourse && fromCourseId) {
-                setUseFallbackCourse(true)
-              } else if (selectedTargetType === 'course' && !useFallbackMap) {
-                setUseFallbackMap(true)
-              } else {
-                setImgFailed(true)
-              }
-            }}
+            if (selectedTargetType === 'route' && !useFallbackCourse && fallbackCourseId) {
+              setUseFallbackCourse(true)
+            } else if (selectedTargetType === 'course' && !useFallbackMap) {
+              setUseFallbackMap(true)
+            } else {
+              setImgFailed(true)
+            }
+          }}
         />
       )}
 
@@ -197,12 +209,21 @@ interface Props {
   courseMap: Map<string, Course>
   selectedTargetType: 'course' | 'route'
   selectedTargetId: string
+  annotations: MapAnnotation[]
+  onAnnotationsChange: (updated: MapAnnotation[]) => void
 }
 
-export default function AnnotationEditor({ routes, notes, courseMap, selectedTargetType, selectedTargetId }: Props) {
-  const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+export default function AnnotationEditor({
+  routes,
+  notes,
+  courseMap,
+  selectedTargetType,
+  selectedTargetId,
+  annotations,
+  onAnnotationsChange,
+}: Props) {
+  const [loading] = useState(false)
+  const [error] = useState<string | null>(null)
 
   const [createType, setCreateType] = useState<AnnotationType>('pin')
   const [createLabel, setCreateLabel] = useState('')
@@ -213,6 +234,10 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
   const [createNoteId, setCreateNoteId] = useState('')
   const [creating, setCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+
+  // Which image side is active in the editor for route targets.
+  // course / 3-lap route always uses goal, so this only matters for normal routes.
+  const [imageSide, setImageSide] = useState<ImageSide>('mid')
 
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editType, setEditType] = useState<AnnotationType>('pin')
@@ -226,21 +251,28 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    api
-      .getMapAnnotations()
-      .then(data => setAnnotations([...data].sort(annotationSortComparator)))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false))
-  }, [])
-
-  useEffect(() => {
     setEditingId(null)
     setCreateNoteId('')
     setCreateX('')
     setCreateY('')
+    setImageSide('mid')
   }, [selectedTargetType, selectedTargetId])
 
   const routeMap = useMemo(() => new Map(routes.map(r => [r.id, r])), [routes])
+
+  const selectedRoute = useMemo(
+    () => (selectedTargetType === 'route' ? (routeMap.get(selectedTargetId) ?? null) : null),
+    [selectedTargetType, selectedTargetId, routeMap],
+  )
+
+  const isThreeLap = useMemo(
+    () => !!selectedRoute && selectedRoute.from_course_id === selectedRoute.to_course_id,
+    [selectedRoute],
+  )
+
+  // The effective side for the current editor context.
+  // 3-lap routes are always goal; courses are irrelevant (no side concept).
+  const effectiveSide: ImageSide = isThreeLap ? 'goal' : imageSide
 
   function routeLabel(r: Route): string {
     if (r.name_ja) return r.name_ja
@@ -279,10 +311,20 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
     [annotations, selectedTargetType, selectedTargetId],
   )
 
-  const positioned = useMemo(
-    () => visibleAnnotations.filter(a => a.x !== null && a.y !== null),
-    [visibleAnnotations],
-  )
+  // Only render markers that belong to the currently visible image side.
+  const positioned = useMemo(() => {
+    const withXY = visibleAnnotations.filter(a => a.x !== null && a.y !== null)
+    if (selectedTargetType === 'course') return withXY
+    return withXY.filter(a => a.is_goal_image === (effectiveSide === 'goal'))
+  }, [visibleAnnotations, selectedTargetType, effectiveSide])
+
+  function handleSideChange(side: ImageSide) {
+    setImageSide(side)
+    // Clear unsaved placement when switching images to avoid coordinate mismatch.
+    setCreateX('')
+    setCreateY('')
+    setEditingId(null)
+  }
 
   async function handleCreate() {
     if (!selectedTargetId) return
@@ -292,7 +334,7 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
       const body: MapAnnotationCreateBody =
         selectedTargetType === 'course'
           ? { course_id: selectedTargetId }
-          : { route_id: selectedTargetId }
+          : { route_id: selectedTargetId, is_goal_image: effectiveSide === 'goal' }
       body.type = createType
       if (createLabel) body.label = createLabel
       if (createHoverText) body.hover_text = createHoverText
@@ -301,7 +343,7 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
       body.priority = createPriority
       if (createNoteId) body.note_id = createNoteId
       const ann = await api.createMapAnnotation(body)
-      setAnnotations(prev => [...prev, ann].sort(annotationSortComparator))
+      onAnnotationsChange([...annotations, ann].sort(annotationSortComparator))
       setCreateLabel('')
       setCreateHoverText('')
       setCreateX('')
@@ -316,6 +358,10 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
   }
 
   function startEdit(a: MapAnnotation) {
+    // When editing a route annotation, switch the surface to the correct image side.
+    if (selectedTargetType === 'route' && !isThreeLap) {
+      setImageSide(a.is_goal_image ? 'goal' : 'mid')
+    }
     setEditingId(a.id)
     setEditType(a.type)
     setEditLabel(a.label ?? '')
@@ -325,6 +371,9 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
     setEditPriority(a.priority)
     setEditNoteId(a.note_id ?? '')
     setSaveError(null)
+    // Clear unsaved placement pin.
+    setCreateX('')
+    setCreateY('')
   }
 
   async function handleSave(a: MapAnnotation) {
@@ -341,8 +390,8 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
         note_id: editNoteId || null,
       }
       const updated = await api.updateMapAnnotation(a.id, body)
-      setAnnotations(prev =>
-        prev.map(item => (item.id === a.id ? updated : item)).sort(annotationSortComparator),
+      onAnnotationsChange(
+        annotations.map(item => (item.id === a.id ? updated : item)).sort(annotationSortComparator),
       )
       setEditingId(null)
     } catch (e: unknown) {
@@ -355,7 +404,7 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
   async function handleDelete(id: string) {
     try {
       await api.deleteMapAnnotation(id)
-      setAnnotations(prev => prev.filter(a => a.id !== id))
+      onAnnotationsChange(annotations.filter(a => a.id !== id))
     } catch {
       // silently ignore
     }
@@ -374,18 +423,31 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
         <p className="placeholder">コース/ルートを選択してください。</p>
       ) : (
         <>
+          {/* Image side selector — only for normal (non-3-lap) routes */}
+          {selectedTargetType === 'route' && !isThreeLap && (
+            <div className="seg">
+              <button
+                className={`seg__btn${imageSide === 'mid' ? ' seg__btn--on' : ''}`}
+                onClick={() => handleSideChange('mid')}
+              >
+                道中
+              </button>
+              <button
+                className={`seg__btn${imageSide === 'goal' ? ' seg__btn--on' : ''}`}
+                onClick={() => handleSideChange('goal')}
+              >
+                道後
+              </button>
+            </div>
+          )}
+
           <AnnotationSurface
             selectedTargetType={selectedTargetType}
             selectedTargetId={selectedTargetId}
-            fromCourseId={selectedTargetType === 'route' ? routeMap.get(selectedTargetId)?.from_course_id : undefined}
-            isThreeLap={
-              selectedTargetType === 'route'
-                ? (() => {
-                    const r = routeMap.get(selectedTargetId)
-                    return r ? r.from_course_id === r.to_course_id : false
-                  })()
-                : false
-            }
+            fromCourseId={selectedRoute?.from_course_id}
+            toCourseId={selectedRoute?.to_course_id}
+            imageSide={effectiveSide}
+            isThreeLap={isThreeLap}
             positioned={positioned}
             editingId={editingId}
             createX={createX}
@@ -523,6 +585,11 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
                           <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
                             {isRoute ? 'ルート' : 'コース'}
                           </span>
+                          {isRoute && (
+                            <span className="tag">
+                              {a.is_goal_image ? '道後' : '道中'}
+                            </span>
+                          )}
                           <span className="note-item__target">{targetName(a)}</span>
                         </div>
                         <div className="field" style={{ marginBottom: 0 }}>
@@ -626,6 +693,11 @@ export default function AnnotationEditor({ routes, notes, courseMap, selectedTar
                           <span className={`tag tag--${isRoute ? 'route' : 'course'}`}>
                             {isRoute ? 'ルート' : 'コース'}
                           </span>
+                          {isRoute && (
+                            <span className="tag">
+                              {a.is_goal_image ? '道後' : '道中'}
+                            </span>
+                          )}
                           <span className="tag ann__type-tag">{a.type}</span>
                           <span className="note-item__target">{targetName(a)}</span>
                           <div className="note-item__actions">

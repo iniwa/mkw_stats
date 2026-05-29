@@ -1819,3 +1819,71 @@ def test_delete_older_ranked_session_does_not_corrupt_current_vr(seeded_client, 
 
     db_session.refresh(account)
     assert account.current_vr == 80
+
+
+# ---------------------------------------------------------------------------
+# Map annotations — is_goal_image discriminator
+# ---------------------------------------------------------------------------
+
+def test_map_annotation_default_is_goal_image_false(seeded_client):
+    """Creating a course annotation without is_goal_image defaults to False."""
+    resp = seeded_client.get("/api/v1/courses")
+    assert resp.status_code == 200
+    course_id = resp.json()[0]["id"]
+
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": course_id, "label": "test-course-ann"},
+    )
+    assert resp.status_code == 201
+    body = resp.json()
+    assert body["is_goal_image"] is False
+
+
+def test_map_annotation_route_mid_and_goal(seeded_client):
+    """Can create separate mid and goal annotations for the same route, and they are
+    returned with the correct is_goal_image value."""
+    resp = seeded_client.get("/api/v1/routes")
+    assert resp.status_code == 200
+    routes = resp.json()
+    # Find a non-3-lap route (from_course_id != to_course_id) for a meaningful test.
+    normal = next((r for r in routes if r["from_course_id"] != r["to_course_id"]), None)
+    if normal is None:
+        # All routes are 3-lap; just use first one but only test goal
+        normal = routes[0]
+    route_id = normal["id"]
+
+    # Mid annotation
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": route_id, "label": "mid-ann", "is_goal_image": False},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["is_goal_image"] is False
+
+    # Goal annotation
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": route_id, "label": "goal-ann", "is_goal_image": True},
+    )
+    assert resp.status_code == 201
+    assert resp.json()["is_goal_image"] is True
+
+    # Both appear when listing by route_id
+    resp = seeded_client.get(f"/api/v1/map-annotations?route_id={route_id}")
+    assert resp.status_code == 200
+    labels = {a["label"] for a in resp.json()}
+    assert "mid-ann" in labels
+    assert "goal-ann" in labels
+
+
+def test_map_annotation_is_goal_image_requires_route_id(seeded_client):
+    """is_goal_image=True without route_id must be rejected (422)."""
+    resp = seeded_client.get("/api/v1/courses")
+    course_id = resp.json()[0]["id"]
+
+    resp = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": course_id, "is_goal_image": True, "label": "bad"},
+    )
+    assert resp.status_code == 422

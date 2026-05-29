@@ -5,6 +5,7 @@ import {
   type CourseNote,
   type CourseNoteCreateBody,
   type CourseNoteUpdateBody,
+  type MapAnnotation,
   type MapPoint,
   type Route,
 } from './api'
@@ -21,10 +22,18 @@ function noteSortComparator(a: CourseNote, b: CourseNote): number {
   return b.created_at.localeCompare(a.created_at)
 }
 
+function annotationSortComparator(a: MapAnnotation, b: MapAnnotation): number {
+  if (a.priority !== b.priority) return b.priority - a.priority
+  const cmp = (a.label ?? '').localeCompare(b.label ?? '', 'ja')
+  if (cmp !== 0) return cmp
+  return a.id.localeCompare(b.id)
+}
+
 export default function NotesView() {
   const [courses, setCourses] = useState<Course[]>([])
   const [routes, setRoutes] = useState<Route[]>([])
   const [notes, setNotes] = useState<CourseNote[]>([])
+  const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -53,12 +62,19 @@ export default function NotesView() {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    Promise.all([api.getCourses(), api.getRoutes(), api.getNotes(), api.getMapPoints()])
-      .then(([c, r, n, mp]) => {
+    Promise.all([
+      api.getCourses(),
+      api.getRoutes(),
+      api.getNotes(),
+      api.getMapPoints(),
+      api.getMapAnnotations(),
+    ])
+      .then(([c, r, n, mp, ann]) => {
         setCourses(c)
         setRoutes(r)
         setNotes(n)
         setMapPoints(mp)
+        setAnnotations([...ann].sort(annotationSortComparator))
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
@@ -97,6 +113,17 @@ export default function NotesView() {
   const selectedRoute = useMemo(
     () => (selectedType === 'route' && selectedId ? (routeMap.get(selectedId) ?? null) : null),
     [selectedType, selectedId, routeMap],
+  )
+
+  // Annotations for the currently selected target (used in preview TargetImage).
+  const targetAnnotations = useMemo(
+    () =>
+      annotations.filter(a =>
+        selectedType === 'course'
+          ? a.course_id === selectedId
+          : a.route_id === selectedId,
+      ),
+    [annotations, selectedType, selectedId],
   )
 
   function handleMapPointUpdated(updated: MapPoint) {
@@ -264,14 +291,16 @@ export default function NotesView() {
           kind="route"
           id={selectedRoute.id}
           fallbackCourseId={selectedRoute.from_course_id}
+          goalFallbackCourseId={selectedRoute.to_course_id}
           isThreeLap={selectedRoute.from_course_id === selectedRoute.to_course_id}
           goalReverse={
             (selectedRoute.tags as { goal_simple?: string } | null | undefined)?.goal_simple === '逆'
           }
+          annotations={targetAnnotations}
         />
       )}
       {selectedId && selectedType === 'course' && (
-        <TargetImage kind="course" id={selectedId} />
+        <TargetImage kind="course" id={selectedId} annotations={targetAnnotations} />
       )}
       {selectedRoute && <RouteDetail route={selectedRoute} compact />}
 
@@ -451,6 +480,8 @@ export default function NotesView() {
         courseMap={courseMap}
         selectedTargetType={selectedType}
         selectedTargetId={selectedId}
+        annotations={annotations}
+        onAnnotationsChange={updated => setAnnotations(updated)}
       />
     </div>
   )

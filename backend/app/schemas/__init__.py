@@ -306,6 +306,7 @@ class MapAnnotationRead(BaseModel):
     hover_text: str | None
     priority: int
     style: dict | None
+    is_goal_image: bool
 
 
 class MapAnnotationCreate(BaseModel):
@@ -323,11 +324,16 @@ class MapAnnotationCreate(BaseModel):
     hover_text: str | None = None
     priority: int = 0
     style: dict | None = None
+    # False = mid-route image (道中), True = goal/final-lap image (道後).
+    # Ignored (treated as False) when course_id is set.
+    is_goal_image: bool = False
 
     @model_validator(mode="after")
     def _exactly_one_target(self) -> MapAnnotationCreate:
         if bool(self.course_id) == bool(self.route_id):
             raise ValueError("course_id か route_id のどちらか一方が必要です")
+        if self.is_goal_image and not self.route_id:
+            raise ValueError("is_goal_image=True は route_id が必要です")
         return self
 
 

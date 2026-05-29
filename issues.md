@@ -49,7 +49,23 @@
     `.route-image` に max-width:min(100%,520px) を付与し、ペア1枚分(~520px)に統一。
     マーカー位置(left/top %)がズレないよう `.target-image-with-markers` を
     width:fit-content で画像にシュリンクラップ。ペア表示(横並び)のサイズ感は維持。
-- [ ] 道後のコースへアノテーションの追加ができない
+  - [ ] マップアノテーションの表示が相変わらずデカい。
+    - 横幅か縦幅に表示制限を入れて欲しい。
+- [x] 道後のコースへアノテーションの追加ができない
+  → 原因: AnnotationEditor が通常ルートで道中画像しか編集サーフェスに出さず、
+    MapAnnotation モデルにもどちらの画像か判別するフィールドが無かった。
+    対応:
+    1. マイグレーション線形化: 重複していた revision="005" を 006 にリネームし
+       005→006→007 と線形化（005 は completion_reason で固定）。
+    2. MapAnnotation に is_goal_image bool カラム追加 (migration 007)。
+       既存3周ルート注釈は is_goal_image=true にバックフィル。
+    3. AnnotationEditor: 通常ルートで「道中/道後」セグメント切替を追加。
+       サーフェスは選択側の画像を表示し、マーカーも側ごとにフィルタ。
+       作成時に is_goal_image をセット。編集クリックで正しい側に自動切替。
+    4. TargetImage: mid/goal アノテーションを分割して各画像の WithMarkers に渡す。
+       goal 画像も WithMarkers で包むよう修正。goalFallbackCourseId prop 追加。
+    5. NotesView: annotations を親で一括管理し AnnotationEditor・TargetImage 両方に
+       供給。プレビュー（TargetImage）にもマーカーが表示されるように。
 - [ ] アノテーションに画像付与
   - キノコ/キラー/金キノ/羽あたり
   - 画像の取得元探す（私が渡してAIで設置でも可）

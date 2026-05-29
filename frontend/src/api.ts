@@ -383,6 +383,8 @@ export interface MapAnnotation {
   hover_text: string | null
   priority: number
   style: Record<string, unknown> | null
+  /** false = mid-route image (道中), true = goal/final-lap image (道後). Always false for course annotations. */
+  is_goal_image: boolean
 }
 
 export interface MapAnnotationCreateBody {
@@ -400,6 +402,7 @@ export interface MapAnnotationCreateBody {
   hover_text?: string | null
   priority?: number
   style?: Record<string, unknown> | null
+  is_goal_image?: boolean
 }
 
 export interface MapAnnotationUpdateBody {
