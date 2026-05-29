@@ -900,18 +900,25 @@ textarea.input { resize: vertical; font-family: inherit; }
 .analytics__band-tag--bottom { color: var(--danger); }
 
 /* -- route image ----------------------------------------------------------- */
+/* Cap single images (course / 3-lap route) at the same per-image size as the
+   side-by-side route pair (~520px) so they don't blow up to full width. */
 .route-image {
-  display: block; max-width: 100%; height: auto; border-radius: 4px;
+  display: block; max-width: min(100%, 520px); height: auto; border-radius: 4px;
   margin-bottom: 0.6rem; border: 1px solid var(--border);
 }
 .route-image-pair {
   display: grid; grid-template-columns: 1fr; gap: 0.5rem; margin-bottom: 0.6rem;
+  justify-items: start;
 }
-.route-image-pair .route-image { margin-bottom: 0; }
+.route-image-pair .route-image { margin-bottom: 0; max-width: 100%; }
 @media (min-width: 640px) {
   .route-image-pair { grid-template-columns: 1fr 1fr; }
 }
-.target-image-with-markers { position: relative; line-height: 0; }
+/* Shrink-wrap the marker overlay to the image so absolute-positioned markers
+   (left/top in %) stay aligned even when the image is narrower than its row. */
+.target-image-with-markers {
+  position: relative; line-height: 0; width: fit-content; max-width: 100%;
+}
 .target-image-with-markers .route-image { margin-bottom: 0; }
 .target-marker {
   position: absolute; transform: translate(-50%, -50%);
