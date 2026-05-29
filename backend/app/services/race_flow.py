@@ -157,8 +157,15 @@ def delete_session(db: Session, session_id: uuid.UUID) -> None:
         if not (race.source == SourceType.ranked and race.status == RaceStatus.completed):
             _revert_race_effects(db, race)
 
+    # Flush deletes in FK-safe order: snapshots -> races -> session.
+    # The models define no ORM relationships, so SQLAlchemy's unit of work does
+    # not know to order these DELETEs; without explicit flushes it can emit the
+    # parent (play_sessions) DELETE before its child race_records rows, which
+    # fails the foreign-key constraint on PostgreSQL.
+    db.flush()
     for race in all_races:
         db.delete(race)
+    db.flush()
     db.delete(session)
     db.commit()
 

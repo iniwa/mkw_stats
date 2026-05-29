@@ -5,10 +5,13 @@
 
 ## Records
 - [x] セッション自体を削除する機能も欲しい
-  - [ ] 削除を押してもエラーが発生する
+  - [x] 削除を押してもエラーが発生する
     ~~→古いデータがそうなってる？新しいデータは問題なく削除できてそう~~
     ~~→一旦全削除するだけでok~~
     - 新しいレコードでも発生。調査必要
+    → 原因: ORM relationship 未定義のため SQLAlchemy が親 play_sessions を子 race_records より
+      先に DELETE し、PostgreSQL で FK 違反。delete_session に flush を挿入し
+      snapshots→races→session の順で削除するよう修正。テストでも SQLite の FK 強制を有効化。
 
 ## VR/Lounge/Analytics
 - [x] 「VR」「Lounge」「Analytics」の3つに分割

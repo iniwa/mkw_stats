@@ -8,7 +8,7 @@ because the models carry a dialect-specific WHERE clause.
 """
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, event
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import sessionmaker
@@ -38,6 +38,14 @@ def db_session():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
+
+    # SQLite disables FK enforcement by default; production is PostgreSQL where
+    # FKs are enforced. Turn them on so tests catch FK-ordering regressions
+    # (e.g. deleting a parent row before its children).
+    @event.listens_for(engine, "connect")
+    def _enable_sqlite_fk(dbapi_con, _rec):  # noqa: ANN001
+        dbapi_con.execute("PRAGMA foreign_keys=ON")
+
     Base.metadata.create_all(engine)
     TestSession = sessionmaker(bind=engine, autoflush=False, autocommit=False)
     session = TestSession()
