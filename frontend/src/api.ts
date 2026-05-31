@@ -372,7 +372,7 @@ export const ANNOTATION_ICONS: AnnotationIconDef[] = [
   { value: 'mushroom', label: 'キノコ' },
   { value: 'bullet', label: 'キラー' },
   { value: 'golden_mushroom', label: '金キノ' },
-  { value: 'feather', label: '羽' },
+  { value: 'hane', label: '羽' },
 ]
 export const annotationIconSrc = (iconType: string): string =>
   `/assets/annotation-icons/${iconType}.png`

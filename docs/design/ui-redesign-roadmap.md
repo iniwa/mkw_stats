@@ -557,3 +557,35 @@ Completed behavior:
 - `KeyError: 'changeId'` and similar field-access crashes can no longer occur.
 - Top-level `mmr` still populates `current_mmr_12p` / `current_mmr_24p` regardless of change usability.
 - All existing sync behavior (idempotency, ±2 hour window, game/player-count matching) is preserved.
+
+## Completed Foundation: Icon-Type Annotations
+
+Icon-type annotation support has been implemented.
+
+Completed behavior:
+
+- A new `icon` annotation type is available alongside `pin`, `arrow`, `text`, and `area`.
+- Active icon types: `mushroom` (キノコ), `bullet` (キラー), `golden_mushroom` (金キノ), `hane` (羽).
+- Icon images are served from `frontend/public/assets/annotation-icons/<icon_type>.png`.
+- `api.ts` exports `ANNOTATION_ICONS` (value/label pairs) and `annotationIconSrc(iconType)` helper used by editor and assist components.
+- `AnnotationEditor` shows an icon type selector when `type === 'icon'` is chosen, in both create and edit forms.
+- Icon markers render on the annotation surface via `ann__marker-icon`; `onError` falls back to a dot marker when the file is missing.
+- `icon_type: str | null` column already existed in `map_annotations`; no migration required.
+- Typecheck and build pass clean.
+
+## Completed Foundation: Route Goal-Image Annotation Surface
+
+Route goal-image annotation surface support has been implemented.
+
+Completed behavior:
+
+- Route annotations carry an `is_goal_image` boolean (default `false`, set at creation time, not updatable after creation).
+- `false` = mid-route path image surface (道中); `true` = goal/final-lap image surface (道後).
+- `AnnotationEditor` shows a `道中 / 道後` surface selector for route targets.
+- The active surface determines the background image and which existing annotations are shown.
+  - Path surface background: `<route_id>.png`
+  - Goal surface background: `<route_id>_goal.png` (or `<route_id>_3lap_goal.png` for 3-lap routes)
+- Migration 007 adds `is_goal_image BOOLEAN NOT NULL DEFAULT FALSE` to `map_annotations` and back-fills existing 3-lap route annotations to `is_goal_image = TRUE`.
+- `MapAnnotationRead` exposes `is_goal_image`; `MapAnnotationCreate` accepts it (requires `route_id`); `MapAnnotationUpdate` does not include it — no post-creation surface change is supported.
+- Typecheck and build pass clean.
+- Pi migration 007 applied (confirmed in 2026-05-31 audit).

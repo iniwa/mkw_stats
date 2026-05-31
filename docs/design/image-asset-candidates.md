@@ -2,53 +2,48 @@
 
 Inventory of image asset status and candidate acquisition sources for course images, route images, and course icons.
 
-Last updated: 2026-05-26
+Last updated: 2026-05-31
 
 ## Current Asset Counts
 
 | Asset type | Total | Local present | Local missing |
 |---|---|---|---|
-| Route images | 203 routes | 11 | 192 |
+| Route path images (`<route_id>.png`) | 203 routes | 202 | 1 |
+| Route goal images (`_goal.png` / `_3lap_goal.png`) | — | 232 | — |
 | Course images | 30 courses | 30 | 0 |
 | Course icons | 30 courses | 0 | 30 |
+| Annotation icons (active) | 4 | 4 | 0 |
 
-- Route images with known `image_url` in seed data: 11 of 203
-- Route images without any known source URL: 192 of 203
+- Route path images were added in bulk (commit `fd8be01`). 1 path image is still missing.
+- Route goal images (232 total) include both `_goal.png` and `_3lap_goal.png` variants.
 
 ## Asset Paths
 
 | Asset type | Local path | Runtime URL |
 |---|---|---|
-| Route images | `frontend/public/assets/routes/<route_id>.png` | `/assets/routes/<route_id>.png` |
+| Route path images | `frontend/public/assets/routes/<route_id>.png` | `/assets/routes/<route_id>.png` |
+| Route goal images | `frontend/public/assets/routes/<route_id>_goal.png` | `/assets/routes/<route_id>_goal.png` |
 | Course images | `frontend/public/assets/courses/<course_id>.png` | `/assets/courses/<course_id>.png` |
 | Course icons | `frontend/public/assets/course-icons/<course_id>.png` | `/assets/course-icons/<course_id>.png` |
+| Annotation icons | `frontend/public/assets/annotation-icons/<icon_type>.png` | `/assets/annotation-icons/<icon_type>.png` |
 
 Notes:
-- `frontend/public/assets/courses/` has a `.gitkeep` but no PNG images yet.
 - `frontend/public/assets/course-icons/` has a `.gitkeep` but no PNG images yet.
+- Route goal images use suffix `_goal.png`; 3-lap route variants use `_3lap_goal.png`.
+- Active annotation icons: `bullet.png`, `golden_mushroom.png`, `hane.png`, `mushroom.png`. An `_etc/` subdirectory holds 12 candidate icons not yet activated.
 
 ## Route Images
 
 ### Status
 
-11 routes have `image_url` values in seed data (`backend/app/seed/initial_data.py`).
-All 11 are present as local files. These were acquired with `scripts/download_route_images.py`.
+202 of 203 route path images are present locally (1 missing).
+232 route goal images are present (`_goal.png` and `_3lap_goal.png` variants).
 
-| route_id | Status |
-|---|---|
-| `rt_mario_bros_circuit_to_crown_city` | present |
-| `rt_mario_bros_circuit_to_whistlestop_summit` | present |
-| `rt_crown_city_to_mario_bros_circuit` | present |
-| `rt_crown_city_to_whistlestop_summit` | present |
-| `rt_crown_city_to_dk_spaceport` | present |
-| `rt_whistlestop_summit_to_mario_bros_circuit` | present |
-| `rt_whistlestop_summit_to_crown_city` | present |
-| `rt_whistlestop_summit_to_dk_spaceport` | present |
-| `rt_dk_spaceport_to_mario_bros_circuit` | present |
-| `rt_dk_spaceport_to_crown_city` | present |
-| `rt_dk_spaceport_to_whistlestop_summit` | present |
+Images were added in a bulk acquisition pass (commit `fd8be01`). The original seed `image_url` mechanism (11 routes with known URLs) was the initial tracking method; most images were subsequently added directly without seed URL entries.
 
-192 routes have no `image_url` in seed data. These fall back to text-only display.
+Missing path image: 1 route ID has no local path image. It can be found by comparing route IDs in `backend/app/seed/initial_data.py` against files in `frontend/public/assets/routes/` (excluding `_goal.png`).
+
+Routes without local images fall back to text-only display in `TargetImage`.
 
 ### Source Strategy
 
@@ -61,12 +56,13 @@ All 11 are present as local files. These were acquired with `scripts/download_ro
 
 ### Acquisition Gap
 
-To get route images for the remaining 192 routes:
+To acquire the 1 remaining missing route path image:
 
-1. Run `scripts/collect_image_asset_candidates.py --source route-page --out-file report.json`
-2. Review `report.json` → `route_page_new_candidates` for newly found URLs
-3. Add discovered `image_url` values to the relevant routes in `backend/app/seed/initial_data.py`
-4. Re-run `scripts/download_route_images.py`
+1. Identify the missing route ID (compare seed route IDs vs local files)
+2. Run `scripts/collect_image_asset_candidates.py --source route-page --out-file report.json`
+3. Review `report.json` → `route_page_new_candidates`
+4. Add the discovered `image_url` to the route entry in `backend/app/seed/initial_data.py`
+5. Re-run `scripts/download_route_images.py`
 
 ## Course Images
 
@@ -76,7 +72,7 @@ To get route images for the remaining 192 routes:
 
 - Component: `frontend/src/TargetImage.tsx` with `kind="course"`
 - Used in: `PlayingView` confirmation step, `AnnotationEditor` surface
-- Fallback chain in `AnnotationEditor`: course image → world map → fallback panel
+- Fallback chain in `AnnotationEditor`: course image → world map (`/assets/maps/world.png`) → fallback panel
 - Missing image: `TargetImage` returns `null` (no broken image shown)
 
 See `docs/design/course-image-assets.md` for full checklist.
@@ -132,6 +128,28 @@ See `docs/design/course-icon-assets.md` for full checklist and usage notes.
 2. Identify icon-sized course images for each course
 3. Download and save to `frontend/public/assets/course-icons/<course_id>.png`
 4. Update `docs/design/course-icon-assets.md` checklist
+
+## Annotation Icons
+
+### Status
+
+4 of 4 active annotation icon files are present locally.
+
+| icon_type | File | Status |
+|---|---|---|
+| `mushroom` | `mushroom.png` | present |
+| `bullet` | `bullet.png` | present |
+| `golden_mushroom` | `golden_mushroom.png` | present |
+| `hane` | `hane.png` | present |
+
+Local path: `frontend/public/assets/annotation-icons/<icon_type>.png`
+Runtime URL: `/assets/annotation-icons/<icon_type>.png`
+
+An `_etc/` subdirectory holds 12 candidate icons not yet activated in the frontend (`star.png`, `thunder.png`, `IB.png`, `DoubleIB.png`, `kino2.png`, `kino3.png`, `Bkino.png`, `food.png`, plus duplicates of the 4 active files). These are available for future icon-type expansion.
+
+### Source Note
+
+Icon files are manually sourced game asset images. No automated acquisition script exists. Any expansion of the active icon list must update `ANNOTATION_ICONS` in `frontend/src/api.ts`.
 
 ## Candidate Collection Script
 

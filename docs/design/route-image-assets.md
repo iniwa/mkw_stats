@@ -1,45 +1,42 @@
 # Route Image Assets
 
+Last updated: 2026-05-31
+
 ## Path Convention
 
 ```text
-frontend/public/assets/routes/<route_id>.png
+frontend/public/assets/routes/<route_id>.png           — mid-route path image (道中)
+frontend/public/assets/routes/<route_id>_goal.png      — goal / final-lap image (道後)
+frontend/public/assets/routes/<route_id>_3lap_goal.png — 3-lap route goal variant (道後)
 ```
 
-Runtime URL: `/assets/routes/<route_id>.png`
+Runtime URLs follow the same pattern: `/assets/routes/<filename>`.
+
+## Status
+
+| Image type | Routes | Local present | Notes |
+|---|---|---|---|
+| Path images (`<route_id>.png`) | 203 routes | 202 | 1 missing |
+| Goal images (`_goal.png` / `_3lap_goal.png`) | — | 232 | includes 3-lap variants |
+
+Path images (202/203) and goal images (232) were added in a bulk acquisition pass (commit `fd8be01`).
+
+The 1 missing path image can be identified by comparing all route IDs in `backend/app/seed/initial_data.py` against files in `frontend/public/assets/routes/` (excluding `_goal.png` files).
+
+## Display Plumbing
+
+- Component: `frontend/src/TargetImage.tsx` with `kind="route"` loads `<route_id>.png`
+- `PlayingView` confirmation step (`SelectionConfirm`): shows `TargetImage kind="route"` for route targets
+- `AnnotationEditor` surface: shows path or goal background based on active surface selector (`道中` / `道後`)
+  - Path surface: `<route_id>.png`
+  - Goal surface: `<route_id>_goal.png` or `<route_id>_3lap_goal.png`
+- Missing image: `TargetImage` returns `null` (no broken image shown)
 
 ## Source Note
 
-Images are sourced from approved reference page URLs stored in `backend/app/seed/initial_data.py` under `route.tags.image_url`.
+Images are manually sourced and stored locally. No hotlinking at runtime.
 
-- Approved reference page: `https://japan-mk.blog.jp/mkworld.info-1/route.html`
-- Actual image URLs: `https://mario.wiki.gallery/images/...` (referenced by the approved page)
-- Assets are stored locally. Do not hotlink at runtime.
-- Acquisition script: `scripts/download_route_images.py` (run from repository root)
-
-## Routes With image_url Metadata
-
-11 routes currently have `image_url` in seed metadata. All 11 images are present.
-
-| route_id | Local file | Status |
-|----------|-----------|--------|
-| `rt_mario_bros_circuit_to_crown_city` | `rt_mario_bros_circuit_to_crown_city.png` | present |
-| `rt_mario_bros_circuit_to_whistlestop_summit` | `rt_mario_bros_circuit_to_whistlestop_summit.png` | present |
-| `rt_crown_city_to_mario_bros_circuit` | `rt_crown_city_to_mario_bros_circuit.png` | present |
-| `rt_crown_city_to_whistlestop_summit` | `rt_crown_city_to_whistlestop_summit.png` | present |
-| `rt_crown_city_to_dk_spaceport` | `rt_crown_city_to_dk_spaceport.png` | present |
-| `rt_whistlestop_summit_to_mario_bros_circuit` | `rt_whistlestop_summit_to_mario_bros_circuit.png` | present |
-| `rt_whistlestop_summit_to_crown_city` | `rt_whistlestop_summit_to_crown_city.png` | present |
-| `rt_whistlestop_summit_to_dk_spaceport` | `rt_whistlestop_summit_to_dk_spaceport.png` | present |
-| `rt_dk_spaceport_to_mario_bros_circuit` | `rt_dk_spaceport_to_mario_bros_circuit.png` | present |
-| `rt_dk_spaceport_to_crown_city` | `rt_dk_spaceport_to_crown_city.png` | present |
-| `rt_dk_spaceport_to_whistlestop_summit` | `rt_dk_spaceport_to_whistlestop_summit.png` | present |
-
-**Present: 11 / 11**
-
-## Remaining Routes
-
-192 routes have no `image_url` in seed metadata. These intentionally fall back to text-only display in `TargetImage` (`onError` → `return null`) and in `AnnotationEditor`. No action needed unless new `image_url` values are added to seed metadata.
+Original acquisition source for the first 11 images: `https://japan-mk.blog.jp/mkworld.info-1/route.html` (fan site, user-approved). Remaining images were added in bulk from the same approved source domain.
 
 ## Related Docs
 
