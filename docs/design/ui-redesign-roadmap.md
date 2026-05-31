@@ -579,13 +579,13 @@ Route goal-image annotation surface support has been implemented.
 
 Completed behavior:
 
-- Route annotations carry an `is_goal_image` boolean (default `false`, set at creation time, not updatable after creation).
+- Route annotations carry an `is_goal_image` boolean (default `false`). It can be set at creation time and updated via PATCH after creation.
 - `false` = mid-route path image surface (道中); `true` = goal/final-lap image surface (道後).
 - `AnnotationEditor` shows a `道中 / 道後` surface selector for route targets.
 - The active surface determines the background image and which existing annotations are shown.
   - Path surface background: `<route_id>.png`
   - Goal surface background: `<route_id>_goal.png` (or `<route_id>_3lap_goal.png` for 3-lap routes)
 - Migration 007 adds `is_goal_image BOOLEAN NOT NULL DEFAULT FALSE` to `map_annotations` and back-fills existing 3-lap route annotations to `is_goal_image = TRUE`.
-- `MapAnnotationRead` exposes `is_goal_image`; `MapAnnotationCreate` accepts it (requires `route_id`); `MapAnnotationUpdate` does not include it — no post-creation surface change is supported.
+- `MapAnnotationRead` exposes `is_goal_image`; `MapAnnotationCreate` accepts it (requires `route_id`); `MapAnnotationUpdate` also accepts `is_goal_image` — setting it to `true` requires a `route_id` on the existing annotation. The edit form shows a compact `道中 / 道後` control for non-3-lap route annotations.
 - Typecheck and build pass clean.
 - Pi migration 007 applied (confirmed in 2026-05-31 audit).

@@ -1887,3 +1887,76 @@ def test_map_annotation_is_goal_image_requires_route_id(seeded_client):
         json={"course_id": course_id, "is_goal_image": True, "label": "bad"},
     )
     assert resp.status_code == 422
+
+
+def test_patch_annotation_is_goal_image_mid_to_goal(seeded_client):
+    """Route annotation can be PATCHed from is_goal_image=False to True."""
+    route_id = seeded_client.get("/api/v1/routes").json()[0]["id"]
+
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": route_id, "label": "switch-test", "is_goal_image": False},
+    ).json()
+    assert created["is_goal_image"] is False
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"is_goal_image": True},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_goal_image"] is True
+
+
+def test_patch_annotation_is_goal_image_goal_to_mid(seeded_client):
+    """Route annotation can be PATCHed from is_goal_image=True to False."""
+    route_id = seeded_client.get("/api/v1/routes").json()[0]["id"]
+
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": route_id, "label": "switch-back-test", "is_goal_image": True},
+    ).json()
+    assert created["is_goal_image"] is True
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"is_goal_image": False},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["is_goal_image"] is False
+
+
+def test_patch_course_annotation_is_goal_image_true_rejected(seeded_client):
+    """Course annotation cannot be PATCHed to is_goal_image=True (422)."""
+    course_id = seeded_client.get("/api/v1/courses").json()[0]["id"]
+
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"course_id": course_id, "label": "course-ann"},
+    ).json()
+    assert created["is_goal_image"] is False
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"is_goal_image": True},
+    )
+    assert resp.status_code == 422
+
+
+def test_patch_annotation_without_is_goal_image_preserves_value(seeded_client):
+    """PATCHing other fields without is_goal_image keeps the existing is_goal_image value."""
+    route_id = seeded_client.get("/api/v1/routes").json()[0]["id"]
+
+    created = seeded_client.post(
+        "/api/v1/map-annotations",
+        json={"route_id": route_id, "label": "preserve-test", "is_goal_image": True},
+    ).json()
+    assert created["is_goal_image"] is True
+
+    resp = seeded_client.patch(
+        f"/api/v1/map-annotations/{created['id']}",
+        json={"label": "updated-label"},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["label"] == "updated-label"
+    assert body["is_goal_image"] is True

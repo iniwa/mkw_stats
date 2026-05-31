@@ -76,6 +76,8 @@ def update_annotation(
     updates = payload.model_dump(exclude_unset=True)
     if "note_id" in updates and updates["note_id"] is not None:
         _check_note_target(db, updates["note_id"], annotation.course_id, annotation.route_id)
+    if updates.get("is_goal_image") is True and not annotation.route_id:
+        raise HTTPException(status_code=422, detail="is_goal_image=True は route_id が必要です")
     for k, v in updates.items():
         setattr(annotation, k, v)
     db.commit()

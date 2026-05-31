@@ -295,6 +295,7 @@ export default function AnnotationEditor({
   const [editY, setEditY] = useState('')
   const [editPriority, setEditPriority] = useState(0)
   const [editNoteId, setEditNoteId] = useState('')
+  const [editIsGoalImage, setEditIsGoalImage] = useState(false)
   const [saving, setSaving] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
 
@@ -422,6 +423,7 @@ export default function AnnotationEditor({
     setEditY(a.y !== null ? String(a.y) : '')
     setEditPriority(a.priority)
     setEditNoteId(a.note_id ?? '')
+    setEditIsGoalImage(a.is_goal_image)
     setSaveError(null)
     // Clear unsaved placement pin.
     setCreateX('')
@@ -441,6 +443,9 @@ export default function AnnotationEditor({
         y: editY !== '' ? parseFloat(editY) : null,
         priority: editPriority,
         note_id: editNoteId || null,
+      }
+      if (a.route_id !== null) {
+        body.is_goal_image = editIsGoalImage
       }
       const updated = await api.updateMapAnnotation(a.id, body)
       onAnnotationsChange(
@@ -664,6 +669,27 @@ export default function AnnotationEditor({
                           )}
                           <span className="note-item__target">{targetName(a)}</span>
                         </div>
+                        {isRoute && !isThreeLap && (
+                          <div className="field" style={{ marginBottom: 0 }}>
+                            <label className="field__label">画像面</label>
+                            <div className="seg">
+                              <button
+                                type="button"
+                                className={`seg__btn${!editIsGoalImage ? ' seg__btn--on' : ''}`}
+                                onClick={() => setEditIsGoalImage(false)}
+                              >
+                                道中
+                              </button>
+                              <button
+                                type="button"
+                                className={`seg__btn${editIsGoalImage ? ' seg__btn--on' : ''}`}
+                                onClick={() => setEditIsGoalImage(true)}
+                              >
+                                道後
+                              </button>
+                            </div>
+                          </div>
+                        )}
                         <div className="field" style={{ marginBottom: 0 }}>
                           <label className="field__label">タイプ</label>
                           <select

@@ -428,4 +428,5 @@ export interface MapAnnotationUpdateBody {
   hover_text?: string | null
   priority?: number
   style?: Record<string, unknown> | null
+  is_goal_image?: boolean
 }

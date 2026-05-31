@@ -350,6 +350,7 @@ class MapAnnotationUpdate(BaseModel):
     hover_text: str | None = None
     priority: int | None = None
     style: dict | None = None
+    is_goal_image: bool | None = None
 
 
 # --------------------------------------------------------------------------
