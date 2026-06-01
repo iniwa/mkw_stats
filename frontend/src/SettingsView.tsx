@@ -1,5 +1,12 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { api, ApiError, Settings, VrAccount, VrAccountCreateBody, VrAccountUpdateBody } from './api'
+
+const OVERLAY_URLS = [
+  { label: 'VR / 透過 / compact', path: '/?view=overlay&mode=vr&compact=1' },
+  { label: 'VR / 背景あり / compact', path: '/?view=overlay&mode=vr&compact=1&bg=solid' },
+  { label: 'Lounge MMR / 背景あり / compact', path: '/?view=overlay&mode=mmr&compact=1&bg=solid' },
+  { label: '自動切替 / 透過 / compact', path: '/?view=overlay&mode=auto&compact=1' },
+] as const
 
 interface EditDraft {
   display_name: string
@@ -35,6 +42,10 @@ export default function SettingsView() {
   const [editDraft, setEditDraft] = useState<EditDraft | null>(null)
   const [showCreate, setShowCreate] = useState(false)
   const [createDraft, setCreateDraft] = useState<CreateDraft>(EMPTY_CREATE)
+  const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
+  const baseUrl = window.location.origin
+
   const [loungeDraft, setLoungeDraft] = useState({
     lounge_player_id: '',
     lounge_auto_sync: false,
@@ -152,6 +163,17 @@ export default function SettingsView() {
       setError(e instanceof ApiError ? e.message : '作成に失敗しました')
     } finally {
       mark('create', false)
+    }
+  }
+
+  async function handleCopy(key: string, url: string) {
+    try {
+      await navigator.clipboard.writeText(url)
+      setCopiedKey(key)
+      setTimeout(() => setCopiedKey(k => (k === key ? null : k)), 2000)
+    } catch {
+      const input = inputRefs.current[key]
+      if (input) { input.focus(); input.select() }
     }
   }
 
@@ -415,6 +437,40 @@ export default function SettingsView() {
             {loungeSuccess && <span className="lounge-form__ok">保存しました</span>}
           </div>
         </div>
+      </div>
+
+      {/* OBS Overlay URLs */}
+      <div className="panel">
+        <div className="panel__title">OBS 配信オーバーレイ</div>
+        <p className="overlay-url__guidance">
+          ブラウザソース推奨サイズ: compact モード <strong>320 × 120</strong> / 通常モード <strong>480 × 160</strong>。
+          透過 URL は OBS の「ブラウザソースの透明度を有効にする」をオン。背景固定（bg=solid）の場合は不要。
+        </p>
+        <ul className="overlay-url__list">
+          {OVERLAY_URLS.map(({ label, path }) => {
+            const url = `${baseUrl}${path}`
+            return (
+              <li key={path} className="overlay-url__row">
+                <span className="overlay-url__label">{label}</span>
+                <div className="overlay-url__controls">
+                  <input
+                    ref={el => { inputRefs.current[path] = el }}
+                    className="overlay-url__input"
+                    readOnly
+                    value={url}
+                    onFocus={e => e.currentTarget.select()}
+                  />
+                  <button
+                    className="btn btn--sm"
+                    onClick={() => handleCopy(path, url)}
+                  >
+                    {copiedKey === path ? 'コピーしました' : 'コピー'}
+                  </button>
+                </div>
+              </li>
+            )
+          })}
+        </ul>
       </div>
     </div>
   )
