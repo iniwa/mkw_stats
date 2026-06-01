@@ -357,6 +357,7 @@ export default function PlayingView() {
               <SelectionConfirm
                 resolved={resolved}
                 source={session.source}
+                loungePlayerCount={session.player_count}
                 rankedPlayerCount={rankedPlayerCountDraft}
                 onRankedPlayerCountChange={setRankedPlayerCountDraft}
                 busy={busy}
@@ -775,6 +776,7 @@ function CourseSelector({
 function SelectionConfirm({
   resolved,
   source,
+  loungePlayerCount,
   rankedPlayerCount,
   onRankedPlayerCountChange,
   busy,
@@ -783,6 +785,7 @@ function SelectionConfirm({
 }: {
   resolved: ResolveResult
   source: SourceType
+  loungePlayerCount: number | null
   rankedPlayerCount: number
   onRankedPlayerCountChange: (n: number) => void
   busy: string | null
@@ -791,6 +794,7 @@ function SelectionConfirm({
 }) {
   const recording = busy === 'confirm'
   const targetId = resolved.kind === 'course' ? resolved.course!.id : resolved.route!.id
+  const itemTablePlayerCount = source === 'lounge' ? (loungePlayerCount ?? 12) : rankedPlayerCount
   const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
   const [notes, setNotes] = useState<CourseNote[]>([])
 
@@ -892,6 +896,7 @@ function SelectionConfirm({
           <p className="hint">結果入力画面でも変更できます。</p>
         </div>
       )}
+      <ItemTablePreview playerCount={itemTablePlayerCount} source={source} />
       <div className="btn-row">
         <button className="btn" disabled={recording} onClick={onReselect}>
           選び直す
@@ -901,6 +906,33 @@ function SelectionConfirm({
         </button>
       </div>
     </div>
+  )
+}
+
+function ItemTablePreview({
+  playerCount,
+  source,
+}: {
+  playerCount: number
+  source: SourceType
+}) {
+  const tableType = playerCount >= 13 ? '24p' : '12p'
+  const label = tableType === '24p' ? '24人部屋' : '12人部屋'
+  return (
+    <section className="confirm__item-table">
+      <div className="confirm__item-head">
+        <span className="field__label">アイテムテーブル</span>
+        <span className="tag">{source === 'lounge' ? `Lounge ${label}` : `${label}目安`}</span>
+      </div>
+      <img
+        className="confirm__item-image"
+        src={`/assets/items/item-table-${tableType}.png`}
+        alt={`${label} アイテムテーブル`}
+      />
+      {source === 'ranked' && (
+        <p className="hint">VRでは参加人数に合わせた目安として表示します。</p>
+      )}
+    </section>
   )
 }
 

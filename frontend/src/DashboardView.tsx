@@ -6,6 +6,7 @@ import {
   type MapAnnotation,
   type PlaySession,
   type Route,
+  type Settings,
   type VrAccount,
 } from './api'
 
@@ -13,10 +14,12 @@ interface DashboardData {
   vrAccounts: VrAccount[]
   activeSessions: PlaySession[]
   recentSessions: PlaySession[]
+  loungeSessions: PlaySession[]
   courses: Course[]
   routes: Route[]
   notes: CourseNote[]
   annotations: MapAnnotation[]
+  settings: Settings | null
 }
 
 interface Props {
@@ -57,13 +60,15 @@ export default function DashboardView({ onNavigate }: Props) {
       api.getVrAccounts(),
       api.getActiveSessions(),
       api.getSessions({ limit: 5 }),
+      api.getSessions({ source: 'lounge', limit: 5 }),
       api.getCourses(),
       api.getRoutes(),
       api.getNotes(),
       api.getMapAnnotations(),
+      api.getSettings().catch((): Settings | null => null),
     ])
-      .then(([vrAccounts, activeSessions, recentSessions, courses, routes, notes, annotations]) => {
-        setData({ vrAccounts, activeSessions, recentSessions, courses, routes, notes, annotations })
+      .then(([vrAccounts, activeSessions, recentSessions, loungeSessions, courses, routes, notes, annotations, settings]) => {
+        setData({ vrAccounts, activeSessions, recentSessions, loungeSessions, courses, routes, notes, annotations, settings })
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
@@ -90,6 +95,11 @@ export default function DashboardView({ onNavigate }: Props) {
   const activeRoutes = data.routes.filter(r => r.is_active).length
   const activeNotes = data.notes.filter(n => n.is_active).length
   const annotationCount = data.annotations.length
+  const activeLoungeCount = data.activeSessions.filter(s => s.source === 'lounge').length
+  const latestLounge = data.loungeSessions[0] ?? null
+  const latestLoungeLabel = latestLounge
+    ? `${latestLounge.player_count ? `${latestLounge.player_count}人 ` : ''}${statusLabel(latestLounge.status)}`
+    : '—'
 
   return (
     <div className="dashboard">
@@ -153,6 +163,31 @@ export default function DashboardView({ onNavigate }: Props) {
       </div>
 
       <div className="panel">
+        <div className="panel__title">Lounge</div>
+        <div className="dashboard__metrics">
+          <div className="dashboard__metric">
+            <div className="dashboard__metric-value">{data.settings?.lounge_mmr_12p ?? '—'}</div>
+            <div className="dashboard__metric-label">12p MMR</div>
+          </div>
+          <div className="dashboard__metric">
+            <div className="dashboard__metric-value">{data.settings?.lounge_mmr_24p ?? '—'}</div>
+            <div className="dashboard__metric-label">24p MMR</div>
+          </div>
+          <div className="dashboard__metric">
+            <div className="dashboard__metric-value">{activeLoungeCount}</div>
+            <div className="dashboard__metric-label">進行中</div>
+          </div>
+          <div className="dashboard__metric">
+            <div className="dashboard__metric-value">{data.settings?.lounge_auto_sync ? 'ON' : 'OFF'}</div>
+            <div className="dashboard__metric-label">自動同期</div>
+          </div>
+        </div>
+        <div className="dashboard__session-row2">
+          Player: {data.settings?.lounge_player_id || '未設定'} / Season {data.settings?.lounge_season ?? '—'} / 最新: {latestLoungeLabel}
+        </div>
+      </div>
+
+      <div className="panel">
         <div className="panel__title">最近のセッション</div>
         {data.recentSessions.length === 0 ? (
           <p className="placeholder" style={{ fontSize: '0.85rem' }}>セッションはありません</p>
@@ -180,7 +215,7 @@ export default function DashboardView({ onNavigate }: Props) {
       <div className="panel">
         <div className="panel__title">クイックアクション</div>
         <div className="dashboard__actions">
-          {(['Playing', 'Records', 'Courses', 'Settings'] as const).map(view => (
+          {(['Playing', 'Lounge', 'Host', 'Records', 'Courses', 'Settings'] as const).map(view => (
             <button key={view} className="btn" onClick={() => onNavigate(view)}>
               {view}
             </button>

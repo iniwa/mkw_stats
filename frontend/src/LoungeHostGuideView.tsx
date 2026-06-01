@@ -1,7 +1,25 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 
 type Mode = '12p' | '24p'
 type CheckSection = { title: string; items: { id: string; label: string }[] }
+
+const STORAGE_KEY = 'mkw:lounge-host-guide'
+
+interface StoredGuideState {
+  mode?: Mode
+  checks?: Record<string, boolean>
+}
+
+function readStoredGuideState(): StoredGuideState {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY)
+    if (!raw) return {}
+    const parsed = JSON.parse(raw) as StoredGuideState
+    return parsed.mode === '12p' || parsed.mode === '24p' ? parsed : { checks: parsed.checks }
+  } catch {
+    return {}
+  }
+}
 
 const MODE_SUMMARY = {
   '12p': {
@@ -87,8 +105,14 @@ const REOPEN_CASES = [
 ]
 
 export default function LoungeHostGuideView() {
-  const [mode, setMode] = useState<Mode>('12p')
-  const [checks, setChecks] = useState<Record<string, boolean>>({})
+  const [mode, setMode] = useState<Mode>(() => readStoredGuideState().mode ?? '12p')
+  const [checks, setChecks] = useState<Record<string, boolean>>(
+    () => readStoredGuideState().checks ?? {},
+  )
+
+  useEffect(() => {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify({ mode, checks }))
+  }, [mode, checks])
 
   function switchMode(m: Mode) {
     setMode(m)
