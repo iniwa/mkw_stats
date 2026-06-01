@@ -966,3 +966,52 @@ textarea.input { resize: vertical; font-family: inherit; }
 .confirm__item-table { margin-top: 1rem; display: flex; flex-direction: column; gap: 0.5rem; min-width: 0; }
 .confirm__item-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; flex-wrap: wrap; }
 .confirm__item-image { display: block; max-width: 100%; height: auto; border-radius: 4px; border: 1px solid var(--border); background: rgba(255,255,255,0.04); }
+
+/* -- overlay (OBS browser source) ----------------------------------------- */
+body.overlay-mode { background: transparent !important; }
+
+.overlay {
+  display: inline-flex; flex-direction: column; gap: 0.35rem;
+  padding: 0.7rem 1rem; min-width: 180px;
+}
+.overlay--solid {
+  background: rgba(17, 17, 25, 0.88);
+  border-radius: 6px;
+}
+
+.overlay__mode-switch { display: flex; gap: 0.2rem; }
+.overlay__mode-btn {
+  padding: 0.15rem 0.45rem; font-size: 0.68rem; font-weight: 700;
+  background: rgba(255,255,255,0.07); color: rgba(255,255,255,0.45);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 3px; cursor: pointer;
+  font-family: inherit; letter-spacing: 0.03em;
+}
+.overlay__mode-btn:hover { color: rgba(255,255,255,0.75); }
+.overlay__mode-btn--on { background: rgba(91,139,240,0.22); border-color: #5b8bf0; color: #9bbcf5; }
+
+.overlay__body { display: flex; flex-direction: column; gap: 0.05rem; }
+
+.overlay__label {
+  font-size: 0.8rem; color: rgba(255,255,255,0.65); white-space: nowrap;
+}
+.overlay__label--empty { color: rgba(255,255,255,0.35); font-size: 0.75rem; }
+
+.overlay__value {
+  font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums;
+  color: #ffffff; line-height: 1.05; white-space: nowrap;
+}
+.overlay__value--empty { color: rgba(255,255,255,0.3); font-size: 1.8rem; }
+
+.overlay__kind {
+  display: block; font-size: 0.72rem; font-weight: 600;
+  color: rgba(255,255,255,0.4); letter-spacing: 0.05em;
+}
+.overlay__mmr-kind {
+  font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.5);
+  background: rgba(255,255,255,0.08); border-radius: 3px;
+  padding: 0.05rem 0.3rem; vertical-align: middle;
+}
+
+.overlay__footer { min-height: 0.9rem; margin-top: 0.1rem; }
+.overlay__updated { font-size: 0.65rem; color: rgba(255,255,255,0.28); font-variant-numeric: tabular-nums; }
+.overlay__stale { font-size: 0.65rem; color: #e5705f; }

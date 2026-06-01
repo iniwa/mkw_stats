@@ -7,6 +7,7 @@ import LoungeHostGuideView from './LoungeHostGuideView'
 import LoungeView from './LoungeView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
+import RateOverlayView, { type OverlayMode } from './RateOverlayView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 import VrView from './VrView'
@@ -15,15 +16,27 @@ const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
+const _qp = new URLSearchParams(window.location.search)
+const _isOverlay = _qp.get('view') === 'overlay'
+const _rawMode = _qp.get('mode')
+const _overlayMode: OverlayMode = (_rawMode === 'vr' || _rawMode === 'mmr' || _rawMode === 'auto') ? _rawMode : 'vr'
+const _compact = _qp.get('compact') === '1'
+const _solidBg = _qp.get('bg') === 'solid'
+
 export default function App() {
   const [active, setActive] = useState('Dashboard')
   const [health, setHealth] = useState<HealthStatus>('checking')
 
   useEffect(() => {
+    if (_isOverlay) return
     fetch('/api/v1/health')
       .then(r => (r.ok ? setHealth('ok') : setHealth('error')))
       .catch(() => setHealth('error'))
   }, [])
+
+  if (_isOverlay) {
+    return <RateOverlayView initialMode={_overlayMode} compact={_compact} solidBg={_solidBg} />
+  }
 
   return (
     <div className="app">
