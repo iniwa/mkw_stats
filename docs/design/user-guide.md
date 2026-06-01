@@ -235,7 +235,7 @@ Settings タブの「OBS 配信オーバーレイ」セクションから各 URL
 |---|---|
 | `http://192.168.1.205:3030/?view=overlay&mode=vr` | アクティブアカウントの現在 VR |
 | `http://192.168.1.205:3030/?view=overlay&mode=mmr` | Lounge MMR（Settings の `lounge_game` に応じて 12p/24p を自動選択） |
-| `http://192.168.1.205:3030/?view=overlay&mode=auto` | Lounge セッション進行中は MMR、Ranked セッション進行中は VR、それ以外は VR |
+| `http://192.168.1.205:3030/?view=overlay&mode=auto` | Lounge セッション進行中は MMR、Ranked セッション進行中は VR、それ以外は VR と MMR を約8秒ごとに交互表示 |
 
 ### オプションパラメータ
 

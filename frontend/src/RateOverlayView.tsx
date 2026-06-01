@@ -3,11 +3,15 @@ import { api, type PlaySession, type Settings, type VrAccount } from './api'
 
 export type OverlayMode = 'vr' | 'mmr' | 'auto'
 
-function resolveDisplay(mode: OverlayMode, activeSessions: PlaySession[]): 'vr' | 'mmr' {
+function resolveDisplay(
+  mode: OverlayMode,
+  activeSessions: PlaySession[],
+  idleAutoDisplay: 'vr' | 'mmr',
+): 'vr' | 'mmr' {
   if (mode !== 'auto') return mode
   if (activeSessions.some(s => s.source === 'lounge' && s.status === 'active')) return 'mmr'
   if (activeSessions.some(s => s.source === 'ranked' && s.status === 'active')) return 'vr'
-  return 'vr'
+  return idleAutoDisplay
 }
 
 function getMmr(settings: Settings | null): { value: number | null; label: '12p' | '24p' } {
@@ -37,6 +41,7 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
   const [activeSessions, setActiveSessions] = useState<PlaySession[]>([])
   const [stale, setStale] = useState(false)
   const [lastOk, setLastOk] = useState<string | null>(null)
+  const [idleAutoDisplay, setIdleAutoDisplay] = useState<'vr' | 'mmr'>('vr')
 
   useEffect(() => {
     document.body.classList.add('overlay-mode')
@@ -71,8 +76,22 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
     }
   }, [mode])
 
+  const hasLoungeSession = activeSessions.some(s => s.source === 'lounge' && s.status === 'active')
+  const hasRankedSession = activeSessions.some(s => s.source === 'ranked' && s.status === 'active')
+
+  useEffect(() => {
+    if (mode !== 'auto' || hasLoungeSession || hasRankedSession) {
+      setIdleAutoDisplay('vr')
+      return
+    }
+    const id = setInterval(() => {
+      setIdleAutoDisplay(d => (d === 'vr' ? 'mmr' : 'vr'))
+    }, 8000)
+    return () => clearInterval(id)
+  }, [mode, hasLoungeSession, hasRankedSession])
+
   const activeAccount = vrAccounts.find(a => a.is_active) ?? null
-  const display = resolveDisplay(mode, activeSessions)
+  const display = resolveDisplay(mode, activeSessions, idleAutoDisplay)
   const mmr = getMmr(settings)
 
   return (
