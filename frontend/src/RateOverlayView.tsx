@@ -76,7 +76,7 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
   const mmr = getMmr(settings)
 
   return (
-    <div className={`overlay${solidBg ? ' overlay--solid' : ''}`}>
+    <div className={`overlay${compact ? ' overlay--compact' : ''}${solidBg ? ' overlay--solid' : ''}`}>
       {!compact && (
         <div className="overlay__mode-switch">
           {(['vr', 'mmr', 'auto'] as const).map(m => (

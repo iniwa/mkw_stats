@@ -974,6 +974,10 @@ body.overlay-mode { background: transparent !important; }
   display: inline-flex; flex-direction: column; gap: 0.35rem;
   padding: 0.7rem 1rem; min-width: 180px;
 }
+.overlay--compact {
+  gap: 0.15rem;
+  padding: 0.35rem 0.75rem;
+}
 .overlay--solid {
   background: rgba(17, 17, 25, 0.88);
   border-radius: 6px;
@@ -995,17 +999,21 @@ body.overlay-mode { background: transparent !important; }
   font-size: 0.8rem; color: rgba(255,255,255,0.65); white-space: nowrap;
 }
 .overlay__label--empty { color: rgba(255,255,255,0.35); font-size: 0.75rem; }
+.overlay--compact .overlay__label { font-size: 0.72rem; line-height: 1.1; }
 
 .overlay__value {
   font-size: 2.6rem; font-weight: 700; font-variant-numeric: tabular-nums;
   color: #ffffff; line-height: 1.05; white-space: nowrap;
 }
 .overlay__value--empty { color: rgba(255,255,255,0.3); font-size: 1.8rem; }
+.overlay--compact .overlay__value { font-size: 2.15rem; line-height: 0.98; }
+.overlay--compact .overlay__value--empty { font-size: 1.55rem; }
 
 .overlay__kind {
   display: block; font-size: 0.72rem; font-weight: 600;
   color: rgba(255,255,255,0.4); letter-spacing: 0.05em;
 }
+.overlay--compact .overlay__kind { font-size: 0.62rem; line-height: 1; }
 .overlay__mmr-kind {
   font-size: 0.68rem; font-weight: 700; color: rgba(255,255,255,0.5);
   background: rgba(255,255,255,0.08); border-radius: 3px;
@@ -1015,3 +1023,6 @@ body.overlay-mode { background: transparent !important; }
 .overlay__footer { min-height: 0.9rem; margin-top: 0.1rem; }
 .overlay__updated { font-size: 0.65rem; color: rgba(255,255,255,0.28); font-variant-numeric: tabular-nums; }
 .overlay__stale { font-size: 0.65rem; color: #e5705f; }
+.overlay--compact .overlay__footer { min-height: 0; margin-top: 0; }
+.overlay--compact .overlay__updated,
+.overlay--compact .overlay__stale { font-size: 0.56rem; line-height: 1; }
