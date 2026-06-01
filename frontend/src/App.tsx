@@ -3,6 +3,7 @@ import './App.css'
 import AnalyticsView from './AnalyticsView'
 import DashboardView from './DashboardView'
 import ItemTablesView from './ItemTablesView'
+import LoungeHostGuideView from './LoungeHostGuideView'
 import LoungeView from './LoungeView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
@@ -10,7 +11,7 @@ import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 import VrView from './VrView'
 
-const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
+const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
@@ -58,6 +59,8 @@ export default function App() {
           <LoungeView />
         ) : active === 'Settings' ? (
           <SettingsView />
+        ) : active === 'Host' ? (
+          <LoungeHostGuideView />
         ) : active === 'Items' ? (
           <ItemTablesView />
         ) : active === 'Courses' ? (

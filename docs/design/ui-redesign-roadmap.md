@@ -631,6 +631,27 @@ Completed behavior:
 - Typecheck and build pass clean.
 - Pi migration 007 applied (confirmed in 2026-05-31 audit).
 
+## Completed Foundation: Lounge Host Guide View
+
+The Lounge host guide view has been implemented.
+
+Completed behavior:
+
+- A new `Host` nav tab is added immediately after `Lounge` in the navigation bar.
+- `LoungeHostGuideView` renders a structured host guide distilled from `lounge_host_note.md`.
+- `lounge_host_note.md` was confirmed readable as valid UTF-8 Japanese; no mojibake.
+- A `12p FFA` / `24p FFA` segmented mode switch controls all mode-specific content below.
+- Switching mode resets all checklist checkboxes to avoid confusion between modes.
+- Mode summary card shows: COM, start basis, missing-player start rule, invalid race threshold, recommended use case.
+- Common settings card shows all FFA-common fields (Class, Teams, Items, Race Count, Intermission) plus a COM row in danger color with a separate highlighted warning line (`host-guide__com-warn`) to prevent the most common mistake (wrong COM setting for the selected mode).
+- Checklist card has four sections: pre-queue, pre-Room-ID-post, pre-start, during match. Mode-specific items (COM, start condition, invalid threshold) update labels when mode changes.
+- A compact `リセット` button clears all checkboxes; checkbox state is component-local only, no persistence.
+- Reopen / host handoff warning panel (reusing `.warnbox`) lists common cases requiring reopen or host replacement.
+- Source note at the bottom references `lounge_host_note.md` without linking it as a clickable path.
+- `.host-guide*` CSS classes added. Layout uses `grid-template-columns: minmax(0, 1fr)` patterns to prevent mobile overflow at 375px.
+- No new npm dependencies, no backend changes.
+- Typecheck and build pass clean.
+
 ## Completed Foundation: Ranked Player Count Pre-Input
 
 The ranked player count pre-input slice has been implemented.
