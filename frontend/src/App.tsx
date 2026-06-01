@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import './App.css'
 import AnalyticsView from './AnalyticsView'
 import DashboardView from './DashboardView'
+import ItemTablesView from './ItemTablesView'
 import LoungeView from './LoungeView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
@@ -9,7 +10,7 @@ import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 import VrView from './VrView'
 
-const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Analytics', 'Courses', 'Records', 'Settings']
+const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
@@ -57,6 +58,8 @@ export default function App() {
           <LoungeView />
         ) : active === 'Settings' ? (
           <SettingsView />
+        ) : active === 'Items' ? (
+          <ItemTablesView />
         ) : active === 'Courses' ? (
           <NotesView />
         ) : (

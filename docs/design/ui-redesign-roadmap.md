@@ -519,7 +519,48 @@ Completed behavior:
 - Typecheck and build pass clean.
 - `issues.md` Courses item marked complete.
 
+The Lounge session score total slice has been implemented.
+
+Completed behavior:
+
+- A `loungeScoreTotal(races)` helper sums `score` from completed races with non-null scores.
+- `PlayingView` computes `currentLoungeScore` for the active session (0 for non-Lounge sessions).
+- `SessionSidebar` receives `currentLoungeScore` and shows `合計スコア: Xpt` directly below `Race X / 12` for Lounge sessions only.
+- `LoungeResultForm` receives `currentTotalScore` and shows `合計スコア: Xpt　→　保存後: Ypt` below the score hint. The projected total updates reactively as the score input changes.
+- Ranked sessions are unaffected; no new backend APIs, no CSS additions.
+- Typecheck and build pass clean.
+
+The Lounge MMR trend even-spacing slice has been implemented.
+
+Completed behavior:
+
+- `MmrTrendChart` now uses sequence-based x positioning instead of real timestamps.
+- `allTimes`, `tMin`, `tMax`, `tRange`, and the `tx(iso)` helper are removed.
+- A new `txIndex(index, total)` helper maps match order to x position: 1 point → horizontal center; 2+ points → evenly spaced from left to right edge of the chart area.
+- Each stream (12p / 24p) uses its own independent sequence; they do not need to align by calendar date.
+- Y-axis range continues to be derived from all visible points across both streams.
+- `buildTrendPoints` ordering (oldest → newest), `MMR_TREND_LIMIT`, colors, legend, and history list are unchanged.
+- No new backend APIs, no CSS changes, no npm dependencies.
+- Typecheck and build pass clean.
+
 Deeper Lounge analytics and broader final cleanup remain later slices.
+
+## Completed Foundation: Item Tables View
+
+The item tables reference view has been implemented.
+
+Completed behavior:
+
+- A new `Items` nav tab is added after `Analytics` in the navigation bar.
+- `ItemTablesView` renders three sections: `24人部屋`, `12人部屋`, `追加出現アイテム`.
+- Each section loads the corresponding local PNG from `/assets/items/`.
+- A source note with a link to `https://japan-mk.blog.jp/mkworld.item-1` is shown under the page title.
+- Images use `max-width: 100%; height: auto` and do not cause horizontal overflow at 375px.
+- If an image fails to load, a concise fallback text `画像を読み込めませんでした。` is shown instead of a broken image.
+- Image files are stored at `frontend/public/assets/items/item-table-{24p,12p,extra}.png` (downloaded from approved source: `livedoor.blogimg.jp/nim_2525/imgs/`).
+- No external hotlinks at runtime; all images served locally.
+- No backend changes, no npm dependencies.
+- Typecheck and build pass clean.
 
 ## Completed Foundation: MKCentral Non-JSON Response Fix
 
@@ -589,3 +630,22 @@ Completed behavior:
 - `MapAnnotationRead` exposes `is_goal_image`; `MapAnnotationCreate` accepts it (requires `route_id`); `MapAnnotationUpdate` also accepts `is_goal_image` — setting it to `true` requires a `route_id` on the existing annotation. The edit form shows a compact `道中 / 道後` control for non-3-lap route annotations.
 - Typecheck and build pass clean.
 - Pi migration 007 applied (confirmed in 2026-05-31 audit).
+
+## Completed Foundation: Ranked Player Count Pre-Input
+
+The ranked player count pre-input slice has been implemented.
+
+Completed behavior:
+
+- `PlayingView` holds `rankedPlayerCountDraft` state (default 12).
+- `resetSessionState` resets `rankedPlayerCountDraft` to 12.
+- Resuming a ranked session initializes `rankedPlayerCountDraft` from `target.player_count ?? 12`.
+- The course confirmation screen (`SelectionConfirm`) shows a stepper for ranked sessions only.
+  - Clamps to 1–24.
+  - A hint `結果入力画面でも変更できます。` is shown below the stepper.
+  - Lounge confirmation screens are unaffected.
+- `RankedResultForm` receives `defaultPlayerCount={rankedPlayerCountDraft}` instead of `session.player_count ?? 12`.
+  - The result form continues to own its own `playerCount` state and can still change the value before saving.
+  - The save payload always uses the result form value.
+- No backend changes, no CSS additions, no npm dependencies.
+- Typecheck and build pass clean.

@@ -45,6 +45,13 @@ function routeName(route: Route | undefined, courses: Map<string, Course>): stri
   return `${courseName(from)} → ${courseName(to)}`
 }
 
+function loungeScoreTotal(races: RaceRecord[]): number {
+  return races.reduce(
+    (sum, race) => sum + (race.status === 'completed' && race.score != null ? race.score : 0),
+    0,
+  )
+}
+
 export default function PlayingView() {
   const [loadState, setLoadState] = useState<LoadState>('loading')
   const [loadError, setLoadError] = useState<string | null>(null)
@@ -66,6 +73,8 @@ export default function PlayingView() {
   const [actionError, setActionError] = useState<string | null>(null)
   const [autoSyncMsg, setAutoSyncMsg] = useState<string | null>(null)
   const [autoSyncError, setAutoSyncError] = useState<string | null>(null)
+
+  const [rankedPlayerCountDraft, setRankedPlayerCountDraft] = useState(12)
 
   const coursesById = useMemo(() => new Map(courses.map(c => [c.id, c])), [courses])
   const routesById = useMemo(() => new Map(routes.map(r => [r.id, r])), [routes])
@@ -135,6 +144,7 @@ export default function PlayingView() {
     setActionError(null)
     setAutoSyncMsg(null)
     setAutoSyncError(null)
+    setRankedPlayerCountDraft(12)
   }, [])
 
   // -- Auto MMR sync -------------------------------------------------------
@@ -167,6 +177,9 @@ export default function PlayingView() {
   const resumeSession = (target: PlaySession) =>
     runAction('resume', async () => {
       resetSessionState()
+      if (target.source === 'ranked') {
+        setRankedPlayerCountDraft(target.player_count ?? 12)
+      }
       const races = await api.getSessionRaces(target.id)
       const completed = races.filter(r => r.status === 'completed')
       setRecordedRaces(completed)
@@ -300,6 +313,8 @@ export default function PlayingView() {
             ? 'confirm'
             : 'select'
 
+  const currentLoungeScore = session?.source === 'lounge' ? loungeScoreTotal(recordedRaces) : 0
+
   return (
     <div className="playing">
       <div className="playing__head">
@@ -341,6 +356,9 @@ export default function PlayingView() {
             {phase === 'confirm' && resolved && (
               <SelectionConfirm
                 resolved={resolved}
+                source={session.source}
+                rankedPlayerCount={rankedPlayerCountDraft}
+                onRankedPlayerCountChange={setRankedPlayerCountDraft}
                 busy={busy}
                 onConfirm={confirmSelection}
                 onReselect={cancelSelection}
@@ -350,7 +368,7 @@ export default function PlayingView() {
               <RankedResultForm
                 draftRace={draftRace}
                 account={vrAccounts.find(a => a.id === session.vr_account_id) ?? null}
-                defaultPlayerCount={session.player_count ?? 12}
+                defaultPlayerCount={rankedPlayerCountDraft}
                 busy={busy}
                 courseLabel={
                   draftRace.course_id
@@ -365,6 +383,7 @@ export default function PlayingView() {
                 draftRace={draftRace}
                 session={session}
                 lastWarnings={lastWarnings}
+                currentTotalScore={currentLoungeScore}
                 courseLabel={
                   draftRace.course_id
                     ? courseName(coursesById.get(draftRace.course_id))
@@ -395,6 +414,7 @@ export default function PlayingView() {
               lastWarnings={lastWarnings}
               coursesById={coursesById}
               routesById={routesById}
+              currentLoungeScore={currentLoungeScore}
               busy={busy}
               canUndo={recordedRaces.length > 0 || draftRace !== null}
               onUndo={undoLastRace}
@@ -754,11 +774,17 @@ function CourseSelector({
 // ---------------------------------------------------------------------------
 function SelectionConfirm({
   resolved,
+  source,
+  rankedPlayerCount,
+  onRankedPlayerCountChange,
   busy,
   onConfirm,
   onReselect,
 }: {
   resolved: ResolveResult
+  source: SourceType
+  rankedPlayerCount: number
+  onRankedPlayerCountChange: (n: number) => void
   busy: string | null
   onConfirm: () => void
   onReselect: () => void
@@ -838,6 +864,34 @@ function SelectionConfirm({
         id={targetId}
         displayName={resolved.display_name}
       />
+      {source === 'ranked' && (
+        <div className="field">
+          <span className="field__label">参加人数</span>
+          <div className="stepper">
+            <button
+              className="btn stepper__btn"
+              onClick={() => onRankedPlayerCountChange(Math.max(1, rankedPlayerCount - 1))}
+            >
+              −
+            </button>
+            <input
+              className="input stepper__input"
+              type="number"
+              min={1}
+              max={24}
+              value={rankedPlayerCount}
+              onChange={e => onRankedPlayerCountChange(Math.min(24, Math.max(1, Number(e.target.value) || 1)))}
+            />
+            <button
+              className="btn stepper__btn"
+              onClick={() => onRankedPlayerCountChange(Math.min(24, rankedPlayerCount + 1))}
+            >
+              ＋
+            </button>
+          </div>
+          <p className="hint">結果入力画面でも変更できます。</p>
+        </div>
+      )}
       <div className="btn-row">
         <button className="btn" disabled={recording} onClick={onReselect}>
           選び直す
@@ -1016,6 +1070,7 @@ function LoungeResultForm({
   session,
   lastWarnings,
   courseLabel,
+  currentTotalScore,
   busy,
   onComplete,
 }: {
@@ -1023,6 +1078,7 @@ function LoungeResultForm({
   session: PlaySession
   lastWarnings: string[]
   courseLabel: string
+  currentTotalScore: number
   busy: string | null
   onComplete: (body: CompleteLoungeBody) => void
 }) {
@@ -1112,6 +1168,7 @@ function LoungeResultForm({
           </button>
         </div>
         <p className="hint">順位から自動入力されます。必要なら修正できます。</p>
+        <p className="hint">合計スコア: {currentTotalScore}pt　→　保存後: {currentTotalScore + score}pt</p>
       </div>
 
       <button
@@ -1132,6 +1189,7 @@ function SessionSidebar({
   lastWarnings,
   coursesById,
   routesById,
+  currentLoungeScore,
   busy,
   canUndo,
   disabled,
@@ -1143,6 +1201,7 @@ function SessionSidebar({
   lastWarnings: string[]
   coursesById: Map<string, Course>
   routesById: Map<string, Route>
+  currentLoungeScore: number
   busy: string | null
   canUndo: boolean
   disabled: boolean
@@ -1159,7 +1218,10 @@ function SessionSidebar({
       <h3 className="panel__title">セッション情報</h3>
 
       {session.source === 'lounge' && (
-        <p className="sidebar__progress">Race {Math.min(recordedRaces.length, 12)} / 12</p>
+        <>
+          <p className="sidebar__progress">Race {Math.min(recordedRaces.length, 12)} / 12</p>
+          <p className="sidebar__progress">合計スコア: {currentLoungeScore}pt</p>
+        </>
       )}
 
       {lastWarnings.length > 0 && (

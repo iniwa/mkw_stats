@@ -73,24 +73,19 @@ function MmrTrendChart({ trend12, trend24 }: { trend12: PlaySession[]; trend24: 
     ...trend12.map(s => s.lounge_mmr_after!),
     ...trend24.map(s => s.lounge_mmr_after!),
   ]
-  const allTimes: number[] = [
-    ...trend12.map(s => new Date(s.completed_at ?? s.started_at).getTime()),
-    ...trend24.map(s => new Date(s.completed_at ?? s.started_at).getTime()),
-  ]
 
   const vMin = Math.min(...allVals)
   const vMax = Math.max(...allVals)
-  const tMin = Math.min(...allTimes)
-  const tMax = Math.max(...allTimes)
   const vRange = vMax === vMin ? 1 : vMax - vMin
-  const tRange = tMax === tMin ? 1 : tMax - tMin
 
-  const tx = (iso: string): number =>
-    padL + ((new Date(iso).getTime() - tMin) / tRange) * chartW
+  const txIndex = (index: number, total: number): number => {
+    if (total <= 1) return padL + chartW / 2
+    return padL + (index / (total - 1)) * chartW
+  }
   const ty = (v: number): number =>
     padT + (1 - (v - vMin) / vRange) * chartH
   const toPoints = (pts: PlaySession[]): string =>
-    pts.map(s => `${tx(s.completed_at ?? s.started_at)},${ty(s.lounge_mmr_after!)}`).join(' ')
+    pts.map((s, i) => `${txIndex(i, pts.length)},${ty(s.lounge_mmr_after!)}`).join(' ')
 
   const yTicks = vMax === vMin ? [vMin] : [vMax, Math.round((vMax + vMin) / 2), vMin]
   const c12 = '#5b8bf0'
@@ -111,10 +106,10 @@ function MmrTrendChart({ trend12, trend24 }: { trend12: PlaySession[]; trend24: 
         <polyline points={toPoints(trend24)} fill="none" stroke={c24} strokeWidth={2} strokeLinejoin="round" />
       )}
       {trend12.map((s, i) => (
-        <circle key={i} cx={tx(s.completed_at ?? s.started_at)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c12} />
+        <circle key={i} cx={txIndex(i, trend12.length)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c12} />
       ))}
       {trend24.map((s, i) => (
-        <circle key={i} cx={tx(s.completed_at ?? s.started_at)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c24} />
+        <circle key={i} cx={txIndex(i, trend24.length)} cy={ty(s.lounge_mmr_after!)} r={3} fill={c24} />
       ))}
       <circle cx={W - padR - 62} cy={padT + 5} r={4} fill={c12} />
       <text x={W - padR - 54} y={padT + 9} fontSize={10} fill="#9a9aae">12p</text>
