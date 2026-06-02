@@ -13,6 +13,10 @@ function fmtDelta(v: number | null): string {
   return v >= 0 ? `+${v}` : String(v)
 }
 
+function fmtValue(v: number | null): string {
+  return v == null ? '—' : v.toLocaleString()
+}
+
 function fmtTime(iso: string): string {
   return new Date(iso).toLocaleString('ja-JP', {
     month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
@@ -190,6 +194,12 @@ export default function VrView() {
       if (ta !== tb) return ta < tb ? -1 : 1
       return (a.race_no ?? 0) - (b.race_no ?? 0)
     })
+  const vrValues = [
+    ...trendRaces.map(r => r.rating_after!),
+    ...(activeAccount ? [activeAccount.current_vr] : []),
+  ]
+  const maxVr = vrValues.length > 0 ? Math.max(...vrValues) : null
+  const minVr = vrValues.length > 0 ? Math.min(...vrValues) : null
 
   const recentSessions = sessions.slice(0, 10)
   const sessionStatusLabel = (s: PlaySession) =>
@@ -226,6 +236,17 @@ export default function VrView() {
             <span className="analytics__vr-value">{activeAccount.current_vr.toLocaleString()}</span>
           </div>
         )}
+        <div className="analytics__grid analytics__grid--4" style={{ marginTop: '0.6rem' }}>
+          {([
+            ['最大VR', fmtValue(maxVr)],
+            ['最小VR', fmtValue(minVr)],
+          ] as [string, string][]).map(([label, value]) => (
+            <div key={label} className="analytics__metric">
+              <div className="analytics__metric-value">{value}</div>
+              <div className="analytics__metric-label">{label}</div>
+            </div>
+          ))}
+        </div>
       </div>
 
       <div className="panel">

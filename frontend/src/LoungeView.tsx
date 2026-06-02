@@ -42,6 +42,10 @@ function toToISO(d: string): string {
   return new Date(y, m - 1, day + 1).toISOString()
 }
 
+function fmtValue(v: number | null): string {
+  return v == null ? '—' : v.toLocaleString()
+}
+
 const MMR_TREND_LIMIT = 20
 
 // Classify a synced session's MKCentral game string into a player-count bucket.
@@ -241,15 +245,31 @@ export default function LoungeView() {
   const mmr24 = mmrSyncResult != null
     ? mmrSyncResult.current_mmr_24p
     : (settings?.lounge_mmr_24p ?? synced24[0]?.lounge_mmr_after ?? null)
+  const mmr12Values = [
+    ...synced12.map(s => s.lounge_mmr_after!),
+    ...(mmr12 != null ? [mmr12] : []),
+  ]
+  const mmr24Values = [
+    ...synced24.map(s => s.lounge_mmr_after!),
+    ...(mmr24 != null ? [mmr24] : []),
+  ]
+  const maxMmr12 = mmr12Values.length > 0 ? Math.max(...mmr12Values) : null
+  const minMmr12 = mmr12Values.length > 0 ? Math.min(...mmr12Values) : null
+  const maxMmr24 = mmr24Values.length > 0 ? Math.max(...mmr24Values) : null
+  const minMmr24 = mmr24Values.length > 0 ? Math.min(...mmr24Values) : null
   const hasAnyMmr = mmr12 != null || mmr24 != null || synced.length > 0
   const mmrPanel = (
     <div className="panel">
       <div className="panel__title">MMR</div>
       {hasAnyMmr ? (
-        <div className="analytics__grid analytics__grid--4">
+        <div className="analytics__grid analytics__grid--6">
           {([
-            ['12p MMR', mmr12 ?? '—'],
-            ['24p MMR', mmr24 ?? '—'],
+            ['12p MMR', fmtValue(mmr12)],
+            ['12p 最大', fmtValue(maxMmr12)],
+            ['12p 最小', fmtValue(minMmr12)],
+            ['24p MMR', fmtValue(mmr24)],
+            ['24p 最大', fmtValue(maxMmr24)],
+            ['24p 最小', fmtValue(minMmr24)],
             ['前回変動', latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
             ['同期済み', synced.length],
           ] as [string, string | number][]).map(([label, value]) => (
