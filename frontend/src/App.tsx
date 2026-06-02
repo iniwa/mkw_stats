@@ -10,9 +10,11 @@ import PlayingView from './PlayingView'
 import RateOverlayView, { type OverlayMode } from './RateOverlayView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
+import StyleguideView from './StyleguideView'
 import VrView from './VrView'
 
-const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
+// スタイルガイドは確認用（?view=styleguide または NAV の SG タブ）。確認後に削除可。
+const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings', 'SG']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
@@ -78,6 +80,8 @@ export default function App() {
           <ItemTablesView />
         ) : active === 'Courses' ? (
           <NotesView />
+        ) : active === 'SG' ? (
+          <StyleguideView />
         ) : (
           <p className="placeholder">{active} はこのスライスでは未実装です。</p>
         )}
