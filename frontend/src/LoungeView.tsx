@@ -262,23 +262,46 @@ export default function LoungeView() {
     <div className="panel">
       <div className="panel__title">MMR</div>
       {hasAnyMmr ? (
-        <div className="analytics__grid analytics__grid--6">
-          {([
-            ['12p MMR', fmtValue(mmr12)],
-            ['12p 最大', fmtValue(maxMmr12)],
-            ['12p 最小', fmtValue(minMmr12)],
-            ['24p MMR', fmtValue(mmr24)],
-            ['24p 最大', fmtValue(maxMmr24)],
-            ['24p 最小', fmtValue(minMmr24)],
-            ['前回変動', latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'],
-            ['同期済み', synced.length],
-          ] as [string, string | number][]).map(([label, value]) => (
-            <div key={label} className="analytics__metric">
-              <div className="analytics__metric-value">{value}</div>
-              <div className="analytics__metric-label">{label}</div>
+        <>
+          <div className="lounge__section-label">12p</div>
+          <div className="analytics__grid analytics__grid--3">
+            <div className="analytics__metric analytics__metric--current">
+              <div className="analytics__metric-value">{fmtValue(mmr12)}</div>
+              <div className="analytics__metric-label">現在</div>
             </div>
-          ))}
-        </div>
+            <div className="analytics__metric">
+              <div className="analytics__metric-value">{fmtValue(maxMmr12)}</div>
+              <div className="analytics__metric-label">最大</div>
+            </div>
+            <div className="analytics__metric">
+              <div className="analytics__metric-value">{fmtValue(minMmr12)}</div>
+              <div className="analytics__metric-label">最小</div>
+            </div>
+          </div>
+          <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>24p</div>
+          <div className="analytics__grid analytics__grid--3">
+            <div className="analytics__metric analytics__metric--current">
+              <div className="analytics__metric-value">{fmtValue(mmr24)}</div>
+              <div className="analytics__metric-label">現在</div>
+            </div>
+            <div className="analytics__metric">
+              <div className="analytics__metric-value">{fmtValue(maxMmr24)}</div>
+              <div className="analytics__metric-label">最大</div>
+            </div>
+            <div className="analytics__metric">
+              <div className="analytics__metric-value">{fmtValue(minMmr24)}</div>
+              <div className="analytics__metric-label">最小</div>
+            </div>
+          </div>
+          <div className="analytics__vr-row" style={{ marginTop: '0.5rem' }}>
+            <span className="analytics__vr-label">前回変動</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
+              {latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'}
+            </span>
+            <span className="analytics__vr-label" style={{ marginLeft: '0.75rem' }}>同期済み</span>
+            <span>{synced.length}</span>
+          </div>
+        </>
       ) : (
         <p className="placeholder">未連携 — 下のボタンで Lounge MMR を同期できます</p>
       )}

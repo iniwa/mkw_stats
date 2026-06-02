@@ -670,6 +670,9 @@ textarea.input { resize: vertical; font-family: inherit; }
 .analytics__metric--solo { display: inline-flex; flex-direction: column; min-width: 6rem; margin-bottom: 0.5rem; }
 .analytics__metric-value { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
 .analytics__metric-label { font-size: 0.7rem; color: var(--text-dim); margin-top: 0.1rem; }
+.analytics__metric--current { border-color: var(--ok); }
+.analytics__metric--current .analytics__metric-value { color: var(--ok); }
+.analytics__metric-sub { font-size: var(--fs-xs); color: var(--text-dim); margin-top: 0.1rem; }
 .analytics__band-row { display: flex; gap: 0.5rem; flex-wrap: wrap; margin-top: 0.6rem; }
 .analytics__band {
   display: flex; align-items: center; gap: 0.35rem;

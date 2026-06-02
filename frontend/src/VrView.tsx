@@ -229,23 +229,20 @@ export default function VrView() {
             </div>
           ))}
         </div>
-        {activeAccount && (
-          <div className="analytics__vr-row">
-            <span className="analytics__vr-label">現在VR</span>
-            <span className="analytics__vr-name">{activeAccount.display_name}</span>
-            <span className="analytics__vr-value">{activeAccount.current_vr.toLocaleString()}</span>
+        <div className="analytics__grid analytics__grid--3" style={{ marginTop: '0.6rem' }}>
+          <div className="analytics__metric analytics__metric--current">
+            <div className="analytics__metric-value">{activeAccount ? activeAccount.current_vr.toLocaleString() : '—'}</div>
+            <div className="analytics__metric-label">現在VR</div>
+            {activeAccount && <div className="analytics__metric-sub">{activeAccount.display_name}</div>}
           </div>
-        )}
-        <div className="analytics__grid analytics__grid--4" style={{ marginTop: '0.6rem' }}>
-          {([
-            ['最大VR', fmtValue(maxVr)],
-            ['最小VR', fmtValue(minVr)],
-          ] as [string, string][]).map(([label, value]) => (
-            <div key={label} className="analytics__metric">
-              <div className="analytics__metric-value">{value}</div>
-              <div className="analytics__metric-label">{label}</div>
-            </div>
-          ))}
+          <div className="analytics__metric">
+            <div className="analytics__metric-value">{fmtValue(maxVr)}</div>
+            <div className="analytics__metric-label">最大VR</div>
+          </div>
+          <div className="analytics__metric">
+            <div className="analytics__metric-value">{fmtValue(minVr)}</div>
+            <div className="analytics__metric-label">最小VR</div>
+          </div>
         </div>
       </div>
 
