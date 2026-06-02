@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { OverlayMode } from './RateOverlayView'
 import { api, ApiError, Settings, VrAccount, VrAccountCreateBody, VrAccountUpdateBody } from './api'
 
 const OVERLAY_URLS = [
@@ -33,6 +34,13 @@ function toEditDraft(a: VrAccount): EditDraft {
   }
 }
 
+function overlayPath(mode: OverlayMode, compact: boolean, solidBg: boolean): string {
+  const params = new URLSearchParams({ view: 'overlay', mode })
+  if (compact) params.set('compact', '1')
+  if (solidBg) params.set('bg', 'solid')
+  return `/?${params.toString()}`
+}
+
 export default function SettingsView() {
   const [accounts, setAccounts] = useState<VrAccount[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -43,6 +51,9 @@ export default function SettingsView() {
   const [showCreate, setShowCreate] = useState(false)
   const [createDraft, setCreateDraft] = useState<CreateDraft>(EMPTY_CREATE)
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
+  const [overlayMode, setOverlayMode] = useState<OverlayMode>('vr')
+  const [overlayCompact, setOverlayCompact] = useState(true)
+  const [overlaySolidBg, setOverlaySolidBg] = useState(true)
   const inputRefs = useRef<Record<string, HTMLInputElement | null>>({})
   const baseUrl = window.location.origin
 
@@ -82,7 +93,7 @@ export default function SettingsView() {
       setAccounts(accs)
       setSettings(sett)
     } catch {
-      /* silent refresh failure — keep current data */
+      /* keep current data */
     }
   }
 
@@ -197,19 +208,20 @@ export default function SettingsView() {
   }
 
   const loading = isBusy('load')
+  const selectedOverlayPath = overlayPath(overlayMode, overlayCompact, overlaySolidBg)
+  const selectedOverlayUrl = `${baseUrl}${selectedOverlayPath}`
 
   return (
     <div className="settings">
       <div className="settings__head">
         <span className="settings__title">設定</span>
         <button className="btn" onClick={load} disabled={loading}>
-          {loading ? '読み込み中…' : '再読み込み'}
+          {loading ? '読み込み中...' : '再読み込み'}
         </button>
       </div>
 
       {error && <div className="notice notice--error">{error}</div>}
 
-      {/* VR Accounts */}
       <div className="panel">
         <div className="panel__title">VR アカウント</div>
         {accounts.length === 0 && !loading && (
@@ -227,19 +239,11 @@ export default function SettingsView() {
                 </div>
                 <div className="account-item__actions">
                   {!a.is_active && (
-                    <button
-                      className="btn btn--primary"
-                      onClick={() => activate(a.id)}
-                      disabled={isBusy(`activate-${a.id}`)}
-                    >
+                    <button className="btn btn--primary" onClick={() => activate(a.id)} disabled={isBusy(`activate-${a.id}`)}>
                       有効化
                     </button>
                   )}
-                  <button
-                    className="btn"
-                    onClick={() => editingId === a.id ? cancelEdit() : startEdit(a)}
-                    disabled={isBusy(`edit-${a.id}`)}
-                  >
+                  <button className="btn" onClick={() => editingId === a.id ? cancelEdit() : startEdit(a)} disabled={isBusy(`edit-${a.id}`)}>
                     {editingId === a.id ? 'キャンセル' : '編集'}
                   </button>
                   <button
@@ -257,48 +261,25 @@ export default function SettingsView() {
                 <div className="account-item__edit">
                   <div className="field">
                     <label className="field__label">表示名</label>
-                    <input
-                      className="input"
-                      value={editDraft.display_name}
-                      onChange={e => setEditDraft({ ...editDraft, display_name: e.target.value })}
-                    />
+                    <input className="input" value={editDraft.display_name} onChange={e => setEditDraft({ ...editDraft, display_name: e.target.value })} />
                   </div>
                   <div className="account-item__edit-row">
                     <div className="field">
                       <label className="field__label">初期 VR</label>
-                      <input
-                        className="input"
-                        type="number"
-                        value={editDraft.initial_vr}
-                        onChange={e => setEditDraft({ ...editDraft, initial_vr: e.target.value })}
-                      />
+                      <input className="input" type="number" value={editDraft.initial_vr} onChange={e => setEditDraft({ ...editDraft, initial_vr: e.target.value })} />
                     </div>
                     <div className="field">
                       <label className="field__label">現在 VR</label>
-                      <input
-                        className="input"
-                        type="number"
-                        value={editDraft.current_vr}
-                        onChange={e => setEditDraft({ ...editDraft, current_vr: e.target.value })}
-                      />
+                      <input className="input" type="number" value={editDraft.current_vr} onChange={e => setEditDraft({ ...editDraft, current_vr: e.target.value })} />
                     </div>
                     <div className="field">
                       <label className="field__label">並び順</label>
-                      <input
-                        className="input"
-                        type="number"
-                        value={editDraft.sort_order}
-                        onChange={e => setEditDraft({ ...editDraft, sort_order: e.target.value })}
-                      />
+                      <input className="input" type="number" value={editDraft.sort_order} onChange={e => setEditDraft({ ...editDraft, sort_order: e.target.value })} />
                     </div>
                   </div>
                   <div className="btn-row">
-                    <button
-                      className="btn btn--primary"
-                      onClick={() => saveEdit(a.id)}
-                      disabled={isBusy(`edit-${a.id}`)}
-                    >
-                      {isBusy(`edit-${a.id}`) ? '保存中…' : '保存'}
+                    <button className="btn btn--primary" onClick={() => saveEdit(a.id)} disabled={isBusy(`edit-${a.id}`)}>
+                      {isBusy(`edit-${a.id}`) ? '保存中...' : '保存'}
                     </button>
                     <button className="btn" onClick={cancelEdit}>キャンセル</button>
                   </div>
@@ -309,11 +290,7 @@ export default function SettingsView() {
         </ul>
 
         {!showCreate ? (
-          <button
-            className="btn"
-            style={{ marginTop: '0.75rem' }}
-            onClick={() => setShowCreate(true)}
-          >
+          <button className="btn" style={{ marginTop: '0.75rem' }} onClick={() => setShowCreate(true)}>
             + 新規アカウント
           </button>
         ) : (
@@ -322,54 +299,26 @@ export default function SettingsView() {
             <div className="create-form__grid">
               <div className="field">
                 <label className="field__label">内部名 (name)</label>
-                <input
-                  className="input"
-                  placeholder="my_account"
-                  value={createDraft.name}
-                  onChange={e => setCreateDraft({ ...createDraft, name: e.target.value })}
-                />
+                <input className="input" placeholder="my_account" value={createDraft.name} onChange={e => setCreateDraft({ ...createDraft, name: e.target.value })} />
               </div>
               <div className="field">
                 <label className="field__label">表示名</label>
-                <input
-                  className="input"
-                  placeholder="プレイヤー名"
-                  value={createDraft.display_name}
-                  onChange={e => setCreateDraft({ ...createDraft, display_name: e.target.value })}
-                />
+                <input className="input" placeholder="プレイヤー名" value={createDraft.display_name} onChange={e => setCreateDraft({ ...createDraft, display_name: e.target.value })} />
               </div>
               <div className="field">
                 <label className="field__label">初期 VR</label>
-                <input
-                  className="input"
-                  type="number"
-                  value={createDraft.initial_vr}
-                  onChange={e => setCreateDraft({ ...createDraft, initial_vr: e.target.value })}
-                />
+                <input className="input" type="number" value={createDraft.initial_vr} onChange={e => setCreateDraft({ ...createDraft, initial_vr: e.target.value })} />
               </div>
               <div className="field">
                 <label className="field__label">現在 VR（省略時は初期 VR）</label>
-                <input
-                  className="input"
-                  type="number"
-                  placeholder="省略可"
-                  value={createDraft.current_vr}
-                  onChange={e => setCreateDraft({ ...createDraft, current_vr: e.target.value })}
-                />
+                <input className="input" type="number" placeholder="省略可" value={createDraft.current_vr} onChange={e => setCreateDraft({ ...createDraft, current_vr: e.target.value })} />
               </div>
             </div>
             <div className="btn-row">
-              <button
-                className="btn btn--primary"
-                onClick={createAccount}
-                disabled={isBusy('create') || !createDraft.name || !createDraft.display_name}
-              >
-                {isBusy('create') ? '作成中…' : '作成'}
+              <button className="btn btn--primary" onClick={createAccount} disabled={isBusy('create') || !createDraft.name || !createDraft.display_name}>
+                {isBusy('create') ? '作成中...' : '作成'}
               </button>
-              <button
-                className="btn"
-                onClick={() => { setShowCreate(false); setCreateDraft(EMPTY_CREATE) }}
-              >
+              <button className="btn" onClick={() => { setShowCreate(false); setCreateDraft(EMPTY_CREATE) }}>
                 キャンセル
               </button>
             </div>
@@ -377,7 +326,6 @@ export default function SettingsView() {
         )}
       </div>
 
-      {/* Lounge Settings */}
       <div className="panel">
         <div className="panel__title">ラウンジ設定</div>
         {settings === null && !loading && (
@@ -412,7 +360,7 @@ export default function SettingsView() {
           </div>
           <div className="field">
             <label className="field__label">ゲームモード</label>
-            <p className="field__hint">12人 / 24人のゲームモードは Lounge セッションの参加人数から自動的に決まります（12人: mkworld、24人 シーズン2以降: mkworld24p）。</p>
+            <p className="field__hint">12人 / 24人のゲームモードは Lounge セッションの参加人数から自動的に決まります。</p>
           </div>
           <div className="toggle-row">
             <input
@@ -427,25 +375,66 @@ export default function SettingsView() {
             <label htmlFor="lounge-auto-sync">自動同期を有効にする</label>
           </div>
           <div className="btn-row">
-            <button
-              className="btn btn--primary"
-              onClick={saveLounge}
-              disabled={isBusy('lounge') || settings === null}
-            >
-              {isBusy('lounge') ? '保存中…' : '保存'}
+            <button className="btn btn--primary" onClick={saveLounge} disabled={isBusy('lounge') || settings === null}>
+              {isBusy('lounge') ? '保存中...' : '保存'}
             </button>
             {loungeSuccess && <span className="lounge-form__ok">保存しました</span>}
           </div>
         </div>
       </div>
 
-      {/* OBS Overlay URLs */}
       <div className="panel">
-        <div className="panel__title">OBS 配信オーバーレイ</div>
+        <div className="panel__title">オーバーレイ</div>
         <p className="overlay-url__guidance">
-          ブラウザソース推奨サイズ: compact モード <strong>320 × 120</strong> / 通常モード <strong>480 × 160</strong>。
-          透過 URL は OBS の「ブラウザソースの透明度を有効にする」をオン。背景固定（bg=solid）の場合は不要。
+          OBS 用オーバーレイをプレビューしながら URL を調整できます。表示は `VR 12,345` / `MMR 12,345` のシンプルな形式です。
         </p>
+        <div className="overlay-preview">
+          <div className={`overlay-preview__stage${overlaySolidBg ? ' overlay-preview__stage--solid' : ''}`}>
+            <iframe
+              key={selectedOverlayPath}
+              className="overlay-preview__frame"
+              title="オーバーレイプレビュー"
+              src={selectedOverlayPath}
+            />
+          </div>
+          <div className="overlay-preview__controls">
+            <div className="field">
+              <label className="field__label">表示</label>
+              <div className="seg">
+                {(['vr', 'mmr', 'auto'] as OverlayMode[]).map(m => (
+                  <button
+                    key={m}
+                    className={`seg__btn${overlayMode === m ? ' seg__btn--on' : ''}`}
+                    onClick={() => setOverlayMode(m)}
+                  >
+                    {m === 'vr' ? 'VR' : m === 'mmr' ? 'MMR' : 'Auto'}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <label className="toggle-row">
+              <input type="checkbox" checked={overlayCompact} onChange={e => setOverlayCompact(e.target.checked)} />
+              <span>compact</span>
+            </label>
+            <label className="toggle-row">
+              <input type="checkbox" checked={overlaySolidBg} onChange={e => setOverlaySolidBg(e.target.checked)} />
+              <span>背景あり</span>
+            </label>
+            <div className="overlay-url__controls">
+              <input
+                className="overlay-url__input"
+                readOnly
+                value={selectedOverlayUrl}
+                onFocus={e => e.currentTarget.select()}
+              />
+              <button className="btn btn--sm" onClick={() => handleCopy('selected-overlay', selectedOverlayUrl)}>
+                {copiedKey === 'selected-overlay' ? 'コピーしました' : 'コピー'}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="lounge__section-label">プリセット URL</div>
         <ul className="overlay-url__list">
           {OVERLAY_URLS.map(({ label, path }) => {
             const url = `${baseUrl}${path}`
@@ -460,10 +449,7 @@ export default function SettingsView() {
                     value={url}
                     onFocus={e => e.currentTarget.select()}
                   />
-                  <button
-                    className="btn btn--sm"
-                    onClick={() => handleCopy(path, url)}
-                  >
+                  <button className="btn btn--sm" onClick={() => handleCopy(path, url)}>
                     {copiedKey === path ? 'コピーしました' : 'コピー'}
                   </button>
                 </div>

@@ -93,6 +93,13 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
   const activeAccount = vrAccounts.find(a => a.is_active) ?? null
   const display = resolveDisplay(mode, activeSessions, idleAutoDisplay)
   const mmr = getMmr(settings)
+  const displayLabel = display === 'vr' ? 'VR' : 'MMR'
+  const displayValue = display === 'vr'
+    ? (activeAccount ? activeAccount.current_vr.toLocaleString() : '--')
+    : (mmr.value !== null ? mmr.value.toLocaleString() : '--')
+  const displayMeta = display === 'vr'
+    ? activeAccount?.display_name
+    : `Lounge ${mmr.label}`
 
   return (
     <div className={`overlay${compact ? ' overlay--compact' : ''}${solidBg ? ' overlay--solid' : ''}`}>
@@ -111,40 +118,16 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
       )}
 
       <div className="overlay__body">
-        {display === 'vr' ? (
-          activeAccount ? (
-            <>
-              <div className="overlay__label">{activeAccount.display_name}</div>
-              <div className="overlay__value">{activeAccount.current_vr.toLocaleString()}</div>
-              <div className="overlay__kind">VR</div>
-            </>
-          ) : (
-            <>
-              <div className="overlay__value overlay__value--empty">VR --</div>
-              <div className="overlay__label overlay__label--empty">アクティブアカウント未設定</div>
-            </>
-          )
-        ) : mmr.value !== null ? (
-          <>
-            <div className="overlay__label">
-              Lounge MMR <span className="overlay__mmr-kind">{mmr.label}</span>
-            </div>
-            <div className="overlay__value">{mmr.value.toLocaleString()}</div>
-          </>
-        ) : (
-          <>
-            <div className="overlay__value overlay__value--empty">MMR --</div>
-            <div className="overlay__label overlay__label--empty">MMR 未同期</div>
-          </>
+        <div className={`overlay__line${displayValue === '--' ? ' overlay__line--empty' : ''}`}>
+          <span className="overlay__line-label">{displayLabel}</span>
+          <span className="overlay__line-value">{displayValue}</span>
+        </div>
+        {!compact && (
+          <div className="overlay__meta">
+            {displayMeta}
+            {stale ? ' / 接続なし' : lastOk ? ` / Updated ${fmtHms(lastOk)}` : null}
+          </div>
         )}
-      </div>
-
-      <div className="overlay__footer">
-        {stale ? (
-          <span className="overlay__stale">接続なし</span>
-        ) : lastOk ? (
-          <span className="overlay__updated">Updated {fmtHms(lastOk)}</span>
-        ) : null}
       </div>
     </div>
   )

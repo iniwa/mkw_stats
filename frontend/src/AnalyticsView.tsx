@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Course, RaceRecord, Route } from './api'
+import { api, Course, PlaySession, RaceRecord, Route } from './api'
 
 type Mode = 'vr' | 'lounge' | 'both'
 
@@ -10,6 +10,7 @@ const MODE_LABELS: Record<Mode, string> = {
 }
 
 interface AnalyticsData {
+  sessions: PlaySession[]
   races: RaceRecord[]
   courses: Course[]
   routes: Route[]
@@ -90,7 +91,7 @@ export default function AnalyticsView() {
         ...r,
         player_count: r.player_count ?? sessionPlayerCount.get(r.session_id) ?? null,
       }))
-      setData({ races, courses, routes })
+      setData({ sessions, races, courses, routes })
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'エラーが発生しました')
     } finally {
@@ -167,7 +168,7 @@ export default function AnalyticsView() {
     )
   }
 
-  const { races, courses, routes } = data
+  const { sessions, races, courses, routes } = data
   const windowLabel = (dateFrom || dateTo) ? 'フィルター中' : `直近 ${limit} セッション/ソース`
 
   // Aggregate per course/route from non-cancelled races.
@@ -198,6 +199,7 @@ export default function AnalyticsView() {
     }
   }
   const totalPicks = effective.length
+  const targetMatchCount = mode === 'lounge' ? sessions.length : null
   const stats = [...accumMap.values()].map(s => ({
     ...s,
     pickRate: totalPicks > 0 ? (s.count / totalPicks) * 100 : 0,
@@ -240,9 +242,10 @@ export default function AnalyticsView() {
 
       <div className="panel">
         <div className="panel__title">サマリー</div>
-        <div className="analytics__grid analytics__grid--3">
+        <div className={`analytics__grid analytics__grid--${targetMatchCount == null ? '3' : '4'}`}>
           {([
             ['対象レース', totalPicks],
+            ...(targetMatchCount == null ? [] : [['対象マッチ数', targetMatchCount] as [string, string | number]]),
             ['コース/ルート数', stats.length],
             ['ソース', MODE_LABELS[mode]],
           ] as [string, string | number][]).map(([label, value]) => (
