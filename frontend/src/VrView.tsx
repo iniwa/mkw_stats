@@ -184,10 +184,10 @@ export default function VrView() {
     .sort((a, b) => a[0] - b[0])
     .slice(0, 12)
 
-  // VR trend: completed ranked races sorted chronologically by session start then race_no
+  // VR trend: completed ranked races for the resolved account, sorted chronologically
   const sessionMap = new Map(sessions.map(s => [s.id, s]))
   const trendRaces = allRaces
-    .filter(r => r.status === 'completed' && r.rating_after != null)
+    .filter(r => r.status === 'completed' && r.rating_after != null && activeAccount != null && r.vr_account_id === activeAccount.id)
     .sort((a, b) => {
       const ta = sessionMap.get(a.session_id)?.started_at ?? ''
       const tb = sessionMap.get(b.session_id)?.started_at ?? ''
@@ -265,7 +265,9 @@ export default function VrView() {
 
       <div className="panel">
         <div className="panel__title">VR 推移</div>
-        {trendRaces.length === 0 ? (
+        {!activeAccount ? (
+          <p className="placeholder">VR アカウントが選択されていません</p>
+        ) : trendRaces.length === 0 ? (
           <p className="placeholder">完了済みランクレースがありません</p>
         ) : (
           <VrTrendChart races={trendRaces} />
