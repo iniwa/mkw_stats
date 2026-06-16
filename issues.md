@@ -13,7 +13,8 @@
 
 ### A-1. コース選択ボタンを最上部へ (P1) — 元: Playing/共通① ✅
 - [x] 「コースオンリー」「⇄ 入れ替え」「コースを確認」を `CourseSelector` 最上部へ移動
-- 対象: `frontend/src/PlayingView.tsx` `CourseSelector`
+- [x] 追加要望(2026-06-16): コース確認画面の「選び直す/結果を入力する」もタイトル直下へ移動
+- 対象: `frontend/src/PlayingView.tsx` `CourseSelector` / `SelectionConfirm`
 
 ### A-2. コースオンリーモード (P1) — 元: Playing/共通② ✅
 - [x] 「到着を出発と同じにする」ボタンを、ワンクリック切り替えの**モード**に変更
@@ -24,10 +25,11 @@
 - [x] 野良VR(ranked)時、参加人数を選択ステップにも stepper で表示（確認/結果画面と同じ state を共有）
 - 対象: `PlayingView.tsx` `CourseSelector`
 
-### A-4. プレイ中のコースメモ追加（メモ追加モード） (P3) — 元: Playing/共通④
-- [ ] プレイ中表示から、対象コース/道中へメモを追加できるようにする（Courses 相当）
-- 新規機能。`api.createNote` を利用。UX は「メモ追加モード」を想定
-- 対象: `PlayingView.tsx`（新規パネル） + `api.ts`
+### A-4. プレイ中のコースメモ追加（メモ追加モード） (P3) — 元: Playing/共通④ ✅
+- [x] 再利用 `NoteAddPanel`(タイトル/本文/ピン留めの折りたたみフォーム)を追加
+- コース確認・VR結果入力・Lounge結果入力の各フェーズに配置。`api.createNote` で対象コース/道中へ追加
+- 確認画面では追加メモを表示リストへ即反映。既存CSSクラスのみ使用
+- 対象: `PlayingView.tsx`
 
 ### A-6. Lounge プレイ中の中央値(目安スコア)表示 (P2・新機能) — 元: ユーザー追加 2026-06-16 ✅
 - [x] `SessionSidebar` に「現在の中央値(目安)」と「12レース時の中央値(目安)」を表示

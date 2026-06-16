@@ -7,6 +7,7 @@ import {
   type CompleteRankedBody,
   type Course,
   type CourseNote,
+  type CourseNoteCreateBody,
   type MapAnnotation,
   type MapPoint,
   type PlaySession,
@@ -958,6 +959,11 @@ function SelectionConfirm({
           </ul>
         </div>
       )}
+      <NoteAddPanel
+        kind={resolved.kind}
+        id={targetId}
+        onAdded={note => setNotes(prev => [note, ...prev])}
+      />
       <TargetAssist
         kind={resolved.kind}
         id={targetId}
@@ -1020,6 +1026,110 @@ function ItemTablePreview({
         <p className="hint">VRでは参加人数に合わせた目安として表示します。</p>
       )}
     </section>
+  )
+}
+
+// ---------------------------------------------------------------------------
+// A-4: プレイ中に対象コース/道中へメモを追加する「メモ追加モード」。
+function NoteAddPanel({
+  kind,
+  id,
+  onAdded,
+}: {
+  kind: 'course' | 'route'
+  id: string
+  onAdded?: (note: CourseNote) => void
+}) {
+  const [open, setOpen] = useState(false)
+  const [title, setTitle] = useState('')
+  const [body, setBody] = useState('')
+  const [pinned, setPinned] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [savedMsg, setSavedMsg] = useState<string | null>(null)
+
+  const reset = () => {
+    setTitle('')
+    setBody('')
+    setPinned(false)
+    setError(null)
+  }
+
+  const submit = async () => {
+    if (!title.trim() && !body.trim()) {
+      setError('タイトルか本文を入力してください')
+      return
+    }
+    setSaving(true)
+    setError(null)
+    try {
+      const payload: CourseNoteCreateBody = kind === 'course' ? { course_id: id } : { route_id: id }
+      if (title.trim()) payload.title = title.trim()
+      if (body.trim()) payload.body_markdown = body.trim()
+      payload.is_pinned = pinned
+      const note = await api.createNote(payload)
+      onAdded?.(note)
+      reset()
+      setOpen(false)
+      setSavedMsg('メモを追加しました')
+    } catch (e) {
+      setError(e instanceof ApiError ? e.message : 'メモの追加に失敗しました')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (!open) {
+    return (
+      <div className="field">
+        <button className="btn" onClick={() => { setOpen(true); setSavedMsg(null) }}>
+          ＋ メモを追加
+        </button>
+        {savedMsg && <p className="hint">{savedMsg}</p>}
+      </div>
+    )
+  }
+
+  return (
+    <div className="field">
+      <div className="field">
+        <label className="field__label">タイトル</label>
+        <input
+          className="input"
+          value={title}
+          onChange={e => setTitle(e.target.value)}
+          placeholder="（省略可）"
+        />
+      </div>
+      <div className="field">
+        <label className="field__label">本文</label>
+        <textarea
+          className="input"
+          rows={3}
+          value={body}
+          onChange={e => setBody(e.target.value)}
+          placeholder="（省略可）"
+        />
+      </div>
+      <div className="toggle-row">
+        <input
+          type="checkbox"
+          id={`note-pin-${kind}-${id}`}
+          checked={pinned}
+          onChange={e => setPinned(e.target.checked)}
+        />
+        <label htmlFor={`note-pin-${kind}-${id}`}>ピン留め</label>
+      </div>
+      {error && <p className="notice notice--error">{error}</p>}
+      <div className="btn-row">
+        <button className="btn" disabled={saving} onClick={() => { reset(); setOpen(false) }}>
+          キャンセル
+        </button>
+        <button className="btn btn--primary" disabled={saving} onClick={submit}>
+          {saving ? '追加中…' : 'メモを保存'}
+        </button>
+      </div>
+    </div>
   )
 }
 
@@ -1166,6 +1276,8 @@ function RankedResultForm({
         />
       )}
 
+      {assistTarget && <NoteAddPanel kind={assistTarget.kind} id={assistTarget.id} />}
+
       <button
         className="btn btn--primary"
         disabled={saving}
@@ -1291,6 +1403,8 @@ function LoungeResultForm({
         <p className="hint">順位から自動入力されます。必要なら修正できます。</p>
         <p className="hint">合計スコア: {currentTotalScore}pt　→　保存後: {currentTotalScore + score}pt</p>
       </div>
+
+      {assistTarget && <NoteAddPanel kind={assistTarget.kind} id={assistTarget.id} />}
 
       <button
         className="btn btn--primary"
