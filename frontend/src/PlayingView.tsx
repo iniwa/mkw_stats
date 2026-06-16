@@ -908,6 +908,15 @@ function SelectionConfirm({
   return (
     <div className="confirm">
       <h3 className="panel__title">コース確認</h3>
+      {/* 操作ボタンを最上部へ（A-1 と同じ方針） */}
+      <div className="btn-row">
+        <button className="btn" disabled={recording} onClick={onReselect}>
+          選び直す
+        </button>
+        <button className="btn btn--primary" disabled={recording} onClick={onConfirm}>
+          結果を入力する
+        </button>
+      </div>
       <p className="confirm__kind">
         <span className={`tag tag--${resolved.kind}`}>
           {resolved.kind === 'course' ? '通常コース' : '道中コース'}
@@ -983,14 +992,6 @@ function SelectionConfirm({
         </div>
       )}
       <ItemTablePreview playerCount={itemTablePlayerCount} source={source} />
-      <div className="btn-row">
-        <button className="btn" disabled={recording} onClick={onReselect}>
-          選び直す
-        </button>
-        <button className="btn btn--primary" disabled={recording} onClick={onConfirm}>
-          結果を入力する
-        </button>
-      </div>
     </div>
   )
 }
