@@ -18,6 +18,7 @@ import {
   type Settings,
   type VrAccount,
 } from './api'
+import AnnotationEditor from './AnnotationEditor'
 import { RouteDetail } from './RouteDetail'
 import { TargetImage } from './TargetImage'
 import { TargetAssist } from './TargetAssist'
@@ -386,6 +387,8 @@ export default function PlayingView() {
                 loungePlayerCount={session.player_count}
                 rankedPlayerCount={rankedPlayerCountDraft}
                 onRankedPlayerCountChange={setRankedPlayerCountDraft}
+                routes={routes}
+                courseMap={coursesById}
                 busy={busy}
                 onConfirm={confirmSelection}
                 onReselect={cancelSelection}
@@ -866,6 +869,8 @@ function SelectionConfirm({
   loungePlayerCount,
   rankedPlayerCount,
   onRankedPlayerCountChange,
+  routes,
+  courseMap,
   busy,
   onConfirm,
   onReselect,
@@ -875,6 +880,8 @@ function SelectionConfirm({
   loungePlayerCount: number | null
   rankedPlayerCount: number
   onRankedPlayerCountChange: (n: number) => void
+  routes: Route[]
+  courseMap: Map<string, Course>
   busy: string | null
   onConfirm: () => void
   onReselect: () => void
@@ -884,6 +891,8 @@ function SelectionConfirm({
   const itemTablePlayerCount = source === 'lounge' ? (loungePlayerCount ?? 12) : rankedPlayerCount
   const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
   const [notes, setNotes] = useState<CourseNote[]>([])
+  // A-7: アノテーション編集（マップアイコン設置）を折りたたみで提供。
+  const [showAnnotationEditor, setShowAnnotationEditor] = useState(false)
 
   useEffect(() => {
     let cancelled = false
@@ -964,6 +973,26 @@ function SelectionConfirm({
         id={targetId}
         onAdded={note => setNotes(prev => [note, ...prev])}
       />
+      <div className="field">
+        <button
+          className={`btn${showAnnotationEditor ? ' btn--primary' : ''}`}
+          aria-pressed={showAnnotationEditor}
+          onClick={() => setShowAnnotationEditor(v => !v)}
+        >
+          {showAnnotationEditor ? 'アノテーション編集を閉じる' : '🗺 アノテーション/アイコンを編集'}
+        </button>
+      </div>
+      {showAnnotationEditor && (
+        <AnnotationEditor
+          routes={routes}
+          notes={notes}
+          courseMap={courseMap}
+          selectedTargetType={resolved.kind}
+          selectedTargetId={targetId}
+          annotations={annotations}
+          onAnnotationsChange={setAnnotations}
+        />
+      )}
       <TargetAssist
         kind={resolved.kind}
         id={targetId}
