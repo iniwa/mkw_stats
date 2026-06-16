@@ -138,6 +138,33 @@ Claude Code is responsible for:
 
 Codex may implement small or design-sensitive changes directly. Use Claude Code when the task is clear, scoped, repetitive, execution-heavy, or benefits from Claude Code tooling.
 
+## Claude Code Model Orchestration
+Claude Code should normally run with Opus as the primary coordinator.
+
+Opus is responsible for:
+- reading `AGENTS.md`, `CLAUDE.md`, handoff files, and relevant project context
+- interpreting requirements, constraints, non-goals, and verification expectations
+- deciding the implementation plan and whether subagents are appropriate
+- giving Sonnet subagents narrow implementation or investigation tasks
+- reviewing subagent output before final reporting
+- making design-sensitive decisions only when they are already allowed by the handoff
+
+Sonnet subagents are responsible for:
+- mechanical code edits
+- repetitive refactors inside an explicit file scope
+- localized tests, verification, and log/code inspection
+- implementation tasks where goal, files, constraints, and non-goals are already clear
+
+Sonnet subagents must not:
+- change documented design intent on their own
+- expand the edit scope beyond the handoff without Opus review
+- introduce dependencies, build tooling, packaging, CI/CD, deployment, or external exposure changes unless explicitly listed
+- touch secrets, credentials, `.env`, or local settings
+- make final architectural decisions without returning the question to Opus/Codex
+
+For very small edits, Opus may implement directly instead of creating unnecessary subagent overhead.
+If the requested Claude Code environment cannot use subagents or the intended model split, Claude Code should continue with the available model and report that limitation.
+
 ## Decision Rule
 
 Keep the task in Codex when:
