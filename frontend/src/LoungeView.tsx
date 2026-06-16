@@ -133,6 +133,7 @@ export default function LoungeView() {
   const [mmrSyncing, setMmrSyncing] = useState(false)
   const [mmrSyncResult, setMmrSyncResult] = useState<MmrSyncResponse | null>(null)
   const [mmrSyncError, setMmrSyncError] = useState<string | null>(null)
+  const [viewMode, setViewMode] = useState<'both' | '24p' | '12p'>('both')
 
   async function load() {
     setLoading(true)
@@ -197,9 +198,9 @@ export default function LoungeView() {
 
   const trend12 = buildTrendPoints(sessions, '12p')
   const trend24 = buildTrendPoints(sessions, '24p')
-  const hasTrend = trend12.length > 0 || trend24.length > 0
   const syncedAll = sessions
     .filter(s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null)
+    .filter(s => viewMode === 'both' || mmrGameKind(s.lounge_mmr_game) === viewMode)
     .sort((a, b) => {
       const ta = a.completed_at ?? a.started_at
       const tb = b.completed_at ?? b.started_at
@@ -257,42 +258,55 @@ export default function LoungeView() {
   const minMmr12 = mmr12Values.length > 0 ? Math.min(...mmr12Values) : null
   const maxMmr24 = mmr24Values.length > 0 ? Math.max(...mmr24Values) : null
   const minMmr24 = mmr24Values.length > 0 ? Math.min(...mmr24Values) : null
-  const hasAnyMmr = mmr12 != null || mmr24 != null || synced.length > 0
+  const show12 = viewMode === 'both' || viewMode === '12p'
+  const show24 = viewMode === 'both' || viewMode === '24p'
+  const hasAnyMmrVisible =
+    (show12 && (mmr12 != null || synced12.length > 0)) ||
+    (show24 && (mmr24 != null || synced24.length > 0)) ||
+    (viewMode === 'both' && synced.length > 0)
   const mmrPanel = (
     <div className="panel">
       <div className="panel__title">MMR</div>
-      {hasAnyMmr ? (
+      {hasAnyMmrVisible ? (
         <>
-          <div className="lounge__section-label">12p</div>
-          <div className="analytics__grid analytics__grid--3">
-            <div className="analytics__metric analytics__metric--current">
-              <div className="analytics__metric-value">{fmtValue(mmr12)}</div>
-              <div className="analytics__metric-label">現在</div>
-            </div>
-            <div className="analytics__metric">
-              <div className="analytics__metric-value">{fmtValue(maxMmr12)}</div>
-              <div className="analytics__metric-label">最大</div>
-            </div>
-            <div className="analytics__metric">
-              <div className="analytics__metric-value">{fmtValue(minMmr12)}</div>
-              <div className="analytics__metric-label">最小</div>
-            </div>
-          </div>
-          <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>24p</div>
-          <div className="analytics__grid analytics__grid--3">
-            <div className="analytics__metric analytics__metric--current">
-              <div className="analytics__metric-value">{fmtValue(mmr24)}</div>
-              <div className="analytics__metric-label">現在</div>
-            </div>
-            <div className="analytics__metric">
-              <div className="analytics__metric-value">{fmtValue(maxMmr24)}</div>
-              <div className="analytics__metric-label">最大</div>
-            </div>
-            <div className="analytics__metric">
-              <div className="analytics__metric-value">{fmtValue(minMmr24)}</div>
-              <div className="analytics__metric-label">最小</div>
-            </div>
-          </div>
+          {show12 && (
+            <>
+              {viewMode === 'both' && <div className="lounge__section-label">12p</div>}
+              <div className="analytics__grid analytics__grid--3">
+                <div className="analytics__metric analytics__metric--current">
+                  <div className="analytics__metric-value">{fmtValue(mmr12)}</div>
+                  <div className="analytics__metric-label">現在</div>
+                </div>
+                <div className="analytics__metric">
+                  <div className="analytics__metric-value">{fmtValue(maxMmr12)}</div>
+                  <div className="analytics__metric-label">最大</div>
+                </div>
+                <div className="analytics__metric">
+                  <div className="analytics__metric-value">{fmtValue(minMmr12)}</div>
+                  <div className="analytics__metric-label">最小</div>
+                </div>
+              </div>
+            </>
+          )}
+          {show24 && (
+            <>
+              {viewMode === 'both' && <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>24p</div>}
+              <div className="analytics__grid analytics__grid--3">
+                <div className="analytics__metric analytics__metric--current">
+                  <div className="analytics__metric-value">{fmtValue(mmr24)}</div>
+                  <div className="analytics__metric-label">現在</div>
+                </div>
+                <div className="analytics__metric">
+                  <div className="analytics__metric-value">{fmtValue(maxMmr24)}</div>
+                  <div className="analytics__metric-label">最大</div>
+                </div>
+                <div className="analytics__metric">
+                  <div className="analytics__metric-value">{fmtValue(minMmr24)}</div>
+                  <div className="analytics__metric-label">最小</div>
+                </div>
+              </div>
+            </>
+          )}
           <div className="analytics__vr-row" style={{ marginTop: '0.5rem' }}>
             <span className="analytics__vr-label">前回変動</span>
             <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
@@ -320,6 +334,20 @@ export default function LoungeView() {
     </div>
   )
 
+  const viewToggle = (
+    <div className="seg" style={{ marginBottom: '0.75rem' }}>
+      {(['both', '24p', '12p'] as const).map(m => (
+        <button
+          key={m}
+          className={`seg__btn${viewMode === m ? ' seg__btn--on' : ''}`}
+          onClick={() => setViewMode(m)}
+        >
+          {m === 'both' ? '共通' : m === '24p' ? '24人' : '12人'}
+        </button>
+      ))}
+    </div>
+  )
+
   if (sessions.length === 0) {
     return (
       <div className="lounge">
@@ -329,14 +357,31 @@ export default function LoungeView() {
           <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
         </div>
         {dateFilter}
+        {viewToggle}
         {mmrPanel}
         <p className="placeholder">Lounge セッションがありません。</p>
       </div>
     )
   }
 
-  const activeSessions = sessions.filter(s => s.status === 'active')
-  const recentSessions = sessions.slice(0, 10)
+  // Classify a session row (which may lack synced MMR) by player_count.
+  // player_count >= 13 → 24p, <= 12 → 12p, null → shown only in 'both'
+  function sessionRowKind(s: PlaySession): '12p' | '24p' | null {
+    if (s.player_count == null) return null
+    return s.player_count >= 13 ? '24p' : '12p'
+  }
+
+  function matchesViewMode(kind: '12p' | '24p' | null): boolean {
+    if (viewMode === 'both') return true
+    return kind === viewMode
+  }
+
+  const activeSessions = sessions
+    .filter(s => s.status === 'active')
+    .filter(s => matchesViewMode(sessionRowKind(s)))
+  const recentSessions = sessions
+    .slice(0, 10)
+    .filter(s => matchesViewMode(sessionRowKind(s)))
 
   // Lounge summary metrics
   const allRacesFlat = [...racesBySession.values()].flat()
@@ -363,6 +408,8 @@ export default function LoungeView() {
 
       {dateFilter}
 
+      {viewToggle}
+
       <div className="panel">
         <div className="panel__title">Lounge サマリー</div>
         <div className="analytics__grid analytics__grid--4">
@@ -384,11 +431,11 @@ export default function LoungeView() {
 
       <div className="panel">
         <div className="panel__title">MMR 推移</div>
-        {!hasTrend ? (
+        {!(show12 && trend12.length > 0) && !(show24 && trend24.length > 0) ? (
           <p className="placeholder">同期済みのMMR履歴がありません</p>
         ) : (
           <>
-            <MmrTrendChart trend12={trend12} trend24={trend24} />
+            <MmrTrendChart trend12={show12 ? trend12 : []} trend24={show24 ? trend24 : []} />
             <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>直近の同期履歴</div>
             <ul className="lounge__mmr-list">
               {syncedAll.map(s => {

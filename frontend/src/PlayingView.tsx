@@ -26,10 +26,32 @@ type LoadState = 'loading' | 'ready' | 'error'
 
 const LOUNGE_FORMATS = ['FFA', '2v2', '3v3', '4v4', '6v6']
 
-const LOUNGE_SCORE_TABLE: Readonly<Record<number, number>> = {
+// Lounge FFA レース毎スコア配点表。12人部屋と24人部屋で配点が異なる。
+// 24p: 合計144 / 12p: 合計82（MK8DX 以来の標準 FFA 配点）。
+const LOUNGE_SCORE_TABLE_24P: Readonly<Record<number, number>> = {
   1: 15, 2: 12, 3: 10, 4: 9, 5: 9, 6: 8, 7: 8, 8: 7, 9: 7, 10: 6,
   11: 6, 12: 6, 13: 5, 14: 5, 15: 5, 16: 4, 17: 4, 18: 4, 19: 3, 20: 3,
   21: 3, 22: 2, 23: 2, 24: 1,
+}
+
+const LOUNGE_SCORE_TABLE_12P: Readonly<Record<number, number>> = {
+  1: 15, 2: 12, 3: 10, 4: 9, 5: 8, 6: 7, 7: 6, 8: 5, 9: 4, 10: 3,
+  11: 2, 12: 1,
+}
+
+// 参加人数に応じた配点表を返す。12人以下は 12p 表、それ以外（24人）は 24p 表。
+function loungeScoreTable(playerCount: number | null | undefined): Readonly<Record<number, number>> {
+  return (playerCount ?? 24) <= 12 ? LOUNGE_SCORE_TABLE_12P : LOUNGE_SCORE_TABLE_24P
+}
+
+// 1レースあたりの平均(期待値)スコア = 配点合計 ÷ 参加人数。
+// これに走行レース数を掛けると「平均的なプレイヤーの目安スコア(par)」になる。
+// 24p: 144 / 24 = 6.0、12p: 82 / 12 ≈ 6.83。
+function loungeParPerRace(playerCount: number | null | undefined): number {
+  const table = loungeScoreTable(playerCount)
+  const sum = Object.values(table).reduce((a, b) => a + b, 0)
+  const size = playerCount ?? Object.keys(table).length
+  return size > 0 ? sum / size : 0
 }
 
 function courseName(course: Course | undefined): string {
@@ -349,6 +371,9 @@ export default function PlayingView() {
               <CourseSelector
                 mapPoints={mapPoints}
                 busy={busy}
+                source={session.source}
+                rankedPlayerCount={rankedPlayerCountDraft}
+                onRankedPlayerCountChange={setRankedPlayerCountDraft}
                 onResolve={resolveSelection}
                 onMapPointUpdated={handleMapPointUpdated}
               />
@@ -679,21 +704,37 @@ function MapPointPicker({
 function CourseSelector({
   mapPoints,
   busy,
+  source,
+  rankedPlayerCount,
+  onRankedPlayerCountChange,
   onResolve,
   onMapPointUpdated,
 }: {
   mapPoints: MapPoint[]
   busy: string | null
+  source: SourceType
+  rankedPlayerCount: number
+  onRankedPlayerCountChange: (n: number) => void
   onResolve: (fromId: string, toId: string) => void
   onMapPointUpdated: (mp: MapPoint) => void
 }) {
   const [fromId, setFromId] = useState('')
   const [toId, setToId] = useState('')
+  // コースオンリーモード: ON の間は「到着 = 出発」を自動適用し、通常3周コース固定で選ぶ。
+  const [courseOnly, setCourseOnly] = useState(false)
   const resolving = busy === 'resolve'
+
+  // コースオンリーモード中は到着地点を常に出発地点へ同期する。
+  useEffect(() => {
+    if (courseOnly && toId !== fromId) setToId(fromId)
+  }, [courseOnly, fromId, toId])
 
   const fromMp = mapPoints.find(mp => mp.id === fromId)
   const toMp = mapPoints.find(mp => mp.id === toId)
   const samePoint = fromId !== '' && fromId === toId
+
+  // 確認可能か: コースオンリーは出発のみ、通常は出発・到着の両方が必要。
+  const canConfirm = courseOnly ? fromId !== '' : fromId !== '' && toId !== ''
 
   const swap = () => {
     const t = fromId
@@ -701,18 +742,84 @@ function CourseSelector({
     setToId(t)
   }
 
+  const confirm = () => {
+    if (!canConfirm) return
+    onResolve(fromId, courseOnly ? fromId : toId)
+  }
+
+  const clampRanked = (n: number) => Math.min(24, Math.max(1, n || 1))
+
   return (
     <div className="selector">
       <h3 className="panel__title">コース選択</h3>
+
+      {/* A-1: 操作ボタンを最上部へ / A-2: コースオンリーモード切り替え */}
+      <div className="btn-row">
+        <button
+          className={`btn${courseOnly ? ' btn--primary' : ''}`}
+          aria-pressed={courseOnly}
+          onClick={() => setCourseOnly(v => !v)}
+        >
+          コースオンリー: {courseOnly ? 'ON' : 'OFF'}
+        </button>
+        <button
+          className="btn"
+          disabled={courseOnly || !fromId || !toId}
+          onClick={swap}
+        >
+          ⇄ 入れ替え
+        </button>
+        <button
+          className="btn btn--primary"
+          disabled={!canConfirm || resolving}
+          onClick={confirm}
+        >
+          コースを確認
+        </button>
+      </div>
+
       <p className="hint">
-        出発地点と到着地点を選びます。同じ地点を選ぶと通常3周コース、異なる地点を選ぶと道中コースになります。
+        {courseOnly
+          ? '出発地点を選ぶと、その地点の通常3周コースになります（到着 = 出発）。'
+          : '出発地点と到着地点を選びます。同じ地点を選ぶと通常3周コース、異なる地点を選ぶと道中コースになります。'}
       </p>
+
+      {/* A-3: 野良VR時は参加人数をこの時点から入力できる */}
+      {source === 'ranked' && (
+        <div className="field">
+          <span className="field__label">参加人数</span>
+          <div className="stepper">
+            <button
+              className="btn stepper__btn"
+              onClick={() => onRankedPlayerCountChange(clampRanked(rankedPlayerCount - 1))}
+            >
+              −
+            </button>
+            <input
+              className="input stepper__input"
+              type="number"
+              min={1}
+              max={24}
+              value={rankedPlayerCount}
+              onChange={e => onRankedPlayerCountChange(clampRanked(Number(e.target.value)))}
+            />
+            <button
+              className="btn stepper__btn"
+              onClick={() => onRankedPlayerCountChange(clampRanked(rankedPlayerCount + 1))}
+            >
+              ＋
+            </button>
+          </div>
+          <p className="hint">確認画面・結果入力画面でも変更できます。</p>
+        </div>
+      )}
+
       <WorldMapPicker
         mapPoints={mapPoints}
         fromId={fromId}
         toId={toId}
         onSelectFrom={setFromId}
-        onSelectTo={setToId}
+        onSelectTo={courseOnly ? setFromId : setToId}
         onMapPointUpdated={onMapPointUpdated}
       />
       <div className="field">
@@ -724,50 +831,29 @@ function CourseSelector({
           onSelect={setFromId}
         />
       </div>
-      <div className="field">
-        <MapPointPicker
-          id="to-mp"
-          label="到着地点"
-          mapPoints={mapPoints}
-          selectedId={toId}
-          onSelect={setToId}
-        />
-      </div>
+      {!courseOnly && (
+        <div className="field">
+          <MapPointPicker
+            id="to-mp"
+            label="到着地点"
+            mapPoints={mapPoints}
+            selectedId={toId}
+            onSelect={setToId}
+          />
+        </div>
+      )}
       {(fromId || toId) && (
         <div className="selector__summary">
           <span>{fromMp ? mapPointLabel(fromMp) : '—'}</span>
           <span className="selector__arrow">→</span>
-          <span>{toMp ? mapPointLabel(toMp) : '—'}</span>
-          {fromId && toId && (
-            <span className={`tag tag--${samePoint ? 'course' : 'route'}`}>
-              {samePoint ? '通常コース' : '道中コース'}
+          <span>{courseOnly ? (fromMp ? mapPointLabel(fromMp) : '—') : (toMp ? mapPointLabel(toMp) : '—')}</span>
+          {canConfirm && (
+            <span className={`tag tag--${courseOnly || samePoint ? 'course' : 'route'}`}>
+              {courseOnly || samePoint ? '通常コース' : '道中コース'}
             </span>
           )}
         </div>
       )}
-      <div className="btn-row">
-        <button
-          className="btn"
-          disabled={!fromId}
-          onClick={() => setToId(fromId)}
-        >
-          到着を出発と同じにする
-        </button>
-        <button
-          className="btn"
-          disabled={!fromId || !toId}
-          onClick={swap}
-        >
-          ⇄ 入れ替え
-        </button>
-        <button
-          className="btn btn--primary"
-          disabled={!fromId || !toId || resolving}
-          onClick={() => onResolve(fromId, toId)}
-        >
-          コースを確認
-        </button>
-      </div>
     </div>
   )
 }
@@ -1114,14 +1200,16 @@ function LoungeResultForm({
   busy: string | null
   onComplete: (body: CompleteLoungeBody) => void
 }) {
+  // 参加人数(12p/24p)に応じた配点表を選択する。
+  const scoreTable = loungeScoreTable(session.player_count)
   const [placement, setPlacement] = useState(1)
-  const [score, setScore] = useState(LOUNGE_SCORE_TABLE[1] ?? 0)
+  const [score, setScore] = useState(scoreTable[1] ?? 0)
   const maxPlacement = session.player_count ?? 99
   const saving = busy === 'complete-lounge'
 
   const handlePlacementChange = (newPlacement: number) => {
     setPlacement(newPlacement)
-    const tableScore = LOUNGE_SCORE_TABLE[newPlacement]
+    const tableScore = scoreTable[newPlacement]
     if (tableScore !== undefined) setScore(tableScore)
   }
 
@@ -1249,12 +1337,28 @@ function SessionSidebar({
     <div className="sidebar">
       <h3 className="panel__title">セッション情報</h3>
 
-      {session.source === 'lounge' && (
-        <>
-          <p className="sidebar__progress">Race {Math.min(recordedRaces.length, 12)} / 12</p>
-          <p className="sidebar__progress">合計スコア: {currentLoungeScore}pt</p>
-        </>
-      )}
+      {session.source === 'lounge' && (() => {
+        const racesDone = Math.min(recordedRaces.length, 12)
+        const parPerRace = loungeParPerRace(session.player_count)
+        const currentPar = Math.round(parPerRace * racesDone)
+        const fullPar = Math.round(parPerRace * 12)
+        const diff = currentLoungeScore - currentPar
+        return (
+          <>
+            <p className="sidebar__progress">Race {racesDone} / 12</p>
+            <p className="sidebar__progress">合計スコア: {currentLoungeScore}pt</p>
+            <p className="sidebar__progress">
+              現在の中央値(目安): {currentPar}pt{' '}
+              {racesDone > 0 && (
+                <span className={diff >= 0 ? 'records__delta--pos' : 'records__delta--neg'}>
+                  ({diff >= 0 ? '+' : ''}{diff})
+                </span>
+              )}
+            </p>
+            <p className="sidebar__progress">12レース時の中央値(目安): {fullPar}pt</p>
+          </>
+        )
+      })()}
 
       {lastWarnings.length > 0 && (
         <div className="warnbox">

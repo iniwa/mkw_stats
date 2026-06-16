@@ -2,11 +2,18 @@ import { useEffect, useState } from 'react'
 import { api, Course, PlaySession, RaceRecord, Route } from './api'
 
 type Mode = 'vr' | 'lounge' | 'both'
+type FieldFilter = 'all' | '24p' | '12p'
 
 const MODE_LABELS: Record<Mode, string> = {
   vr: 'VR',
   lounge: 'Lounge',
   both: '両方',
+}
+
+const FIELD_FILTER_LABELS: Record<FieldFilter, string> = {
+  all: '共通',
+  '24p': '24人',
+  '12p': '12人',
 }
 
 interface AnalyticsData {
@@ -59,6 +66,7 @@ function placementBand(placement: number, playerCount: number): 'top' | 'mid' | 
 
 export default function AnalyticsView() {
   const [mode, setMode] = useState<Mode>('both')
+  const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all')
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -117,6 +125,22 @@ export default function AnalyticsView() {
     </div>
   )
 
+  // Player-size sub-filter: visible only when Lounge data is in scope (mode === 'lounge').
+  const fieldFilterToggle = mode === 'lounge' ? (
+    <div className="seg">
+      {(['all', '24p', '12p'] as FieldFilter[]).map(f => (
+        <button
+          key={f}
+          className={`seg__btn${fieldFilter === f ? ' seg__btn--on' : ''}`}
+          onClick={() => setFieldFilter(f)}
+          disabled={loading}
+        >
+          {FIELD_FILTER_LABELS[f]}
+        </button>
+      ))}
+    </div>
+  ) : null
+
   const dateFilter = (
     <div className="date-filter">
       <div className="date-filter__group">
@@ -147,6 +171,7 @@ export default function AnalyticsView() {
         <div className="analytics__header">
           <span className="analytics__title">Analytics</span>
           {modeToggle}
+          {fieldFilterToggle}
         </div>
         <p className="placeholder">読み込み中…</p>
       </div>
@@ -159,6 +184,7 @@ export default function AnalyticsView() {
         <div className="analytics__header">
           <span className="analytics__title">Analytics</span>
           {modeToggle}
+          {fieldFilterToggle}
         </div>
         <p className="notice notice--error">{error ?? '読み込みに失敗しました'}</p>
         <div className="btn-row">
@@ -172,7 +198,16 @@ export default function AnalyticsView() {
   const windowLabel = (dateFrom || dateTo) ? 'フィルター中' : `直近 ${limit} セッション/ソース`
 
   // Aggregate per course/route from non-cancelled races.
-  const effective = races.filter(r => r.status !== 'cancelled' && (r.course_id || r.route_id))
+  // When mode === 'lounge' and a player-size sub-filter is active, restrict by player_count.
+  const effective = races.filter(r => {
+    if (r.status === 'cancelled' || !(r.course_id || r.route_id)) return false
+    if (mode === 'lounge' && fieldFilter !== 'all') {
+      if (r.player_count == null) return false
+      if (fieldFilter === '24p') return r.player_count >= 13
+      if (fieldFilter === '12p') return r.player_count <= 12
+    }
+    return true
+  })
   const accumMap = new Map<string, TargetStat>()
   for (const r of effective) {
     const kind: 'course' | 'route' = r.course_id ? 'course' : 'route'
@@ -234,6 +269,7 @@ export default function AnalyticsView() {
       <div className="analytics__header">
         <span className="analytics__title">Analytics</span>
         {modeToggle}
+        {fieldFilterToggle}
         <span className="analytics__window">{windowLabel}</span>
         <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
       </div>

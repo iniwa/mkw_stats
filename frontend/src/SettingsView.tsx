@@ -5,7 +5,9 @@ import { api, ApiError, Settings, VrAccount, VrAccountCreateBody, VrAccountUpdat
 const OVERLAY_URLS = [
   { label: 'VR / 透過 / compact', path: '/?view=overlay&mode=vr&compact=1' },
   { label: 'VR / 背景あり / compact', path: '/?view=overlay&mode=vr&compact=1&bg=solid' },
-  { label: 'Lounge MMR / 背景あり / compact', path: '/?view=overlay&mode=mmr&compact=1&bg=solid' },
+  { label: 'MMR (設定に従う) / 背景あり / compact', path: '/?view=overlay&mode=mmr&compact=1&bg=solid' },
+  { label: 'MMR 12p 固定 / 背景あり / compact', path: '/?view=overlay&mode=mmr12&compact=1&bg=solid' },
+  { label: 'MMR 24p 固定 / 背景あり / compact', path: '/?view=overlay&mode=mmr24&compact=1&bg=solid' },
   { label: '自動切替 / 透過 / compact', path: '/?view=overlay&mode=auto&compact=1' },
 ] as const
 
@@ -401,13 +403,13 @@ export default function SettingsView() {
             <div className="field">
               <label className="field__label">表示</label>
               <div className="seg">
-                {(['vr', 'mmr', 'auto'] as OverlayMode[]).map(m => (
+                {(['vr', 'mmr', 'mmr12', 'mmr24', 'auto'] as OverlayMode[]).map(m => (
                   <button
                     key={m}
                     className={`seg__btn${overlayMode === m ? ' seg__btn--on' : ''}`}
                     onClick={() => setOverlayMode(m)}
                   >
-                    {m === 'vr' ? 'VR' : m === 'mmr' ? 'MMR' : 'Auto'}
+                    {m === 'vr' ? 'VR' : m === 'mmr' ? 'MMR' : m === 'mmr12' ? '12p' : m === 'mmr24' ? '24p' : 'Auto'}
                   </button>
                 ))}
               </div>

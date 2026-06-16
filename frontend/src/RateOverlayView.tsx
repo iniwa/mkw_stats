@@ -1,22 +1,42 @@
 import { useEffect, useState } from 'react'
 import { api, type PlaySession, type Settings, type VrAccount } from './api'
 
-export type OverlayMode = 'vr' | 'mmr' | 'auto'
+export type OverlayMode = 'vr' | 'mmr' | 'auto' | 'mmr12' | 'mmr24'
 
 function resolveDisplay(
   mode: OverlayMode,
   activeSessions: PlaySession[],
   idleAutoDisplay: 'vr' | 'mmr',
 ): 'vr' | 'mmr' {
-  if (mode !== 'auto') return mode
-  if (activeSessions.some(s => s.source === 'lounge' && s.status === 'active')) return 'mmr'
-  if (activeSessions.some(s => s.source === 'ranked' && s.status === 'active')) return 'vr'
-  return idleAutoDisplay
+  if (mode === 'auto') {
+    if (activeSessions.some(s => s.source === 'lounge' && s.status === 'active')) return 'mmr'
+    if (activeSessions.some(s => s.source === 'ranked' && s.status === 'active')) return 'vr'
+    return idleAutoDisplay
+  }
+  if (mode === 'vr') return 'vr'
+  return 'mmr'
 }
 
-function getMmr(settings: Settings | null): { value: number | null; label: '12p' | '24p' } {
-  if (!settings) return { value: null, label: '12p' }
-  if (settings.lounge_game === 'mkworld24p') return { value: settings.lounge_mmr_24p, label: '24p' }
+/** Resolve which MMR format to show based on mode + active lounge session. */
+function resolveMmrFormat(
+  mode: OverlayMode,
+  activeSessions: PlaySession[],
+  settings: Settings | null,
+): '12p' | '24p' {
+  if (mode === 'mmr12') return '12p'
+  if (mode === 'mmr24') return '24p'
+  // For 'mmr' and 'auto': prefer active lounge session player_count, fall back to settings
+  const loungeSession = activeSessions.find(s => s.source === 'lounge' && s.status === 'active')
+  if (loungeSession && loungeSession.player_count !== null) {
+    return loungeSession.player_count >= 13 ? '24p' : '12p'
+  }
+  if (settings?.lounge_game === 'mkworld24p') return '24p'
+  return '12p'
+}
+
+function getMmr(settings: Settings | null, format: '12p' | '24p'): { value: number | null; label: '12p' | '24p' } {
+  if (!settings) return { value: null, label: format }
+  if (format === '24p') return { value: settings.lounge_mmr_24p, label: '24p' }
   return { value: settings.lounge_mmr_12p, label: '12p' }
 }
 
@@ -57,7 +77,7 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
         if (!active) return
         setVrAccounts(accounts)
         setSettings(s)
-        if (mode === 'auto') {
+        if (mode !== 'vr') {
           const sessions = await api.getActiveSessions()
           if (!active) return
           setActiveSessions(sessions)
@@ -92,8 +112,9 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
 
   const activeAccount = vrAccounts.find(a => a.is_active) ?? null
   const display = resolveDisplay(mode, activeSessions, idleAutoDisplay)
-  const mmr = getMmr(settings)
-  const displayLabel = display === 'vr' ? 'VR' : 'MMR'
+  const mmrFormat = resolveMmrFormat(mode, activeSessions, settings)
+  const mmr = getMmr(settings, mmrFormat)
+  const displayLabel = display === 'vr' ? 'VR' : `${mmr.label}MMR`
   const displayValue = display === 'vr'
     ? (activeAccount ? activeAccount.current_vr.toLocaleString() : '--')
     : (mmr.value !== null ? mmr.value.toLocaleString() : '--')
@@ -105,13 +126,13 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
     <div className={`overlay${compact ? ' overlay--compact' : ''}${solidBg ? ' overlay--solid' : ''}`}>
       {!compact && (
         <div className="overlay__mode-switch">
-          {(['vr', 'mmr', 'auto'] as const).map(m => (
+          {(['vr', 'mmr', 'mmr12', 'mmr24', 'auto'] as const).map(m => (
             <button
               key={m}
               className={`overlay__mode-btn${mode === m ? ' overlay__mode-btn--on' : ''}`}
               onClick={() => setMode(m)}
             >
-              {m.toUpperCase()}
+              {m === 'vr' ? 'VR' : m === 'mmr' ? 'MMR' : m === 'mmr12' ? '12p' : m === 'mmr24' ? '24p' : 'AUTO'}
             </button>
           ))}
         </div>

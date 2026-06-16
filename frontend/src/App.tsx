@@ -13,15 +13,16 @@ import SettingsView from './SettingsView'
 import StyleguideView from './StyleguideView'
 import VrView from './VrView'
 
-// スタイルガイドは確認用（?view=styleguide または NAV の SG タブ）。確認後に削除可。
-const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings', 'SG']
+// スタイルガイドは ?view=styleguide で確認可能（NAV からは非表示）。
+const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
 const _qp = new URLSearchParams(window.location.search)
 const _isOverlay = _qp.get('view') === 'overlay'
+const _isStyleguide = _qp.get('view') === 'styleguide'
 const _rawMode = _qp.get('mode')
-const _overlayMode: OverlayMode = (_rawMode === 'vr' || _rawMode === 'mmr' || _rawMode === 'auto') ? _rawMode : 'vr'
+const _overlayMode: OverlayMode = (_rawMode === 'vr' || _rawMode === 'mmr' || _rawMode === 'auto' || _rawMode === 'mmr12' || _rawMode === 'mmr24') ? _rawMode : 'vr'
 const _compact = _qp.get('compact') === '1'
 const _solidBg = _qp.get('bg') === 'solid'
 
@@ -38,6 +39,10 @@ export default function App() {
 
   if (_isOverlay) {
     return <RateOverlayView initialMode={_overlayMode} compact={_compact} solidBg={_solidBg} />
+  }
+
+  if (_isStyleguide) {
+    return <StyleguideView />
   }
 
   return (
@@ -80,8 +85,6 @@ export default function App() {
           <ItemTablesView />
         ) : active === 'Courses' ? (
           <NotesView />
-        ) : active === 'SG' ? (
-          <StyleguideView />
         ) : (
           <p className="placeholder">{active} はこのスライスでは未実装です。</p>
         )}
