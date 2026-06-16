@@ -15,6 +15,17 @@
 - Do not commit automatically unless explicitly requested.
 - Report changed files, summary, verification results, blocked checks, and any design questions that should return to Codex.
 
+## Model / Subagent Policy
+- **Opus is the coordinator; delegate hands-on work to subagents.** By default Opus plans and directs, while the actual implementation, edits, inspection, and verification are delegated to Sonnet or Haiku subagents. Opus should avoid doing routine execution itself when a subagent can do it.
+- Opus owns context reading, requirement interpretation, planning, design-sensitive judgment, subagent orchestration, and final review.
+- Choose the subagent model by task weight:
+  - **Sonnet** — scoped implementation, multi-file or non-trivial edits, localized refactors, code/log inspection, and verification that needs some reasoning.
+  - **Haiku** — light, mechanical, well-defined work: simple text/format edits, single-file find-and-replace, log/grep gathering, and other low-ambiguity tasks where speed and cost matter.
+- Give each subagent a narrow goal, explicit file scope, constraints, non-goals, and expected report.
+- Subagents (Sonnet or Haiku) must not change documented design intent, expand scope, add dependencies, alter build/deploy/external exposure, touch secrets, or make architectural decisions without returning to Opus.
+- Opus may implement directly only for very small edits where subagent overhead clearly outweighs the benefit.
+- If subagents or the intended model split are unavailable, continue with the available model and report that limitation.
+
 ## Environment
 - Host: Raspberry Pi 4 (8GB RAM), `linux/arm64`
 - Docker management: Portainer — Stack Web Editor only (no direct compose files)
