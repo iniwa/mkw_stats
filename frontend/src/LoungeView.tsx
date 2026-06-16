@@ -239,7 +239,8 @@ export default function LoungeView() {
   const synced = sessions.filter(s => s.lounge_mmr_after != null)
   const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
   const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
-  const latest = synced[0]
+  const syncedForView = viewMode === '12p' ? synced12 : viewMode === '24p' ? synced24 : synced
+  const latestForView = syncedForView[0]
   const mmr12 = mmrSyncResult != null
     ? mmrSyncResult.current_mmr_12p
     : (settings?.lounge_mmr_12p ?? synced12[0]?.lounge_mmr_after ?? null)
@@ -310,10 +311,10 @@ export default function LoungeView() {
           <div className="analytics__vr-row" style={{ marginTop: '0.5rem' }}>
             <span className="analytics__vr-label">前回変動</span>
             <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 600 }}>
-              {latest?.lounge_mmr_delta != null ? (latest.lounge_mmr_delta >= 0 ? `+${latest.lounge_mmr_delta}` : String(latest.lounge_mmr_delta)) : '—'}
+              {latestForView?.lounge_mmr_delta != null ? (latestForView.lounge_mmr_delta >= 0 ? `+${latestForView.lounge_mmr_delta}` : String(latestForView.lounge_mmr_delta)) : '—'}
             </span>
             <span className="analytics__vr-label" style={{ marginLeft: '0.75rem' }}>同期済み</span>
-            <span>{synced.length}</span>
+            <span>{syncedForView.length}</span>
           </div>
         </>
       ) : (
@@ -384,7 +385,8 @@ export default function LoungeView() {
     .filter(s => matchesViewMode(sessionRowKind(s)))
 
   // Lounge summary metrics
-  const allRacesFlat = [...racesBySession.values()].flat()
+  const summarySessions = sessions.filter(s => matchesViewMode(sessionRowKind(s)))
+  const allRacesFlat = summarySessions.flatMap(s => racesBySession.get(s.id) ?? [])
   const completedLounge = allRacesFlat.filter(r => r.status === 'completed')
   const placementRaces = completedLounge.filter(r => r.placement != null)
   const avgPlacement = placementRaces.length > 0
@@ -414,7 +416,7 @@ export default function LoungeView() {
         <div className="panel__title">Lounge サマリー</div>
         <div className="analytics__grid analytics__grid--4">
           {([
-            ['セッション', sessions.length],
+            ['セッション', summarySessions.length],
             ['完了レース', completedLounge.length],
             ['平均順位', avgPlacement != null ? avgPlacement.toFixed(1) : '—'],
             ['平均スコア', avgScore != null ? Math.round(avgScore).toString() : '—'],

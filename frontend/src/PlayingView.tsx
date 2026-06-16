@@ -405,6 +405,8 @@ export default function PlayingView() {
                     ? courseName(coursesById.get(draftRace.course_id))
                     : routeName(routesById.get(draftRace.route_id ?? ''), coursesById)
                 }
+                routes={routes}
+                courseMap={coursesById}
                 onComplete={completeRanked}
               />
             )}
@@ -420,6 +422,8 @@ export default function PlayingView() {
                     : routeName(routesById.get(draftRace.route_id ?? ''), coursesById)
                 }
                 busy={busy}
+                routes={routes}
+                courseMap={coursesById}
                 onComplete={completeLounge}
               />
             )}
@@ -1163,12 +1167,74 @@ function NoteAddPanel({
 }
 
 // ---------------------------------------------------------------------------
+// アノテーション/マップアイコン編集を結果入力フェーズでも使えるようにする自己完結パネル。
+function AnnotationEditPanel({
+  kind,
+  id,
+  routes,
+  courseMap,
+}: {
+  kind: 'course' | 'route'
+  id: string
+  routes: Route[]
+  courseMap: Map<string, Course>
+}) {
+  const [open, setOpen] = useState(false)
+  const [annotations, setAnnotations] = useState<MapAnnotation[]>([])
+  const [notes, setNotes] = useState<CourseNote[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    const params = kind === 'course' ? { course_id: id } : { route_id: id }
+    Promise.all([api.getMapAnnotations(params), api.getNotes(params)])
+      .then(([anns, ns]) => {
+        if (cancelled) return
+        setAnnotations(anns)
+        setNotes(ns.filter(n => n.is_active))
+      })
+      .catch(() => {
+        if (cancelled) return
+        setAnnotations([])
+        setNotes([])
+      })
+    return () => { cancelled = true }
+  }, [kind, id])
+
+  return (
+    <>
+      <div className="field">
+        <button
+          className={`btn${open ? ' btn--primary' : ''}`}
+          aria-pressed={open}
+          onClick={() => setOpen(v => !v)}
+        >
+          {open ? 'アノテーション編集を閉じる' : '🗺 アノテーション/アイコンを編集'}
+        </button>
+      </div>
+      {open && (
+        <AnnotationEditor
+          routes={routes}
+          notes={notes}
+          courseMap={courseMap}
+          selectedTargetType={kind}
+          selectedTargetId={id}
+          annotations={annotations}
+          onAnnotationsChange={setAnnotations}
+        />
+      )}
+    </>
+  )
+}
+
+// ---------------------------------------------------------------------------
 function RankedResultForm({
   draftRace,
   account,
   defaultPlayerCount,
   courseLabel,
   busy,
+  routes,
+  courseMap,
   onComplete,
 }: {
   draftRace: RaceRecord
@@ -1176,6 +1242,8 @@ function RankedResultForm({
   defaultPlayerCount: number
   courseLabel: string
   busy: string | null
+  routes: Route[]
+  courseMap: Map<string, Course>
   onComplete: (body: CompleteRankedBody) => void
 }) {
   const [playerCount, setPlayerCount] = useState(Math.min(24, Math.max(1, defaultPlayerCount || 12)))
@@ -1306,6 +1374,7 @@ function RankedResultForm({
       )}
 
       {assistTarget && <NoteAddPanel kind={assistTarget.kind} id={assistTarget.id} />}
+      {assistTarget && <AnnotationEditPanel kind={assistTarget.kind} id={assistTarget.id} routes={routes} courseMap={courseMap} />}
 
       <button
         className="btn btn--primary"
@@ -1332,6 +1401,8 @@ function LoungeResultForm({
   courseLabel,
   currentTotalScore,
   busy,
+  routes,
+  courseMap,
   onComplete,
 }: {
   draftRace: RaceRecord
@@ -1340,6 +1411,8 @@ function LoungeResultForm({
   courseLabel: string
   currentTotalScore: number
   busy: string | null
+  routes: Route[]
+  courseMap: Map<string, Course>
   onComplete: (body: CompleteLoungeBody) => void
 }) {
   // 参加人数(12p/24p)に応じた配点表を選択する。
