@@ -20,12 +20,11 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-06-18-time-attack-publish.md` — final verification, scoped commit/push, GitHub mirror confirmation, and GHCR publication.
+- `2026-06-18-publish-seed-vr-idempotency.md` — publish the reviewed seed idempotency fix and documentation lifecycle changes.
 
 Current UI redesign order (next after Codex review):
 
-1. Complete and review `2026-06-18-time-attack-publish.md`.
-2. Prepare the Pi backup, Portainer redeploy, migration `007 -> 008`, and live smoke-test handoff.
+None.
 
 Next queued verification handoff:
 

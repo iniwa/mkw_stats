@@ -194,3 +194,153 @@ def test_seed_sync_fields_updates_existing_master_records():
 
     assert existing.name_ja == "new"
     assert existing.tags == {"source": "test"}
+
+
+def _active_accounts(session):
+    from sqlalchemy import select
+
+    from app.models import VrAccount
+
+    return session.scalars(select(VrAccount).where(VrAccount.is_active.is_(True))).all()
+
+
+def _account_by_name(session, name):
+    from sqlalchemy import select
+
+    from app.models import VrAccount
+
+    return session.scalars(select(VrAccount).where(VrAccount.name == name)).first()
+
+
+def test_seed_vr_account_empty_db_creates_active_main(db_session):
+    """On a fresh DB the seed creates `main` as the single active account."""
+    from app.seed.initial_data import seed
+
+    seed(db_session)
+
+    main = _account_by_name(db_session, "main")
+    assert main is not None
+    assert main.is_active is True
+
+    active = _active_accounts(db_session)
+    assert len(active) == 1
+    assert active[0].name == "main"
+
+
+def test_seed_vr_account_preserves_existing_active_account(db_session):
+    """With an active custom account and no `main`, seed adds `main` inactive
+    and leaves the user's active account untouched."""
+    from app.models import VrAccount
+    from app.seed.initial_data import seed
+
+    custom = VrAccount(
+        id=uuid.uuid4(),
+        name="iniwa",
+        display_name="いにわ",
+        initial_vr=8000,
+        current_vr=8630,
+        is_active=True,
+        sort_order=5,
+    )
+    db_session.add(custom)
+    db_session.commit()
+
+    seed(db_session)
+
+    iniwa = _account_by_name(db_session, "iniwa")
+    assert iniwa.is_active is True
+    # User-managed fields must be preserved exactly.
+    assert iniwa.display_name == "いにわ"
+    assert iniwa.initial_vr == 8000
+    assert iniwa.current_vr == 8630
+    assert iniwa.sort_order == 5
+
+    main = _account_by_name(db_session, "main")
+    assert main is not None
+    assert main.is_active is False
+
+    active = _active_accounts(db_session)
+    assert len(active) == 1
+    assert active[0].name == "iniwa"
+
+
+def test_seed_vr_account_repeated_run_is_stable(db_session):
+    """Re-running the seed does not duplicate `main` or change the active account."""
+    from sqlalchemy import func, select
+
+    from app.models import VrAccount
+    from app.seed.initial_data import seed
+
+    custom = VrAccount(
+        id=uuid.uuid4(),
+        name="iniwa",
+        display_name="いにわ",
+        initial_vr=8000,
+        current_vr=8630,
+        is_active=True,
+        sort_order=5,
+    )
+    db_session.add(custom)
+    db_session.commit()
+
+    seed(db_session)
+    seed(db_session)
+
+    main_count = db_session.scalar(
+        select(func.count()).select_from(VrAccount).where(VrAccount.name == "main")
+    )
+    assert main_count == 1
+
+    active = _active_accounts(db_session)
+    assert len(active) == 1
+    assert active[0].name == "iniwa"
+
+    iniwa = _account_by_name(db_session, "iniwa")
+    assert iniwa.display_name == "いにわ"
+    assert iniwa.initial_vr == 8000
+    assert iniwa.current_vr == 8630
+    assert iniwa.sort_order == 5
+
+
+def test_seed_vr_account_leaves_existing_inactive_main_untouched(db_session):
+    """An existing inactive `main` is left as-is even when another account is active."""
+    from app.models import VrAccount
+    from app.seed.initial_data import seed
+
+    main = VrAccount(
+        id=uuid.uuid4(),
+        name="main",
+        display_name="旧メイン",
+        initial_vr=100,
+        current_vr=200,
+        is_active=False,
+        sort_order=3,
+    )
+    active = VrAccount(
+        id=uuid.uuid4(),
+        name="iniwa",
+        display_name="いにわ",
+        initial_vr=8000,
+        current_vr=8630,
+        is_active=True,
+        sort_order=5,
+    )
+    db_session.add_all([main, active])
+    db_session.commit()
+
+    seed(db_session)
+
+    main_after = _account_by_name(db_session, "main")
+    assert main_after.is_active is False
+    # User-managed fields on the existing seed account are not overwritten.
+    assert main_after.display_name == "旧メイン"
+    assert main_after.initial_vr == 100
+    assert main_after.current_vr == 200
+    assert main_after.sort_order == 3
+
+    iniwa_after = _account_by_name(db_session, "iniwa")
+    assert iniwa_after.is_active is True
+
+    active_accounts = _active_accounts(db_session)
+    assert len(active_accounts) == 1
+    assert active_accounts[0].name == "iniwa"

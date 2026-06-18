@@ -1,6 +1,8 @@
 Read AGENTS.md, CLAUDE.md, `docs/design/time-attack.md`, the archived Time Attack handoffs, and this handoff file before starting.
 If the repository state differs materially from this handoff, or publication would include unrelated changes, stop and report before committing or pushing.
 
+> Reviewed by Codex on 2026-06-18. Publication accepted. Commit `f1caa35408dc0debb099c821333389c5e2f72b74` reached GitHub main; Docker Publish succeeded; backend and frontend `sha-f1caa35` manifests are published and match `latest`.
+
 ## Goal
 
 Publish the reviewed Time Attack implementation through the established source and image pipeline:

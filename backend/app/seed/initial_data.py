@@ -4043,12 +4043,25 @@ def seed(session) -> None:
 
     session.flush()
 
-    # VR accounts — only insert if name doesn't exist
+    # VR accounts — insert only if the seed name is absent. The seed account is a
+    # default for empty installs, not an authority over the user's active selection:
+    # if an active account already exists, add the missing seed account as inactive
+    # so we never violate uq_vr_accounts_single_active or displace the user's choice.
+    # An existing seed account is left exactly as-is (no field sync).
     for va_data in VR_ACCOUNTS:
         stmt = select(VrAccount).where(VrAccount.name == va_data["name"])
         existing = session.scalars(stmt).first()
-        if existing is None:
-            session.add(VrAccount(id=uuid.uuid4(), **va_data))
+        if existing is not None:
+            continue
+        active_exists = (
+            session.scalars(select(VrAccount.id).where(VrAccount.is_active.is_(True))).first()
+            is not None
+        )
+        values = dict(va_data)
+        if active_exists:
+            values["is_active"] = False
+        session.add(VrAccount(id=uuid.uuid4(), **values))
+        session.flush()
 
     session.commit()
     print("Seed complete.")
