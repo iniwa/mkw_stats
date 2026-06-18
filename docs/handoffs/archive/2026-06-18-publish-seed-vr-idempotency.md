@@ -1,6 +1,8 @@
 Read AGENTS.md, CLAUDE.md, `docs/decisions/2026-06-18-seed-vr-account-idempotency.md`, the archived implementation handoff, and this handoff before starting.
 If repository state differs materially from this handoff, or publication would include unrelated changes, stop and report before committing or pushing.
 
+> Reviewed by Codex on 2026-06-18. Publication accepted. Commit `e10e721028682183ed5429704fcf94cc968f05f0` reached GitHub main, Docker Publish succeeded, and backend `sha-e10e721` was published with the same manifest digest as `latest`.
+
 ## Goal
 
 Publish the reviewed VR seed idempotency fix through the established source pipeline:

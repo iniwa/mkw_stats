@@ -20,7 +20,7 @@ None.
 
 ## Active Implementation Handoffs
 
-- `2026-06-18-publish-seed-vr-idempotency.md` — publish the reviewed seed idempotency fix and documentation lifecycle changes.
+None.
 
 Current UI redesign order (next after Codex review):
 
