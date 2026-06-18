@@ -13,4 +13,5 @@ Recommended files:
 - `frontend.md`
 - `deployment.md`
 - `operations.md`
+- `time-attack.md`
 - `ui-redesign-roadmap.md`

@@ -65,6 +65,7 @@ def test_model_metadata_tables():
         "characters",
         "vehicles",
         "item_tables",
+        "time_attack_records",
     }
     actual = set(Base.metadata.tables.keys())
     assert expected == actual, f"Missing: {expected - actual}, Extra: {actual - expected}"

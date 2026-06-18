@@ -1067,6 +1067,104 @@ body.overlay-mode { background: transparent !important; }
 .overlay--compact .overlay__line-value { font-size: 1.5rem; }
 .overlay__meta { font-size: 0.68rem; color: rgba(255,255,255,0.42); white-space: nowrap; }
 
+/* Time Attack ---------------------------------------------------------------- */
+.ta { display: flex; flex-direction: column; gap: 0.85rem; }
+.ta__head {
+  display: flex; align-items: center; justify-content: space-between;
+  gap: 0.5rem; flex-wrap: wrap;
+}
+.ta__title { font-size: 1.1rem; font-weight: 600; }
+
+.ta__summary {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 0.5rem;
+}
+@media (max-width: 600px) {
+  .ta__summary { grid-template-columns: repeat(2, 1fr); }
+}
+.ta__metric {
+  text-align: center; padding: 0.65rem 0.5rem;
+  background: var(--bg-input); border: 1px solid var(--border); border-radius: var(--radius);
+}
+.ta__metric-value {
+  font-size: 1.5rem; font-weight: 700; font-variant-numeric: tabular-nums;
+}
+.ta__metric-label { font-size: 0.72rem; color: var(--text-dim); margin-top: 0.1rem; }
+
+.ta__scroll { overflow-x: auto; }
+.ta__table {
+  width: 100%; min-width: 760px; border-collapse: collapse;
+  font-size: var(--fs-base);
+}
+.ta__table th {
+  text-align: left; font-size: 0.75rem; color: var(--text-faint);
+  font-weight: 600; text-transform: uppercase; letter-spacing: 0.03em;
+  padding: 0.4rem 0.5rem; border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+.ta__table td {
+  padding: 0.35rem 0.5rem; border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+.ta__table tr:last-child td { border-bottom: none; }
+.ta__table tr:hover td { background: rgba(255,255,255,0.02); }
+
+.ta__course-name {
+  font-size: var(--fs-base); white-space: nowrap;
+  overflow: hidden; text-overflow: ellipsis; max-width: 9rem;
+}
+
+.ta__time-input {
+  width: 7rem; padding: 0.3rem 0.4rem; font-size: var(--fs-base);
+  font-variant-numeric: tabular-nums;
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-family: inherit;
+}
+.ta__time-input:focus { outline: none; border-color: var(--accent); }
+.ta__time-input--invalid { border-color: var(--danger); }
+
+.ta__diff {
+  font-variant-numeric: tabular-nums; font-size: var(--fs-base);
+  white-space: nowrap; color: var(--text-dim);
+}
+.ta__diff--pos { color: var(--warn); }
+.ta__diff--neg { color: var(--ok); }
+.ta__diff--zero { color: var(--text-dim); }
+
+.ta__field-error {
+  font-size: var(--fs-xs); color: var(--danger); white-space: nowrap;
+  margin-top: 0.15rem;
+}
+
+.ta__saved {
+  font-size: var(--fs-xs); color: var(--ok); white-space: nowrap;
+}
+
+.ta__notes {
+  padding: 0.6rem 0.5rem; background: var(--bg-panel);
+  border-top: 1px solid var(--border);
+}
+.ta__notes-grid {
+  display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.5rem;
+}
+@media (max-width: 600px) {
+  .ta__notes-grid { grid-template-columns: 1fr; }
+}
+.ta__notes-label {
+  display: block; font-size: var(--fs-xs); color: var(--text-dim); margin-bottom: 0.2rem;
+}
+.ta__notes-textarea {
+  width: 100%; padding: 0.3rem 0.4rem; font-size: var(--fs-sm);
+  background: var(--bg-input); color: var(--text);
+  border: 1px solid var(--border-strong); border-radius: var(--radius-sm);
+  font-family: inherit; resize: vertical; min-height: 3.5rem;
+}
+.ta__notes-textarea:focus { outline: none; border-color: var(--accent); }
+
+.ta__row-status td {
+  padding: 0 0.5rem 0.35rem; border-bottom: 1px solid var(--border);
+}
+
 /* -- モバイル最適化 (≤480px) ----------------------------------------------- */
 @media (max-width: 480px) {
   /* ヘッダー: タイトルが長い場合に省略 */

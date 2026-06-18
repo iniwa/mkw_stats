@@ -1,12 +1,12 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, Text, func, DateTime
+from sqlalchemy import Boolean, CheckConstraint, Enum, Float, ForeignKey, Integer, String, Text, func, DateTime, UniqueConstraint
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
 
 from .base import Base
-from .enums import AnnotationType
+from .enums import AnnotationType, TimeAttackCategory
 
 
 class MapPoint(Base):
@@ -135,4 +135,33 @@ class MapAnnotation(Base):
             "(course_id IS NOT NULL AND route_id IS NULL) OR (course_id IS NULL AND route_id IS NOT NULL)",
             name="chk_map_annotations_course_xor_route",
         ),
+    )
+
+
+class TimeAttackRecord(Base):
+    __tablename__ = "time_attack_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    course_id: Mapped[str] = mapped_column(String(64), ForeignKey("courses.id"), nullable=False)
+    category: Mapped[TimeAttackCategory] = mapped_column(
+        Enum(TimeAttackCategory, name="time_attack_category"), nullable=False
+    )
+    personal_best_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    world_record_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    target_time_ms: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    personal_best_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    world_record_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    target_note: Mapped[str | None] = mapped_column(Text, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), nullable=False
+    )
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=func.now(), onupdate=func.now(), nullable=False
+    )
+
+    __table_args__ = (
+        UniqueConstraint("course_id", "category", name="uq_ta_record_course_category"),
+        CheckConstraint("personal_best_ms IS NULL OR personal_best_ms > 0", name="chk_ta_personal_best_positive"),
+        CheckConstraint("world_record_ms IS NULL OR world_record_ms > 0", name="chk_ta_world_record_positive"),
+        CheckConstraint("target_time_ms IS NULL OR target_time_ms > 0", name="chk_ta_target_time_positive"),
     )

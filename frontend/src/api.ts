@@ -217,6 +217,31 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await resp.json()) as T
 }
 
+export type TimeAttackCategory = 'nita' | 'item'
+
+export interface TimeAttackRecord {
+  id: string
+  course_id: string
+  category: TimeAttackCategory
+  personal_best_ms: number | null
+  world_record_ms: number | null
+  target_time_ms: number | null
+  personal_best_note: string | null
+  world_record_note: string | null
+  target_note: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface TimeAttackRecordUpdateBody {
+  personal_best_ms?: number | null
+  world_record_ms?: number | null
+  target_time_ms?: number | null
+  personal_best_note?: string | null
+  world_record_note?: string | null
+  target_note?: string | null
+}
+
 export const api = {
   health: () => request<{ status: string; service: string }>('/health'),
   getSettings: () => request<Settings>('/settings'),
@@ -327,6 +352,15 @@ export const api = {
     request<void>(`/map-annotations/${id}`, { method: 'DELETE' }),
   mmrSync: () =>
     request<MmrSyncResponse>('/lounge/mmr-sync', { method: 'POST' }),
+  getTimeAttackRecords: (category?: TimeAttackCategory) => {
+    const qs = category ? `?category=${category}` : ''
+    return request<TimeAttackRecord[]>(`/time-attack-records${qs}`)
+  },
+  upsertTimeAttackRecord: (courseId: string, category: TimeAttackCategory, body: TimeAttackRecordUpdateBody) =>
+    request<TimeAttackRecord>(`/time-attack-records/${courseId}/${category}`, {
+      method: 'PUT',
+      body: JSON.stringify(body),
+    }),
 }
 
 export interface CourseNote {

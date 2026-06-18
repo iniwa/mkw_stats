@@ -39,6 +39,7 @@ Mario Kart World の対戦記録、レート推移、コース情報をまとめ
 | Analytics | ランク戦の順位・コース・ルート分析 |
 | Items | 12人・24人用アイテムテーブル |
 | Courses | コース・ルート単位のノートとマップ注釈 |
+| TA | NITA・アイテムありのPB、WR、目標タイム管理 |
 | Records | セッション・レース履歴の確認と修正 |
 | Settings | VRアカウント、Lounge、表示設定の管理 |
 

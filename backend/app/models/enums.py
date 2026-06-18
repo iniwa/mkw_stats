@@ -30,3 +30,8 @@ class AnnotationType(str, enum.Enum):
     arrow = "arrow"
     text = "text"
     area = "area"
+
+
+class TimeAttackCategory(str, enum.Enum):
+    nita = "nita"
+    item = "item"

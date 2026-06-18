@@ -1960,3 +1960,226 @@ def test_patch_annotation_without_is_goal_image_preserves_value(seeded_client):
     body = resp.json()
     assert body["label"] == "updated-label"
     assert body["is_goal_image"] is True
+
+
+# ---------------------------------------------------------------------------
+# Time Attack
+# ---------------------------------------------------------------------------
+from app.models import TimeAttackRecord  # noqa: E402
+
+
+def test_ta_empty_get_returns_empty_list(seeded_client):
+    resp = seeded_client.get("/api/v1/time-attack-records")
+    assert resp.status_code == 200
+    assert resp.json() == []
+
+
+def test_ta_create_by_put_returns_200_with_values(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["course_id"] == "mario_bros_circuit"
+    assert body["category"] == "nita"
+    assert body["personal_best_ms"] == 102350
+
+
+def test_ta_repeat_put_updates_not_duplicates(seeded_client):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 99000},
+    )
+    resp = seeded_client.get("/api/v1/time-attack-records")
+    assert resp.status_code == 200
+    records = resp.json()
+    assert len(records) == 1
+    assert records[0]["personal_best_ms"] == 99000
+
+
+def test_ta_get_without_filter_returns_ordered_by_sort_order_then_category(seeded_client):
+    # mario_bros_circuit (sort_order=10), crown_city (sort_order=20)
+    seeded_client.put(
+        "/api/v1/time-attack-records/crown_city/item",
+        json={"personal_best_ms": 120000},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/item",
+        json={"personal_best_ms": 105000},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/crown_city/nita",
+        json={"personal_best_ms": 115000},
+    )
+    resp = seeded_client.get("/api/v1/time-attack-records")
+    assert resp.status_code == 200
+    records = resp.json()
+    assert len(records) == 4
+    # Order: mario_bros_circuit/item, mario_bros_circuit/nita, crown_city/item, crown_city/nita
+    assert records[0]["course_id"] == "mario_bros_circuit"
+    assert records[0]["category"] == "item"
+    assert records[1]["course_id"] == "mario_bros_circuit"
+    assert records[1]["category"] == "nita"
+    assert records[2]["course_id"] == "crown_city"
+    assert records[2]["category"] == "item"
+    assert records[3]["course_id"] == "crown_city"
+    assert records[3]["category"] == "nita"
+
+
+def test_ta_get_with_category_nita_filters_to_nita_only(seeded_client):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/item",
+        json={"personal_best_ms": 105000},
+    )
+    resp = seeded_client.get("/api/v1/time-attack-records", params={"category": "nita"})
+    assert resp.status_code == 200
+    records = resp.json()
+    assert all(r["category"] == "nita" for r in records)
+    assert len(records) == 1
+
+
+def test_ta_get_with_category_item_filters_to_item_only(seeded_client):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/item",
+        json={"personal_best_ms": 105000},
+    )
+    resp = seeded_client.get("/api/v1/time-attack-records", params={"category": "item"})
+    assert resp.status_code == 200
+    records = resp.json()
+    assert all(r["category"] == "item" for r in records)
+    assert len(records) == 1
+
+
+def test_ta_get_invalid_category_returns_422(seeded_client):
+    resp = seeded_client.get("/api/v1/time-attack-records", params={"category": "bogus"})
+    assert resp.status_code == 422
+
+
+def test_ta_put_unknown_course_returns_404(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/no_such_course/nita",
+        json={"personal_best_ms": 102350},
+    )
+    assert resp.status_code == 404
+
+
+def test_ta_put_invalid_category_returns_422(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/bogus",
+        json={"personal_best_ms": 102350},
+    )
+    assert resp.status_code == 422
+
+
+def test_ta_each_time_field_saves_and_returns(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={
+            "personal_best_ms": 102350,
+            "world_record_ms": 95000,
+            "target_time_ms": 100000,
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["personal_best_ms"] == 102350
+    assert body["world_record_ms"] == 95000
+    assert body["target_time_ms"] == 100000
+
+
+def test_ta_each_note_field_saves_and_returns(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={
+            "personal_best_note": "my PB note",
+            "world_record_note": "WR note",
+            "target_note": "target note",
+        },
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["personal_best_note"] == "my PB note"
+    assert body["world_record_note"] == "WR note"
+    assert body["target_note"] == "target note"
+
+
+def test_ta_zero_time_value_returns_422(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 0},
+    )
+    assert resp.status_code == 422
+
+
+def test_ta_negative_time_value_returns_422(seeded_client):
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": -1000},
+    )
+    assert resp.status_code == 422
+
+
+def test_ta_explicit_null_clears_existing_value(seeded_client):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": None},
+    )
+    assert resp.status_code == 200
+    assert resp.json()["personal_best_ms"] is None
+
+
+def test_ta_omitted_field_preserves_existing_value(seeded_client):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350, "world_record_ms": 95000},
+    )
+    resp = seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"target_time_ms": 100000},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["personal_best_ms"] == 102350
+    assert body["world_record_ms"] == 95000
+    assert body["target_time_ms"] == 100000
+
+
+def test_ta_db_contains_exactly_one_row_after_repeated_put(seeded_client, db_session):
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 102350},
+    )
+    seeded_client.put(
+        "/api/v1/time-attack-records/mario_bros_circuit/nita",
+        json={"personal_best_ms": 99000},
+    )
+    count = len(
+        db_session.scalars(
+            select(TimeAttackRecord).where(
+                TimeAttackRecord.course_id == "mario_bros_circuit",
+                TimeAttackRecord.category == "nita",
+            )
+        ).all()
+    )
+    assert count == 1

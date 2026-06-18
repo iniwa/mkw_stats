@@ -20,11 +20,12 @@ None.
 
 ## Active Implementation Handoffs
 
-None.
+- `2026-06-18-time-attack-publish.md` — final verification, scoped commit/push, GitHub mirror confirmation, and GHCR publication.
 
 Current UI redesign order (next after Codex review):
 
-None.
+1. Complete and review `2026-06-18-time-attack-publish.md`.
+2. Prepare the Pi backup, Portainer redeploy, migration `007 -> 008`, and live smoke-test handoff.
 
 Next queued verification handoff:
 

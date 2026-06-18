@@ -11,10 +11,11 @@ import RateOverlayView, { type OverlayMode } from './RateOverlayView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 import StyleguideView from './StyleguideView'
+import TimeAttackView from './TimeAttackView'
 import VrView from './VrView'
 
 // スタイルガイドは ?view=styleguide で確認可能（NAV からは非表示）。
-const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'Records', 'Settings']
+const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'TA', 'Records', 'Settings']
 
 type HealthStatus = 'checking' | 'ok' | 'error'
 
@@ -85,6 +86,8 @@ export default function App() {
           <ItemTablesView />
         ) : active === 'Courses' ? (
           <NotesView />
+        ) : active === 'TA' ? (
+          <TimeAttackView />
         ) : (
           <p className="placeholder">{active} はこのスライスでは未実装です。</p>
         )}

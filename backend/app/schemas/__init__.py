@@ -7,7 +7,7 @@ from typing import Annotated, Literal
 
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
-from app.models.enums import AnnotationType, RaceStatus, SessionStatus, SourceType
+from app.models.enums import AnnotationType, RaceStatus, SessionStatus, SourceType, TimeAttackCategory
 
 _orm = ConfigDict(from_attributes=True)
 
@@ -351,6 +351,34 @@ class MapAnnotationUpdate(BaseModel):
     priority: int | None = None
     style: dict | None = None
     is_goal_image: bool | None = None
+
+
+# --------------------------------------------------------------------------
+# Time Attack
+# --------------------------------------------------------------------------
+class TimeAttackRecordRead(BaseModel):
+    model_config = _orm
+
+    id: uuid.UUID
+    course_id: str
+    category: TimeAttackCategory
+    personal_best_ms: int | None
+    world_record_ms: int | None
+    target_time_ms: int | None
+    personal_best_note: str | None
+    world_record_note: str | None
+    target_note: str | None
+    created_at: datetime
+    updated_at: datetime
+
+
+class TimeAttackRecordUpdate(BaseModel):
+    personal_best_ms: int | None = Field(default=None, gt=0)
+    world_record_ms: int | None = Field(default=None, gt=0)
+    target_time_ms: int | None = Field(default=None, gt=0)
+    personal_best_note: str | None = None
+    world_record_note: str | None = None
+    target_note: str | None = None
 
 
 # --------------------------------------------------------------------------

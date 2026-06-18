@@ -21,6 +21,7 @@
 --   vr_accounts          -- Account rows kept; current_vr is reset to initial_vr
 --   app_settings         -- All settings preserved (lounge_player_id, lounge_season, etc.)
 --   uploaded_files       -- Excluded: no FK links to play data; may hold intentional assets
+--   time_attack_records  -- Independent Time Attack user data (PB, WR, target times)
 --
 -- BEFORE RUNNING:
 --   Take a pg_dump backup first:
@@ -71,6 +72,8 @@ SELECT table_name, row_count FROM (
     SELECT 'routes (preserved)',                 COUNT(*)         FROM routes
     UNION ALL
     SELECT 'uploaded_files (not deleted)',       COUNT(*)         FROM uploaded_files
+    UNION ALL
+    SELECT 'time_attack_records (preserved)',    COUNT(*)         FROM time_attack_records
 ) counts
 ORDER BY table_name;
 
@@ -161,6 +164,8 @@ SELECT table_name, row_count FROM (
     SELECT 'routes (preserved)',                 COUNT(*)         FROM routes
     UNION ALL
     SELECT 'uploaded_files (not deleted)',       COUNT(*)         FROM uploaded_files
+    UNION ALL
+    SELECT 'time_attack_records (preserved)',    COUNT(*)         FROM time_attack_records
 ) counts
 ORDER BY table_name;
 
