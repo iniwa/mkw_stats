@@ -532,6 +532,20 @@ personal_best_ms - world_record_ms
 
 通常はWRより速いケースは想定しないが、計算上は許容する。
 
+### WR Difference Percentage
+
+```text
+((world_record_ms - personal_best_ms) / world_record_ms) * 100
+```
+
+- `< 0`: WRより遅い
+- `= 0`: WRと同タイム
+- `> 0`: WRより速い
+
+`WR差分%` は符号付き小数3桁のパーセント形式で表示する。
+例えばWRが `100000`、自分PBが `102000` の場合は `-2.000%` と表示する。
+必要な値が不足している場合は `-` と表示する。
+
 ### Difference Display
 
 差分は `+x.xxx` / `-x.xxx` 形式で表示する。
@@ -568,6 +582,7 @@ personal_best_ms - world_record_ms
 - `m:ss.mmm` 形式以外は不正入力として扱う
 - `personal_best_ms` がない場合、差分表示は `-`
 - `world_record_ms` がない場合、WR差分は `-`
+- `personal_best_ms` または `world_record_ms` がない場合、WR差分%は `-`
 - `target_time_ms` がない場合、目標差分は `-`
 
 ## 14. Explicit Non-goals

@@ -40,6 +40,17 @@ export function formatDiff(a: number | null, b: number | null): string {
   return s + (Math.abs(d) / 1000).toFixed(3)
 }
 
+export function formatWrDiffPercent(
+  personalBestMs: number | null,
+  worldRecordMs: number | null,
+): string {
+  if (personalBestMs === null || worldRecordMs === null) return '-'
+  const percent = ((worldRecordMs - personalBestMs) / worldRecordMs) * 100
+  const rounded = Number(percent.toFixed(3))
+  const sign = rounded > 0 ? '+' : ''
+  return `${sign}${rounded.toFixed(3)}%`
+}
+
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
@@ -91,6 +102,13 @@ function diffClass(diffStr: string): string {
   if (diffStr === '-') return 'ta__diff'
   if (diffStr.startsWith('+')) return 'ta__diff ta__diff--pos'
   if (diffStr.startsWith('-')) return 'ta__diff ta__diff--neg'
+  return 'ta__diff ta__diff--zero'
+}
+
+function wrDiffPercentClass(diffStr: string): string {
+  if (diffStr === '-') return 'ta__diff'
+  if (diffStr.startsWith('-')) return 'ta__diff ta__diff--pos'
+  if (diffStr.startsWith('+')) return 'ta__diff ta__diff--neg'
   return 'ta__diff ta__diff--zero'
 }
 
@@ -305,6 +323,7 @@ export default function TimeAttackView() {
               <th>WR</th>
               <th>目標タイム</th>
               <th>WR差分</th>
+              <th>WR差分%</th>
               <th>目標差分</th>
               <th>メモ</th>
               <th>保存</th>
@@ -325,6 +344,7 @@ export default function TimeAttackView() {
               const targetNum = typeof targetParsed === 'number' ? targetParsed : null
 
               const wrDiff = formatDiff(pbNum, wrNum)
+              const wrDiffPercent = formatWrDiffPercent(pbNum, wrNum)
               const targetDiff = formatDiff(pbNum, targetNum)
 
               return (
@@ -390,6 +410,9 @@ export default function TimeAttackView() {
                       <span className={diffClass(wrDiff)}>{wrDiff}</span>
                     </td>
                     <td>
+                      <span className={wrDiffPercentClass(wrDiffPercent)}>{wrDiffPercent}</span>
+                    </td>
+                    <td>
                       <span className={diffClass(targetDiff)}>{targetDiff}</span>
                     </td>
                     <td>
@@ -412,7 +435,7 @@ export default function TimeAttackView() {
                   </tr>
                   {(ui.rowError || ui.saved || ui.expanded) && (
                     <tr className="ta__row-status">
-                      <td colSpan={8}>
+                      <td colSpan={9}>
                         {ui.rowError && (
                           <p className="notice notice--error" style={{ marginBottom: ui.expanded ? '0.5rem' : 0 }}>
                             {ui.rowError}

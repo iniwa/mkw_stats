@@ -1092,7 +1092,7 @@ body.overlay-mode { background: transparent !important; }
 
 .ta__scroll { overflow-x: auto; }
 .ta__table {
-  width: 100%; min-width: 760px; border-collapse: collapse;
+  width: 100%; min-width: 840px; border-collapse: collapse;
   font-size: var(--fs-base);
 }
 .ta__table th {
