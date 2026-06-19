@@ -4007,8 +4007,18 @@ VR_ACCOUNTS = [
 ]
 
 
-def _sync_seed_fields(existing, values: dict) -> None:
+# Map-point coordinate fields are user-managed calibration after a point is first
+# inserted: they are committed via PATCH /api/v1/map-points/{id} and shared by every
+# client of the same backend. Seed values for these fields are defaults for NEW rows
+# only; a re-seed must never overwrite calibration on an existing map point.
+# See docs/decisions/2026-06-19-preserve-map-point-calibration-during-seed.md
+MAP_POINT_CALIBRATION_FIELDS = ("x", "y", "radius")
+
+
+def _sync_seed_fields(existing, values: dict, *, exclude: tuple[str, ...] = ()) -> None:
     for key, value in values.items():
+        if key in exclude:
+            continue
         setattr(existing, key, value)
 
 
@@ -4027,9 +4037,12 @@ def seed(session) -> None:
     for mp_data in MAP_POINTS:
         existing = session.get(MapPoint, mp_data["id"])
         if existing is None:
+            # Fresh row: seed all fields, including the initial coordinates.
             session.add(MapPoint(**mp_data))
         else:
-            _sync_seed_fields(existing, mp_data)
+            # Existing row: refresh seed-owned master fields (course_id, labels)
+            # but preserve user-calibrated coordinates.
+            _sync_seed_fields(existing, mp_data, exclude=MAP_POINT_CALIBRATION_FIELDS)
 
     session.flush()
 

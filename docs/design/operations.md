@@ -61,7 +61,7 @@ Or use the backend container console in Portainer (Exec).
 
 Always run migration before seed after schema changes.
 
-The seed command is idempotent — it upserts master data (courses, map points, routes) and does not touch user play data.
+The seed command is idempotent — it upserts master data (courses, map points, routes) and does not touch user play data. Existing map-point calibration (`map_points.x/y/radius`) is preserved: those coordinates are user-managed after a point is first inserted, so a re-seed refreshes seed-owned fields (course, labels) but never overwrites calibrated positions. See `docs/decisions/2026-06-19-preserve-map-point-calibration-during-seed.md`.
 
 ## Backup
 

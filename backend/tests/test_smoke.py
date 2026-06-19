@@ -196,6 +196,48 @@ def test_seed_sync_fields_updates_existing_master_records():
     assert existing.tags == {"source": "test"}
 
 
+def test_seed_map_point_fresh_insert_uses_seed_coordinates(db_session):
+    """A fresh seed inserts map points with their seed-defined coordinates."""
+    from app.models import MapPoint
+    from app.seed.initial_data import seed
+
+    seed(db_session)
+
+    mp = db_session.get(MapPoint, "mp_rainbow_road")
+    assert mp is not None
+    # Seed grid value for rainbow_road.
+    assert mp.x == 0.90
+    assert mp.y == 0.90
+
+
+def test_seed_preserves_user_calibrated_map_point_coordinates(db_session):
+    """After calibration, a re-seed preserves x/y/radius but still restores
+    non-coordinate seed-owned master fields (proving only calibration is excluded)."""
+    from app.models import MapPoint
+    from app.seed.initial_data import seed
+
+    seed(db_session)
+
+    mp = db_session.get(MapPoint, "mp_rainbow_road")
+    # Calibrate to values clearly different from the placeholder grid.
+    mp.x = 0.137
+    mp.y = 0.482
+    mp.radius = 0.061
+    # Clobber a seed-owned field so we can prove it is re-synced.
+    mp.label_ja = "ユーザー編集ラベル"
+    db_session.commit()
+
+    seed(db_session)
+
+    mp_after = db_session.get(MapPoint, "mp_rainbow_road")
+    # Calibration is user-managed and must survive the re-seed exactly.
+    assert mp_after.x == 0.137
+    assert mp_after.y == 0.482
+    assert mp_after.radius == 0.061
+    # Non-coordinate seed-owned master field is restored from the seed.
+    assert mp_after.label_ja == "レインボーロード"
+
+
 def _active_accounts(session):
     from sqlalchemy import select
 
