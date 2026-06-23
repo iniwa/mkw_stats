@@ -5,7 +5,7 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.orm import Session
 
 from app.models.enums import SessionStatus, SourceType
@@ -139,6 +139,13 @@ def _find_best_session(
             PlaySession.completed_at >= lower,
             PlaySession.completed_at <= upper,
             PlaySession.player_count.in_(valid_counts),
+            # Only attach to sessions of the requested season. Legacy rows with an
+            # unknown (null) season stay eligible and become tagged on attach; a row
+            # already tagged with a different season must not be matched here.
+            or_(
+                PlaySession.lounge_season == season,
+                PlaySession.lounge_season.is_(None),
+            ),
         )
     ).all()
 
@@ -205,16 +212,28 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
 
     all_changes_sorted = sorted(all_changes, key=lambda x: x[1]["time"], reverse=True)
 
-    existing_ids: set[str] = {
-        row[0]
-        for row in db.execute(
-            select(PlaySession.lounge_mmr_table_id).where(PlaySession.lounge_mmr_table_id.isnot(None))
+    # Map already-synced changeId -> its local session, so a change that is already
+    # attached can have its legacy (null) season backfilled from the current response.
+    existing_by_id: dict[str, PlaySession] = {
+        s.lounge_mmr_table_id: s
+        for s in db.scalars(
+            select(PlaySession).where(PlaySession.lounge_mmr_table_id.isnot(None))
         ).all()
     }
+    existing_ids = set(existing_by_id.keys())
 
+    enriched_any = False
     for game, change in all_changes_sorted:
         change_id = change["change_id"]
         if change_id in existing_ids:
+            # This change is already attached to a local session. Observing it in the
+            # requested-season response proves the (session, season) association, so a
+            # legacy unknown season can be safely backfilled — but a non-null, different
+            # season is never overwritten.
+            existing = existing_by_id[change_id]
+            if existing.lounge_season is None:
+                existing.lounge_season = season
+                enriched_any = True
             continue
 
         new_mmr = change["new_mmr"]
@@ -231,6 +250,7 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
         candidate.lounge_mmr_after = new_mmr
         candidate.lounge_mmr_delta = mmr_delta
         candidate.lounge_mmr_game = game
+        candidate.lounge_season = season
         candidate.lounge_mmr_synced_at = datetime.now(timezone.utc)
         db.commit()
         db.refresh(candidate)
@@ -240,6 +260,18 @@ def sync_mmr(db: Session, player_id: str, season: int) -> dict:
             "updated_session": candidate,
             "updated_game": game,
             "message": f"セッションに MMR を同期しました（changeId={change_id}）",
+        }
+
+    # No new session was attached. If only legacy season metadata was enriched, report
+    # that distinctly so the result is not mistaken for a new MMR update.
+    if enriched_any:
+        db.commit()
+        return {
+            "current_mmr_12p": current_mmr_12p,
+            "current_mmr_24p": current_mmr_24p,
+            "updated_session": None,
+            "updated_game": None,
+            "message": "既存セッションのシーズン情報を補完しました",
         }
 
     return {

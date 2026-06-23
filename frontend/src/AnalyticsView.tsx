@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { api, Course, PlaySession, RaceRecord, Route } from './api'
+import { api, Course, PlaySession, RaceRecord, Route, Settings } from './api'
 
 type Mode = 'vr' | 'lounge' | 'both'
 type FieldFilter = 'all' | '24p' | '12p'
@@ -67,6 +67,9 @@ function placementBand(placement: number, playerCount: number): 'top' | 'mid' | 
 export default function AnalyticsView() {
   const [mode, setMode] = useState<Mode>('both')
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all')
+  // Lounge season filter. Preserved across mode switches but only applied in Lounge mode.
+  const [season, setSeason] = useState<'all' | number>('all')
+  const [settings, setSettings] = useState<Settings | null>(null)
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -81,16 +84,21 @@ export default function AnalyticsView() {
     setError(null)
     try {
       const sources = mode === 'both' ? (['ranked', 'lounge'] as const) : mode === 'vr' ? (['ranked'] as const) : (['lounge'] as const)
-      const [courses, routes, ...sessionGroups] = await Promise.all([
+      // Season filter is only meaningful for Lounge data; never let it touch ranked rows.
+      const seasonParam = mode === 'lounge' && season !== 'all' ? season : undefined
+      const [courses, routes, settingsRes, ...sessionGroups] = await Promise.all([
         api.getCourses(),
         api.getRoutes(),
+        api.getSettings().catch((): Settings | null => null),
         ...sources.map(src => api.getSessions({
           source: src,
           limit,
           started_from: dateFrom ? toFromISO(dateFrom) : undefined,
           started_to: dateTo ? toToISO(dateTo) : undefined,
+          lounge_season: seasonParam,
         })),
       ])
+      setSettings(settingsRes)
       const sessions = sessionGroups.flat()
       const raceArrays = await Promise.all(sessions.map(s => api.getSessionRaces(s.id, true)))
       const sessionPlayerCount = new Map(sessions.map(s => [s.id, s.player_count]))
@@ -108,7 +116,7 @@ export default function AnalyticsView() {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [mode, dateFrom, dateTo, limit])
+  useEffect(() => { load() }, [mode, dateFrom, dateTo, limit, season])
 
   const modeToggle = (
     <div className="seg">
@@ -139,6 +147,34 @@ export default function AnalyticsView() {
         </button>
       ))}
     </div>
+  ) : null
+
+  // Season options: 0 .. current setting, extended upward if loaded data contains a
+  // higher numbered season. Keep the selected option available even if Settings
+  // cannot be loaded or the selected season currently has no sessions.
+  const baseMaxSeason = Math.max(
+    settings?.lounge_season ?? -1,
+    season === 'all' ? -1 : season,
+  )
+  const dataMaxSeason = (data?.sessions ?? []).reduce(
+    (m, s) => (s.lounge_season != null && s.lounge_season > m ? s.lounge_season : m),
+    baseMaxSeason,
+  )
+  const seasonOptions = dataMaxSeason >= 0
+    ? Array.from({ length: dataMaxSeason + 1 }, (_, i) => i).reverse()
+    : []
+
+  // Season selector: visible and applied only in Lounge mode (hidden for VR / both).
+  const seasonSelect = mode === 'lounge' ? (
+    <select
+      className="date-filter__select"
+      value={season}
+      disabled={loading}
+      onChange={e => setSeason(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+    >
+      <option value="all">全シーズン</option>
+      {seasonOptions.map(n => <option key={n} value={n}>シーズン{n}</option>)}
+    </select>
   ) : null
 
   const dateFilter = (
@@ -172,6 +208,7 @@ export default function AnalyticsView() {
           <span className="analytics__title">Analytics</span>
           {modeToggle}
           {fieldFilterToggle}
+          {seasonSelect}
         </div>
         <p className="placeholder">読み込み中…</p>
       </div>
@@ -185,6 +222,7 @@ export default function AnalyticsView() {
           <span className="analytics__title">Analytics</span>
           {modeToggle}
           {fieldFilterToggle}
+          {seasonSelect}
         </div>
         <p className="notice notice--error">{error ?? '読み込みに失敗しました'}</p>
         <div className="btn-row">
@@ -195,7 +233,10 @@ export default function AnalyticsView() {
   }
 
   const { sessions, races, courses, routes } = data
-  const windowLabel = (dateFrom || dateTo) ? 'フィルター中' : `直近 ${limit} セッション/ソース`
+  const baseWindowLabel = (dateFrom || dateTo) ? 'フィルター中' : `直近 ${limit} セッション/ソース`
+  // Make the season scope explicit in the filter summary (Lounge mode only).
+  const seasonScopeLabel = season === 'all' ? '全シーズン' : `シーズン${season}`
+  const windowLabel = mode === 'lounge' ? `${baseWindowLabel}・${seasonScopeLabel}` : baseWindowLabel
 
   // Aggregate per course/route from non-cancelled races.
   // When mode === 'lounge' and a player-size sub-filter is active, restrict by player_count.
@@ -270,6 +311,7 @@ export default function AnalyticsView() {
         <span className="analytics__title">Analytics</span>
         {modeToggle}
         {fieldFilterToggle}
+        {seasonSelect}
         <span className="analytics__window">{windowLabel}</span>
         <button className="btn" onClick={load} disabled={loading}>再読み込み</button>
       </div>

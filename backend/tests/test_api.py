@@ -1703,6 +1703,173 @@ def test_mmr_sync_current_mmr_populated_when_changes_unusable(seeded_client):
 
 
 # ---------------------------------------------------------------------------
+# Lounge season snapshot / filter / sync tagging
+# ---------------------------------------------------------------------------
+
+def test_new_lounge_session_defaults_to_season_two(seeded_client):
+    s = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    assert s["lounge_season"] == 2
+
+
+def test_new_lounge_session_defaults_to_season_two_without_settings_row(client):
+    s = client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    assert s["lounge_season"] == 2
+
+
+def test_new_lounge_session_snapshots_current_season(seeded_client):
+    seeded_client.patch(
+        "/api/v1/settings", json={"lounge_season": 1, "lounge_game": "mkworld"}
+    )
+    s = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    assert s["lounge_season"] == 1
+
+
+def test_changing_settings_does_not_mutate_session_season(seeded_client):
+    s = seeded_client.post(
+        "/api/v1/play-sessions", json={"source": "lounge", "player_count": 24}
+    ).json()
+    assert s["lounge_season"] == 2
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_season": 5})
+
+    again = seeded_client.get(f"/api/v1/play-sessions/{s['id']}").json()
+    assert again["lounge_season"] == 2
+
+
+def test_ranked_session_has_null_lounge_season(seeded_client):
+    s = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    assert s["lounge_season"] is None
+
+
+def test_list_sessions_lounge_season_filters_before_limit(client, db_session):
+    # Newer season-1 sessions would dominate a small limit; the season filter must be
+    # applied before the limit so the older season-2 rows are still returned.
+    for day in range(1, 6):
+        s = _insert_session(db_session, _dt(2026, 5, day))
+        s.lounge_season = 1
+    for day in range(1, 4):
+        s = _insert_session(db_session, _dt(2026, 1, day))
+        s.lounge_season = 2
+    db_session.commit()
+
+    resp = client.get("/api/v1/play-sessions", params={"lounge_season": 2, "limit": 2})
+    assert resp.status_code == 200
+    body = resp.json()
+    assert len(body) == 2
+    assert all(s["lounge_season"] == 2 for s in body)
+
+
+def test_list_sessions_lounge_season_omitted_preserves_results(client, db_session):
+    a = _insert_session(db_session, _dt(2026, 5, 1))
+    a.lounge_season = 1
+    b = _insert_session(db_session, _dt(2026, 5, 2))
+    b.lounge_season = 2
+    db_session.commit()
+
+    resp = client.get("/api/v1/play-sessions")
+    ids = {s["id"] for s in resp.json()}
+    assert str(a.id) in ids
+    assert str(b.id) in ids
+
+
+def test_mmr_sync_tags_matched_session_with_requested_season(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details_12p = _player_details(1100, [_mmr_change(2501, 1100, 100, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld12p" else _player_details(2000, [])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    body = resp.json()
+    assert body["updated_session"] is not None
+    assert body["updated_session"]["lounge_season"] == 2
+
+
+def test_mmr_sync_does_not_match_session_tagged_different_season(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+    s.lounge_season = 1  # tagged season 1; requested season (default) is 2
+    db_session.commit()
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})
+    details_12p = _player_details(1100, [_mmr_change(2601, 1100, 100, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld12p" else _player_details(2000, [])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    assert resp.json()["updated_session"] is None
+    db_session.refresh(s)
+    assert s.lounge_mmr_table_id is None
+    assert s.lounge_season == 1
+
+
+def test_mmr_sync_enriches_legacy_null_season_session(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+    # Legacy synced row: change is already attached but the season is unknown.
+    s.lounge_mmr_table_id = "7777"
+    s.lounge_mmr_after = 1100
+    s.lounge_mmr_before = 1000
+    s.lounge_mmr_delta = 100
+    s.lounge_mmr_game = "mkworld12p"
+    s.lounge_season = None
+    db_session.commit()
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})  # season 2
+    details_12p = _player_details(1100, [_mmr_change(7777, 1100, 100, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld12p" else _player_details(2000, [])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    # Only legacy metadata was enriched — not a new session update.
+    assert resp.json()["updated_session"] is None
+    db_session.refresh(s)
+    assert s.lounge_season == 2
+
+
+def test_mmr_sync_does_not_overwrite_existing_season_on_enrichment(seeded_client, db_session):
+    now = datetime.now(timezone.utc)
+    s = _completed_lounge_session(db_session, completed_at=now - timedelta(minutes=30), player_count=12)
+    s.lounge_mmr_table_id = "8888"
+    s.lounge_mmr_after = 1100
+    s.lounge_season = 1  # already a known, different season
+    db_session.commit()
+
+    seeded_client.patch("/api/v1/settings", json={"lounge_player_id": "12345"})  # season 2
+    details_12p = _player_details(1100, [_mmr_change(8888, 1100, 100, hours_ago=0.5)])
+
+    def fake_fetch(player_id, season, game):
+        return details_12p if game == "mkworld12p" else _player_details(2000, [])
+
+    with patch("app.services.lounge_mmr._fetch_player_details", side_effect=fake_fetch):
+        resp = seeded_client.post("/api/v1/lounge/mmr-sync")
+
+    assert resp.status_code == 200
+    db_session.refresh(s)
+    assert s.lounge_season == 1
+
+
+# ---------------------------------------------------------------------------
 # Session delete
 # ---------------------------------------------------------------------------
 

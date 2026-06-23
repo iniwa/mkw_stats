@@ -85,6 +85,7 @@ export interface PlaySession {
   lounge_mmr_table_id: string | null
   lounge_mmr_synced_at: string | null
   lounge_mmr_game: string | null
+  lounge_season: number | null
   completion_reason: string | null
 }
 
@@ -262,6 +263,7 @@ export const api = {
     source?: SourceType
     started_from?: string
     started_to?: string
+    lounge_season?: number
   }) => {
     const params = new URLSearchParams()
     if (options?.limit !== undefined) params.set('limit', String(options.limit))
@@ -269,6 +271,7 @@ export const api = {
     if (options?.source) params.set('source', options.source)
     if (options?.started_from) params.set('started_from', options.started_from)
     if (options?.started_to) params.set('started_to', options.started_to)
+    if (options?.lounge_season !== undefined) params.set('lounge_season', String(options.lounge_season))
     const qs = params.toString()
     return request<PlaySession[]>(`/play-sessions${qs ? '?' + qs : ''}`)
   },

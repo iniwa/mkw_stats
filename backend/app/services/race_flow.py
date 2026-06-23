@@ -27,6 +27,10 @@ from app.services.warnings import compute_lounge_warnings
 
 LOUNGE_MATCH_RACES = 12
 
+# Application default Lounge season, used when no AppSettings row exists yet.
+# Mirrors AppSettings.lounge_season's column default.
+DEFAULT_LOUNGE_SEASON = 2
+
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
@@ -68,6 +72,13 @@ def create_session(db: Session, payload: PlaySessionCreate) -> PlaySession:
     )
     if payload.source == SourceType.ranked:
         session.vr_account_id = _resolve_ranked_account(db, payload.vr_account_id).id
+    elif payload.source == SourceType.lounge:
+        # Snapshot the season active at creation time. This is historical session
+        # metadata: later Settings changes must not retroactively alter it.
+        settings = db.get(AppSettings, 1)
+        session.lounge_season = (
+            settings.lounge_season if settings is not None else DEFAULT_LOUNGE_SEASON
+        )
     db.add(session)
     db.commit()
     db.refresh(session)
@@ -88,6 +99,7 @@ def list_sessions(
     source: SourceType | None = None,
     started_from: datetime | None = None,
     started_to: datetime | None = None,
+    lounge_season: int | None = None,
 ) -> list[PlaySession]:
     stmt = select(PlaySession).order_by(PlaySession.started_at.desc())
     if status is not None:
@@ -98,6 +110,10 @@ def list_sessions(
         stmt = stmt.where(PlaySession.started_at >= started_from)
     if started_to is not None:
         stmt = stmt.where(PlaySession.started_at < started_to)
+    # Apply the season filter before ordering/limit so a small limit cannot hide
+    # matching rows behind newer sessions from other seasons.
+    if lounge_season is not None:
+        stmt = stmt.where(PlaySession.lounge_season == lounge_season)
     stmt = stmt.limit(limit)
     return list(db.scalars(stmt))
 

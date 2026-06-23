@@ -67,6 +67,46 @@ function buildTrendPoints(sessions: PlaySession[], kind: '12p' | '24p'): PlaySes
     .slice(-MMR_TREND_LIMIT)
 }
 
+interface SeasonTrend {
+  key: number | 'unknown'
+  label: string
+  trend12: PlaySession[]
+  trend24: PlaySession[]
+}
+
+function seasonTrendLabel(key: number | 'unknown'): string {
+  return key === 'unknown' ? 'シーズン不明' : `シーズン${key}`
+}
+
+// Group synced MMR sessions by their persisted lounge_season and build per-season
+// 12p/24p trends. Numbered seasons come first (newest/highest first); legacy rows
+// with an unknown (null) season go into a separate "シーズン不明" group so they are
+// never silently folded into the current season. Trend lines never cross a season
+// boundary because each group is plotted independently.
+function buildSeasonTrends(sessions: PlaySession[]): SeasonTrend[] {
+  const synced = sessions.filter(
+    s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null,
+  )
+  const groups = new Map<number | 'unknown', PlaySession[]>()
+  for (const s of synced) {
+    const key: number | 'unknown' = s.lounge_season == null ? 'unknown' : s.lounge_season
+    const arr = groups.get(key)
+    if (arr) arr.push(s)
+    else groups.set(key, [s])
+  }
+  const numbered = [...groups.keys()]
+    .filter((k): k is number => k !== 'unknown')
+    .sort((a, b) => b - a)
+  const ordered: (number | 'unknown')[] = [...numbered]
+  if (groups.has('unknown')) ordered.push('unknown')
+  return ordered.map(key => ({
+    key,
+    label: seasonTrendLabel(key),
+    trend12: buildTrendPoints(groups.get(key)!, '12p'),
+    trend24: buildTrendPoints(groups.get(key)!, '24p'),
+  }))
+}
+
 function MmrTrendChart({ trend12, trend24 }: { trend12: PlaySession[]; trend24: PlaySession[] }) {
   const W = 480, H = 130
   const padL = 46, padR = 8, padT = 10, padB = 14
@@ -168,9 +208,9 @@ export default function LoungeView() {
     try {
       const result = await api.mmrSync()
       setMmrSyncResult(result)
-      if (result.updated_session) {
-        await load()
-      }
+      // A successful sync can also enrich only a legacy session's season while
+      // returning updated_session=null. Reload so season grouping updates immediately.
+      await load()
     } catch (e: unknown) {
       setMmrSyncError(e instanceof ApiError ? e.message : 'MMR同期に失敗しました')
     } finally {
@@ -196,8 +236,7 @@ export default function LoungeView() {
 
   const { sessions, racesBySession, courses, routes, settings } = data
 
-  const trend12 = buildTrendPoints(sessions, '12p')
-  const trend24 = buildTrendPoints(sessions, '24p')
+  const seasonTrends = buildSeasonTrends(sessions)
   const syncedAll = sessions
     .filter(s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null)
     .filter(s => viewMode === 'both' || mmrGameKind(s.lounge_mmr_game) === viewMode)
@@ -234,11 +273,14 @@ export default function LoungeView() {
     </div>
   )
 
-  // MMR panel — rendered regardless of session count so the synced MMR persists
-  // across navigation and shows even when no Lounge session is recorded yet.
-  const synced = sessions.filter(s => s.lounge_mmr_after != null)
-  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
-  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
+  // MMR summary panel — scoped to the configured current season so historical
+  // max/min are never mixed across seasons. The "現在" values still come from the
+  // Settings snapshot / latest sync; only the aggregates are season-scoped.
+  const currentSeason = settings?.lounge_season ?? null
+  const inCurrentSeason = (s: PlaySession) => currentSeason != null && s.lounge_season === currentSeason
+  const synced = sessions.filter(s => s.lounge_mmr_after != null && inCurrentSeason(s))
+  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null && inCurrentSeason(s))
+  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null && inCurrentSeason(s))
   const syncedForView = viewMode === '12p' ? synced12 : viewMode === '24p' ? synced24 : synced
   const latestForView = syncedForView[0]
   const mmr12 = mmrSyncResult != null
@@ -262,12 +304,14 @@ export default function LoungeView() {
   const show12 = viewMode === 'both' || viewMode === '12p'
   const show24 = viewMode === 'both' || viewMode === '24p'
   const hasAnyMmrVisible =
-    (show12 && (mmr12 != null || synced12.length > 0)) ||
-    (show24 && (mmr24 != null || synced24.length > 0)) ||
-    (viewMode === 'both' && synced.length > 0)
+    settings != null && (
+      (show12 && (mmr12 != null || synced12.length > 0)) ||
+      (show24 && (mmr24 != null || synced24.length > 0)) ||
+      (viewMode === 'both' && synced.length > 0)
+    )
   const mmrPanel = (
     <div className="panel">
-      <div className="panel__title">MMR</div>
+      <div className="panel__title">{currentSeason != null ? `MMR（シーズン${currentSeason}）` : 'MMR'}</div>
       {hasAnyMmrVisible ? (
         <>
           {show12 && (
@@ -318,7 +362,11 @@ export default function LoungeView() {
           </div>
         </>
       ) : (
-        <p className="placeholder">未連携 — 下のボタンで Lounge MMR を同期できます</p>
+        <p className="placeholder">
+          {settings == null
+            ? '設定を読み込めませんでした — シーズン別 MMR を表示できません'
+            : '未連携 — 下のボタンで Lounge MMR を同期できます'}
+        </p>
       )}
       <div className="btn-row">
         <button className="btn btn--primary" onClick={syncMmr} disabled={mmrSyncing || loading}>
@@ -431,37 +479,59 @@ export default function LoungeView() {
 
       {mmrPanel}
 
-      <div className="panel">
-        <div className="panel__title">MMR 推移</div>
-        {!(show12 && trend12.length > 0) && !(show24 && trend24.length > 0) ? (
-          <p className="placeholder">同期済みのMMR履歴がありません</p>
-        ) : (
-          <>
-            <MmrTrendChart trend12={show12 ? trend12 : []} trend24={show24 ? trend24 : []} />
-            <div className="lounge__section-label" style={{ marginTop: '0.6rem' }}>直近の同期履歴</div>
-            <ul className="lounge__mmr-list">
-              {syncedAll.map(s => {
-                const is24 = s.lounge_mmr_game === 'mkworld24p'
-                const delta = s.lounge_mmr_delta
-                const deltaStr = delta != null ? (delta >= 0 ? `+${delta}` : String(delta)) : '—'
-                const deltaPos = delta != null && delta >= 0
-                return (
-                  <li key={s.id} className="lounge__mmr-item">
-                    <span className="lounge__meta">{fmtTime(s.completed_at ?? s.started_at)}</span>
-                    <span className={`tag ${is24 ? 'tag--mmr24' : 'tag--mmr12'}`}>{is24 ? '24p' : '12p'}</span>
-                    <span className="lounge__mmr-range">
-                      {s.lounge_mmr_before ?? '?'} → {s.lounge_mmr_after ?? '?'}
-                    </span>
-                    <span className={deltaPos ? 'lounge__mmr-delta--pos' : 'lounge__mmr-delta--neg'}>
-                      {deltaStr}
-                    </span>
-                  </li>
-                )
-              })}
-            </ul>
-          </>
-        )}
-      </div>
+      {(() => {
+        // One MMR trend panel per season; seasons are never combined into a single
+        // chart and lines never connect across season boundaries. Empty groups
+        // (no points for the active 12p/24p view) are skipped.
+        const panels = seasonTrends.flatMap(st => {
+          const t12 = show12 ? st.trend12 : []
+          const t24 = show24 ? st.trend24 : []
+          if (t12.length === 0 && t24.length === 0) return []
+          return [(
+            <div className="panel" key={`trend-${st.key}`}>
+              <div className="panel__title">{st.label} MMR推移</div>
+              <MmrTrendChart trend12={t12} trend24={t24} />
+            </div>
+          )]
+        })
+        if (panels.length === 0) {
+          return (
+            <div className="panel">
+              <div className="panel__title">MMR推移</div>
+              <p className="placeholder">同期済みのMMR履歴がありません</p>
+            </div>
+          )
+        }
+        return panels
+      })()}
+
+      {syncedAll.length > 0 && (
+        <div className="panel">
+          <div className="panel__title">直近の同期履歴</div>
+          <ul className="lounge__mmr-list">
+            {syncedAll.map(s => {
+              const is24 = s.lounge_mmr_game === 'mkworld24p'
+              const delta = s.lounge_mmr_delta
+              const deltaStr = delta != null ? (delta >= 0 ? `+${delta}` : String(delta)) : '—'
+              const deltaPos = delta != null && delta >= 0
+              const seasonTag = s.lounge_season == null ? '不明' : `S${s.lounge_season}`
+              return (
+                <li key={s.id} className="lounge__mmr-item">
+                  <span className="lounge__meta">{fmtTime(s.completed_at ?? s.started_at)}</span>
+                  <span className={`tag ${is24 ? 'tag--mmr24' : 'tag--mmr12'}`}>{is24 ? '24p' : '12p'}</span>
+                  <span className="lounge__meta">{seasonTag}</span>
+                  <span className="lounge__mmr-range">
+                    {s.lounge_mmr_before ?? '?'} → {s.lounge_mmr_after ?? '?'}
+                  </span>
+                  <span className={deltaPos ? 'lounge__mmr-delta--pos' : 'lounge__mmr-delta--neg'}>
+                    {deltaStr}
+                  </span>
+                </li>
+              )
+            })}
+          </ul>
+        </div>
+      )}
 
       {activeSessions.length > 0 && (
         <div className="panel">
