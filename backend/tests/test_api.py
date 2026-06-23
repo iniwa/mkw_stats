@@ -1765,6 +1765,24 @@ def test_list_sessions_lounge_season_filters_before_limit(client, db_session):
     assert all(s["lounge_season"] == 2 for s in body)
 
 
+def test_list_sessions_lounge_season_before_includes_older_and_unknown_before_limit(client, db_session):
+    current = _insert_session(db_session, _dt(2026, 6, 3))
+    current.lounge_season = 3
+    older = _insert_session(db_session, _dt(2026, 6, 2))
+    older.lounge_season = 2
+    unknown = _insert_session(db_session, _dt(2026, 6, 1))
+    unknown.lounge_season = None
+    db_session.commit()
+
+    resp = client.get(
+        "/api/v1/play-sessions",
+        params={"lounge_season_before": 3, "limit": 2},
+    )
+    assert resp.status_code == 200
+    body = resp.json()
+    assert [s["id"] for s in body] == [str(older.id), str(unknown.id)]
+
+
 def test_list_sessions_lounge_season_omitted_preserves_results(client, db_session):
     a = _insert_session(db_session, _dt(2026, 5, 1))
     a.lounge_season = 1

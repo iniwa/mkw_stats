@@ -26,18 +26,18 @@ Lounge season is historical session metadata, snapshotted at session creation ti
    session's season is null (legacy) or matches the requested season. A session already
    tagged with a different season is excluded from matching.
 
-5. **Trend visualization by season**: Lounge MMR trend charts are separated by season,
-   with one panel per numbered season (newest/highest first) plus a separate
-   「シーズン不明」panel for null-season rows. Trend lines never connect across season
-   boundaries. The current-season MMR summary (max/min/delta/synced-count) is scoped to
-   the configured current season only.
+5. **Trend visualization by season**: Season 3 and later are durable, individually
+   selectable seasons. The current season is labeled `今シーズン（シーズンN）`;
+   completed numbered seasons from N-1 down through Season 3 are listed separately.
+   Older unclassified history is grouped under the fixed compatibility label
+   `シーズン3以前`. This legacy bucket contains seasons below 3 plus null-season rows
+   and never absorbs a row explicitly tagged as Season 3 or later.
 
-6. **Analytics filtering**: Season filtering applies ONLY to Lounge mode; it is hidden
-   and not applied for VR or both modes, ensuring ranked data is never removed by a
-   season filter. The backend `GET /api/v1/play-sessions?lounge_season=N` query parameter
-   filters sessions before applying the result limit. Available options are 全シーズン
-   plus Season 0 through the current setting (extended if loaded data contains a higher
-   season). Legacy null-season rows appear only under 全シーズン.
+6. **Analytics filtering**: Season filtering in Analytics applies ONLY to Lounge mode;
+   it is hidden and not applied for VR or both modes, ensuring ranked data is never
+   removed by a season filter. The exact-season backend query filters before the result
+   limit. Lounge overview also supports `lounge_season_before=3`, which returns sessions
+   below Season 3 plus null-season legacy rows before applying the limit.
 
 ## Why
 

@@ -33,6 +33,7 @@ def list_play_sessions(
     started_from: datetime | None = Query(None),
     started_to: datetime | None = Query(None),
     lounge_season: int | None = Query(None),
+    lounge_season_before: int | None = Query(None),
     db: Session = Depends(get_db),
 ):
     return race_flow.list_sessions(
@@ -43,6 +44,7 @@ def list_play_sessions(
         started_from=started_from,
         started_to=started_to,
         lounge_season=lounge_season,
+        lounge_season_before=lounge_season_before,
     )
 
 

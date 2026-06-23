@@ -3,7 +3,7 @@ import uuid
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
-from sqlalchemy import func, select
+from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session
 
 from app.models import (
@@ -100,6 +100,7 @@ def list_sessions(
     started_from: datetime | None = None,
     started_to: datetime | None = None,
     lounge_season: int | None = None,
+    lounge_season_before: int | None = None,
 ) -> list[PlaySession]:
     stmt = select(PlaySession).order_by(PlaySession.started_at.desc())
     if status is not None:
@@ -114,6 +115,13 @@ def list_sessions(
     # matching rows behind newer sessions from other seasons.
     if lounge_season is not None:
         stmt = stmt.where(PlaySession.lounge_season == lounge_season)
+    if lounge_season_before is not None:
+        stmt = stmt.where(
+            or_(
+                PlaySession.lounge_season < lounge_season_before,
+                PlaySession.lounge_season.is_(None),
+            )
+        )
     stmt = stmt.limit(limit)
     return list(db.scalars(stmt))
 

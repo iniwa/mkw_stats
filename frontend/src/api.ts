@@ -264,6 +264,7 @@ export const api = {
     started_from?: string
     started_to?: string
     lounge_season?: number
+    lounge_season_before?: number
   }) => {
     const params = new URLSearchParams()
     if (options?.limit !== undefined) params.set('limit', String(options.limit))
@@ -272,6 +273,7 @@ export const api = {
     if (options?.started_from) params.set('started_from', options.started_from)
     if (options?.started_to) params.set('started_to', options.started_to)
     if (options?.lounge_season !== undefined) params.set('lounge_season', String(options.lounge_season))
+    if (options?.lounge_season_before !== undefined) params.set('lounge_season_before', String(options.lounge_season_before))
     const qs = params.toString()
     return request<PlaySession[]>(`/play-sessions${qs ? '?' + qs : ''}`)
   },

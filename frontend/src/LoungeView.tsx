@@ -9,7 +9,9 @@ interface LoungeData {
   settings: Settings | null
 }
 
-type LoungeSeasonMode = 'all' | 'current' | 'specified'
+type LoungeSeasonSelection = 'current' | 'legacy' | `season:${number}`
+
+const LEGACY_SEASON_BOUNDARY = 3
 
 function resolveName(
   kind: 'course' | 'route',
@@ -176,22 +178,25 @@ export default function LoungeView() {
   const [mmrSyncResult, setMmrSyncResult] = useState<MmrSyncResponse | null>(null)
   const [mmrSyncError, setMmrSyncError] = useState<string | null>(null)
   const [viewMode, setViewMode] = useState<'both' | '24p' | '12p'>('both')
-  const [seasonMode, setSeasonMode] = useState<LoungeSeasonMode>('current')
-  const [specifiedSeason, setSpecifiedSeason] = useState<number | null>(null)
+  const [seasonSelection, setSeasonSelection] = useState<LoungeSeasonSelection>('current')
 
   async function load() {
     setLoading(true)
     setError(null)
     try {
       const settings = await api.getSettings().catch((): Settings | null => null)
-      if (seasonMode === 'current' && settings == null) {
-        throw new Error('設定を読み込めないため、今シーズンを判定できません')
+      if (settings == null) {
+        throw new Error('設定を読み込めないため、ラウンジシーズンを判定できません')
       }
-      const loungeSeason = seasonMode === 'current'
-        ? settings!.lounge_season
-        : seasonMode === 'specified'
-          ? (specifiedSeason ?? settings?.lounge_season ?? 0)
-          : undefined
+      const selectedNumber = seasonSelection.startsWith('season:')
+        ? Number(seasonSelection.slice('season:'.length))
+        : null
+      const loungeSeason = seasonSelection === 'current'
+        ? settings.lounge_season
+        : (selectedNumber ?? undefined)
+      const loungeSeasonBefore = seasonSelection === 'legacy'
+        ? LEGACY_SEASON_BOUNDARY
+        : undefined
       const [sessions, courses, routes] = await Promise.all([
         api.getSessions({
           source: 'lounge',
@@ -199,6 +204,7 @@ export default function LoungeView() {
           started_from: dateFrom ? toFromISO(dateFrom) : undefined,
           started_to: dateTo ? toToISO(dateTo) : undefined,
           lounge_season: loungeSeason,
+          lounge_season_before: loungeSeasonBefore,
         }),
         api.getCourses(),
         api.getRoutes(),
@@ -232,7 +238,7 @@ export default function LoungeView() {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [dateFrom, dateTo, limit, seasonMode, specifiedSeason])
+  useEffect(() => { load() }, [dateFrom, dateTo, limit, seasonSelection])
 
   if (loading) return <p className="placeholder">読み込み中…</p>
 
@@ -249,7 +255,26 @@ export default function LoungeView() {
 
   const { sessions, racesBySession, courses, routes, settings } = data
 
-  const seasonTrends = buildSeasonTrends(sessions)
+  const currentSeason = settings?.lounge_season ?? null
+  const selectedSeason = seasonSelection.startsWith('season:')
+    ? Number(seasonSelection.slice('season:'.length))
+    : seasonSelection === 'current'
+      ? currentSeason
+      : null
+  const historicalSeasonOptions = currentSeason != null && currentSeason > LEGACY_SEASON_BOUNDARY
+    ? Array.from(
+        { length: currentSeason - LEGACY_SEASON_BOUNDARY },
+        (_, index) => currentSeason - index - 1,
+      )
+    : []
+  const seasonTrends = seasonSelection === 'legacy'
+    ? [{
+        key: 'unknown' as const,
+        label: `シーズン${LEGACY_SEASON_BOUNDARY}以前`,
+        trend12: buildTrendPoints(sessions, '12p'),
+        trend24: buildTrendPoints(sessions, '24p'),
+      }]
+    : buildSeasonTrends(sessions)
   const syncedAll = sessions
     .filter(s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null)
     .filter(s => viewMode === 'both' || mmrGameKind(s.lounge_mmr_game) === viewMode)
@@ -260,25 +285,12 @@ export default function LoungeView() {
     })
     .slice(0, 6)
 
-  const currentSeason = settings?.lounge_season ?? null
-  const effectiveSpecifiedSeason = specifiedSeason ?? currentSeason ?? 0
-  const selectedSeason = seasonMode === 'current'
-    ? currentSeason
-    : seasonMode === 'specified'
-      ? effectiveSpecifiedSeason
-      : null
-  const seasonScopeLabel = seasonMode === 'all'
-    ? '全シーズン'
-    : seasonMode === 'current'
-      ? `今シーズン（Season ${currentSeason ?? '—'}）`
-      : `指定シーズン（Season ${effectiveSpecifiedSeason}）`
+  const seasonScopeLabel = seasonSelection === 'current'
+    ? `今シーズン（シーズン${currentSeason ?? '—'}）`
+    : seasonSelection === 'legacy'
+      ? `シーズン${LEGACY_SEASON_BOUNDARY}以前`
+      : `シーズン${selectedSeason ?? '—'}`
   const windowLabel = `${dateFrom || dateTo ? 'フィルター中' : `直近 ${limit} セッション`}・${seasonScopeLabel}`
-  const maxSeason = Math.max(
-    currentSeason ?? 0,
-    specifiedSeason ?? 0,
-    ...sessions.map(s => s.lounge_season ?? 0),
-  )
-  const seasonOptions = Array.from({ length: maxSeason + 1 }, (_, i) => i).reverse()
 
   const dateFilter = (
     <div className="date-filter">
@@ -301,38 +313,28 @@ export default function LoungeView() {
       </div>
       <div className="date-filter__group">
         <span className="date-filter__label">ラウンジシーズン</span>
-        <select className="date-filter__select" value={seasonMode} disabled={loading}
-          onChange={e => setSeasonMode(e.target.value as LoungeSeasonMode)}>
-          <option value="all">全シーズン</option>
-          <option value="current">今シーズン</option>
-          <option value="specified">指定シーズン</option>
+        <select className="date-filter__select" value={seasonSelection} disabled={loading}
+          onChange={e => setSeasonSelection(e.target.value as LoungeSeasonSelection)}>
+          <option value="current">今シーズン（シーズン{currentSeason ?? '—'}）</option>
+          {historicalSeasonOptions.map(season => (
+            <option key={season} value={`season:${season}`}>シーズン{season}</option>
+          ))}
+          <option value="legacy">シーズン{LEGACY_SEASON_BOUNDARY}以前</option>
         </select>
       </div>
-      {seasonMode === 'specified' && (
-        <div className="date-filter__group">
-          <span className="date-filter__label">指定</span>
-          <select className="date-filter__select" value={effectiveSpecifiedSeason} disabled={loading}
-            onChange={e => setSpecifiedSeason(Number(e.target.value))}>
-            {seasonOptions.map(v => <option key={v} value={v}>Season {v}</option>)}
-          </select>
-        </div>
-      )}
       <button className="btn" disabled={loading || (!dateFrom && !dateTo)}
         onClick={() => { setDateFrom(''); setDateTo('') }}>日付クリア</button>
     </div>
   )
 
-  // MMR summary panel — scoped to the selected season. The live Settings snapshot
-  // is used only for the configured current season; historical seasons use their
-  // latest recorded session value.
-  const summarySeason = selectedSeason ?? currentSeason
-  const inSummarySeason = (s: PlaySession) => summarySeason != null && s.lounge_season === summarySeason
-  const synced = sessions.filter(s => s.lounge_mmr_after != null && inSummarySeason(s))
-  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null && inSummarySeason(s))
-  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null && inSummarySeason(s))
+  // Current season uses the live Settings snapshot. Earlier and unknown records are
+  // summarized together as the historical "シーズンN以前" bucket.
+  const synced = sessions.filter(s => s.lounge_mmr_after != null)
+  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
+  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
   const syncedForView = viewMode === '12p' ? synced12 : viewMode === '24p' ? synced24 : synced
   const latestForView = syncedForView[0]
-  const summaryIsCurrentSeason = summarySeason != null && summarySeason === currentSeason
+  const summaryIsCurrentSeason = seasonSelection === 'current'
   const mmr12 = summaryIsCurrentSeason
     ? (mmrSyncResult?.current_mmr_12p ?? settings?.lounge_mmr_12p ?? synced12[0]?.lounge_mmr_after ?? null)
     : (synced12[0]?.lounge_mmr_after ?? null)
@@ -361,7 +363,13 @@ export default function LoungeView() {
     )
   const mmrPanel = (
     <div className="panel">
-      <div className="panel__title">{summarySeason != null ? `MMR（シーズン${summarySeason}）` : 'MMR'}</div>
+      <div className="panel__title">
+        {summaryIsCurrentSeason
+          ? `MMR（シーズン${currentSeason ?? '—'}）`
+          : seasonSelection === 'legacy'
+            ? `MMR（シーズン${LEGACY_SEASON_BOUNDARY}以前）`
+            : `MMR（シーズン${selectedSeason ?? '—'}）`}
+      </div>
       {hasAnyMmrVisible ? (
         <>
           {show12 && (
@@ -568,7 +576,9 @@ export default function LoungeView() {
               const delta = s.lounge_mmr_delta
               const deltaStr = delta != null ? (delta >= 0 ? `+${delta}` : String(delta)) : '—'
               const deltaPos = delta != null && delta >= 0
-              const seasonTag = s.lounge_season == null ? '不明' : `S${s.lounge_season}`
+              const seasonTag = s.lounge_season == null
+                ? (seasonSelection === 'legacy' ? `S${LEGACY_SEASON_BOUNDARY}以前` : '不明')
+                : `S${s.lounge_season}`
               return (
                 <li key={s.id} className="lounge__mmr-item">
                   <span className="lounge__meta">{fmtTime(s.completed_at ?? s.started_at)}</span>
