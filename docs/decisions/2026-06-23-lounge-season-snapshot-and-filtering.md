@@ -53,6 +53,18 @@ support accurate historical analytics and comparison across seasons:
 - MMR sync must use API-provided evidence (the change ID already attached to a session)
   to resolve null-season rows, rather than guessing.
 
+## Operational correction on 2026-06-23
+
+The user confirmed that the newest synced 12p and 24p records were the first
+records of Season 3. On the Raspberry Pi database, only those two exact records
+were assigned `lounge_season = 3` after migration 009 was applied:
+
+- 12p: completed 2026-06-22 19:49 JST, MMR 3790
+- 24p: completed 2026-06-22 20:53 JST, MMR 2324
+
+Older null-season records remain unknown because no season evidence was provided.
+This was an instance-specific data correction, not a general migration rule.
+
 ## Related
 
 - **Alembic revision 009** (down_revision 008): Adds nullable `play_sessions.lounge_season`
