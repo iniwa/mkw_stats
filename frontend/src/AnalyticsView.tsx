@@ -3,6 +3,9 @@ import { api, Course, PlaySession, RaceRecord, Route, Settings } from './api'
 
 type Mode = 'vr' | 'lounge' | 'both'
 type FieldFilter = 'all' | '24p' | '12p'
+type LoungeSeasonSelection = 'all' | 'current' | 'legacy' | `season:${number}`
+
+const LEGACY_SEASON_BOUNDARY = 3
 
 const MODE_LABELS: Record<Mode, string> = {
   vr: 'VR',
@@ -68,7 +71,7 @@ export default function AnalyticsView() {
   const [mode, setMode] = useState<Mode>('both')
   const [fieldFilter, setFieldFilter] = useState<FieldFilter>('all')
   // Lounge season filter. Preserved across mode switches but only applied in Lounge mode.
-  const [season, setSeason] = useState<'all' | number>('all')
+  const [seasonSelection, setSeasonSelection] = useState<LoungeSeasonSelection>('current')
   const [settings, setSettings] = useState<Settings | null>(null)
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
@@ -84,18 +87,32 @@ export default function AnalyticsView() {
     setError(null)
     try {
       const sources = mode === 'both' ? (['ranked', 'lounge'] as const) : mode === 'vr' ? (['ranked'] as const) : (['lounge'] as const)
+      const settingsRes = await api.getSettings().catch((): Settings | null => null)
+      if (mode === 'lounge' && settingsRes == null) {
+        throw new Error('設定を読み込めないため、ラウンジシーズンを判定できません')
+      }
       // Season filter is only meaningful for Lounge data; never let it touch ranked rows.
-      const seasonParam = mode === 'lounge' && season !== 'all' ? season : undefined
-      const [courses, routes, settingsRes, ...sessionGroups] = await Promise.all([
+      const selectedNumber = seasonSelection.startsWith('season:')
+        ? Number(seasonSelection.slice('season:'.length))
+        : null
+      const seasonParam = mode === 'lounge'
+        ? seasonSelection === 'current'
+          ? settingsRes!.lounge_season
+          : (selectedNumber ?? undefined)
+        : undefined
+      const seasonBeforeParam = mode === 'lounge' && seasonSelection === 'legacy'
+        ? LEGACY_SEASON_BOUNDARY
+        : undefined
+      const [courses, routes, ...sessionGroups] = await Promise.all([
         api.getCourses(),
         api.getRoutes(),
-        api.getSettings().catch((): Settings | null => null),
         ...sources.map(src => api.getSessions({
           source: src,
           limit,
           started_from: dateFrom ? toFromISO(dateFrom) : undefined,
           started_to: dateTo ? toToISO(dateTo) : undefined,
           lounge_season: seasonParam,
+          lounge_season_before: seasonBeforeParam,
         })),
       ])
       setSettings(settingsRes)
@@ -116,7 +133,7 @@ export default function AnalyticsView() {
   }
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { load() }, [mode, dateFrom, dateTo, limit, season])
+  useEffect(() => { load() }, [mode, dateFrom, dateTo, limit, seasonSelection])
 
   const modeToggle = (
     <div className="seg">
@@ -149,31 +166,33 @@ export default function AnalyticsView() {
     </div>
   ) : null
 
-  // Season options: 0 .. current setting, extended upward if loaded data contains a
-  // higher numbered season. Keep the selected option available even if Settings
-  // cannot be loaded or the selected season currently has no sessions.
-  const baseMaxSeason = Math.max(
-    settings?.lounge_season ?? -1,
-    season === 'all' ? -1 : season,
-  )
-  const dataMaxSeason = (data?.sessions ?? []).reduce(
-    (m, s) => (s.lounge_season != null && s.lounge_season > m ? s.lounge_season : m),
-    baseMaxSeason,
-  )
-  const seasonOptions = dataMaxSeason >= 0
-    ? Array.from({ length: dataMaxSeason + 1 }, (_, i) => i).reverse()
+  const currentSeason = settings?.lounge_season ?? null
+  const selectedSeason = seasonSelection.startsWith('season:')
+    ? Number(seasonSelection.slice('season:'.length))
+    : seasonSelection === 'current'
+      ? currentSeason
+      : null
+  const historicalSeasonOptions = currentSeason != null && currentSeason > LEGACY_SEASON_BOUNDARY
+    ? Array.from(
+        { length: currentSeason - LEGACY_SEASON_BOUNDARY },
+        (_, index) => currentSeason - index - 1,
+      )
     : []
 
   // Season selector: visible and applied only in Lounge mode (hidden for VR / both).
   const seasonSelect = mode === 'lounge' ? (
     <select
       className="date-filter__select"
-      value={season}
+      value={seasonSelection}
       disabled={loading}
-      onChange={e => setSeason(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+      onChange={e => setSeasonSelection(e.target.value as LoungeSeasonSelection)}
     >
       <option value="all">全シーズン</option>
-      {seasonOptions.map(n => <option key={n} value={n}>シーズン{n}</option>)}
+      <option value="current">今シーズン（シーズン{currentSeason ?? '—'}）</option>
+      {historicalSeasonOptions.map(season => (
+        <option key={season} value={`season:${season}`}>シーズン{season}</option>
+      ))}
+      <option value="legacy">シーズン{LEGACY_SEASON_BOUNDARY}以前</option>
     </select>
   ) : null
 
@@ -235,7 +254,13 @@ export default function AnalyticsView() {
   const { sessions, races, courses, routes } = data
   const baseWindowLabel = (dateFrom || dateTo) ? 'フィルター中' : `直近 ${limit} セッション/ソース`
   // Make the season scope explicit in the filter summary (Lounge mode only).
-  const seasonScopeLabel = season === 'all' ? '全シーズン' : `シーズン${season}`
+  const seasonScopeLabel = seasonSelection === 'all'
+    ? '全シーズン'
+    : seasonSelection === 'current'
+      ? `今シーズン（シーズン${currentSeason ?? '—'}）`
+      : seasonSelection === 'legacy'
+        ? `シーズン${LEGACY_SEASON_BOUNDARY}以前`
+        : `シーズン${selectedSeason ?? '—'}`
   const windowLabel = mode === 'lounge' ? `${baseWindowLabel}・${seasonScopeLabel}` : baseWindowLabel
 
   // Aggregate per course/route from non-cancelled races.

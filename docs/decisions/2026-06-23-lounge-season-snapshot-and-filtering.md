@@ -27,8 +27,9 @@ Lounge season is historical session metadata, snapshotted at session creation ti
    tagged with a different season is excluded from matching.
 
 5. **Trend visualization by season**: Season 3 and later are durable, individually
-   selectable seasons. The current season is labeled `今シーズン（シーズンN）`;
-   completed numbered seasons from N-1 down through Season 3 are listed separately.
+   selectable seasons. Both Lounge and Lounge-mode Analytics provide `全シーズン`,
+   label the current season `今シーズン（シーズンN）`, and list completed numbered
+   seasons from N-1 down through Season 3 separately.
    Older unclassified history is grouped under the fixed compatibility label
    `シーズン3以前`. This legacy bucket contains seasons below 3 plus null-season rows
    and never absorbs a row explicitly tagged as Season 3 or later.

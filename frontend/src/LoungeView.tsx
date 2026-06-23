@@ -9,7 +9,7 @@ interface LoungeData {
   settings: Settings | null
 }
 
-type LoungeSeasonSelection = 'current' | 'legacy' | `season:${number}`
+type LoungeSeasonSelection = 'all' | 'current' | 'legacy' | `season:${number}`
 
 const LEGACY_SEASON_BOUNDARY = 3
 
@@ -72,37 +72,36 @@ function buildTrendPoints(sessions: PlaySession[], kind: '12p' | '24p'): PlaySes
 }
 
 interface SeasonTrend {
-  key: number | 'unknown'
+  key: number | 'legacy'
   label: string
   trend12: PlaySession[]
   trend24: PlaySession[]
 }
 
-function seasonTrendLabel(key: number | 'unknown'): string {
-  return key === 'unknown' ? 'シーズン不明' : `シーズン${key}`
+function seasonTrendLabel(key: number | 'legacy'): string {
+  return key === 'legacy' ? `シーズン${LEGACY_SEASON_BOUNDARY}以前` : `シーズン${key}`
 }
 
-// Group synced MMR sessions by their persisted lounge_season and build per-season
-// 12p/24p trends. Numbered seasons come first (newest/highest first); legacy rows
-// with an unknown (null) season go into a separate "シーズン不明" group so they are
-// never silently folded into the current season. Trend lines never cross a season
-// boundary because each group is plotted independently.
+// Season 3 and later stay independent. Earlier and unknown rows share the fixed
+// compatibility bucket so all-season views never reintroduce "シーズン不明".
 function buildSeasonTrends(sessions: PlaySession[]): SeasonTrend[] {
   const synced = sessions.filter(
     s => s.lounge_mmr_after != null && mmrGameKind(s.lounge_mmr_game) != null,
   )
-  const groups = new Map<number | 'unknown', PlaySession[]>()
+  const groups = new Map<number | 'legacy', PlaySession[]>()
   for (const s of synced) {
-    const key: number | 'unknown' = s.lounge_season == null ? 'unknown' : s.lounge_season
+    const key: number | 'legacy' = s.lounge_season != null && s.lounge_season >= LEGACY_SEASON_BOUNDARY
+      ? s.lounge_season
+      : 'legacy'
     const arr = groups.get(key)
     if (arr) arr.push(s)
     else groups.set(key, [s])
   }
   const numbered = [...groups.keys()]
-    .filter((k): k is number => k !== 'unknown')
+    .filter((k): k is number => k !== 'legacy')
     .sort((a, b) => b - a)
-  const ordered: (number | 'unknown')[] = [...numbered]
-  if (groups.has('unknown')) ordered.push('unknown')
+  const ordered: (number | 'legacy')[] = [...numbered]
+  if (groups.has('legacy')) ordered.push('legacy')
   return ordered.map(key => ({
     key,
     label: seasonTrendLabel(key),
@@ -285,11 +284,13 @@ export default function LoungeView() {
     })
     .slice(0, 6)
 
-  const seasonScopeLabel = seasonSelection === 'current'
-    ? `今シーズン（シーズン${currentSeason ?? '—'}）`
-    : seasonSelection === 'legacy'
-      ? `シーズン${LEGACY_SEASON_BOUNDARY}以前`
-      : `シーズン${selectedSeason ?? '—'}`
+  const seasonScopeLabel = seasonSelection === 'all'
+    ? '全シーズン'
+    : seasonSelection === 'current'
+      ? `今シーズン（シーズン${currentSeason ?? '—'}）`
+      : seasonSelection === 'legacy'
+        ? `シーズン${LEGACY_SEASON_BOUNDARY}以前`
+        : `シーズン${selectedSeason ?? '—'}`
   const windowLabel = `${dateFrom || dateTo ? 'フィルター中' : `直近 ${limit} セッション`}・${seasonScopeLabel}`
 
   const dateFilter = (
@@ -315,6 +316,7 @@ export default function LoungeView() {
         <span className="date-filter__label">ラウンジシーズン</span>
         <select className="date-filter__select" value={seasonSelection} disabled={loading}
           onChange={e => setSeasonSelection(e.target.value as LoungeSeasonSelection)}>
+          <option value="all">全シーズン</option>
           <option value="current">今シーズン（シーズン{currentSeason ?? '—'}）</option>
           {historicalSeasonOptions.map(season => (
             <option key={season} value={`season:${season}`}>シーズン{season}</option>
@@ -327,14 +329,17 @@ export default function LoungeView() {
     </div>
   )
 
-  // Current season uses the live Settings snapshot. Earlier and unknown records are
-  // summarized together as the historical "シーズンN以前" bucket.
-  const synced = sessions.filter(s => s.lounge_mmr_after != null)
-  const synced12 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
-  const synced24 = sessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
+  // Current season uses the live Settings snapshot. In all-season mode, keep this MMR
+  // summary current-season-only so max/min never mix across season boundaries.
+  const mmrSummarySessions = seasonSelection === 'all'
+    ? sessions.filter(s => currentSeason != null && s.lounge_season === currentSeason)
+    : sessions
+  const synced = mmrSummarySessions.filter(s => s.lounge_mmr_after != null)
+  const synced12 = mmrSummarySessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '12p' && s.lounge_mmr_after != null)
+  const synced24 = mmrSummarySessions.filter(s => mmrGameKind(s.lounge_mmr_game) === '24p' && s.lounge_mmr_after != null)
   const syncedForView = viewMode === '12p' ? synced12 : viewMode === '24p' ? synced24 : synced
   const latestForView = syncedForView[0]
-  const summaryIsCurrentSeason = seasonSelection === 'current'
+  const summaryIsCurrentSeason = seasonSelection === 'current' || seasonSelection === 'all'
   const mmr12 = summaryIsCurrentSeason
     ? (mmrSyncResult?.current_mmr_12p ?? settings?.lounge_mmr_12p ?? synced12[0]?.lounge_mmr_after ?? null)
     : (synced12[0]?.lounge_mmr_after ?? null)
