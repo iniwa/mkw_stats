@@ -16,15 +16,16 @@
 - Report changed files, summary, verification results, blocked checks, and any design questions that should return to Codex.
 
 ## Model / Subagent Policy
-- **Opus is the coordinator; delegate hands-on work to subagents.** By default Opus plans and directs, while the actual implementation, edits, inspection, and verification are delegated to Sonnet or Haiku subagents. Opus should avoid doing routine execution itself when a subagent can do it.
-- Opus owns context reading, requirement interpretation, planning, design-sensitive judgment, subagent orchestration, and final review.
-- Choose the subagent model by task weight:
-  - **Sonnet** — scoped implementation, multi-file or non-trivial edits, localized refactors, code/log inspection, and verification that needs some reasoning.
-  - **Haiku** — light, mechanical, well-defined work: simple text/format edits, single-file find-and-replace, log/grep gathering, and other low-ambiguity tasks where speed and cost matter.
-- Give each subagent a narrow goal, explicit file scope, constraints, non-goals, and expected report.
-- Subagents (Sonnet or Haiku) must not change documented design intent, expand scope, add dependencies, alter build/deploy/external exposure, touch secrets, or make architectural decisions without returning to Opus.
-- Opus may implement directly only for very small edits where subagent overhead clearly outweighs the benefit.
-- If subagents or the intended model split are unavailable, continue with the available model and report that limitation.
+- Claude Code runs in **auto mode** (automatic model selection). There is no fixed coordinator/subagent split.
+- Codex owns design decisions; handoffs are written so implementation needs no further design judgment. Claude Code implements, verifies, and reports directly.
+- Subagents are optional (e.g. broad parallel investigation), not a default. When used, give each a narrow goal, explicit file scope, constraints, non-goals, and expected report.
+- Regardless of model: do not change documented design intent, expand scope, add dependencies, alter build/deploy/external exposure, or touch secrets. Architectural questions return to Codex.
+- If the intended model or tooling is unavailable, continue with what is available and report that limitation.
+
+## Verification (this project)
+- Backend: `cd backend && python -m pytest` (in-memory SQLite; PostgreSQL only needed for Alembic migration checks)
+- Frontend: `cd frontend && npm run typecheck` and `npm run build`
+- Protected (never edit/delete): `.env`, `data/`, `backups/`, production DB content
 
 ## Environment
 - Host: Raspberry Pi 4 (8GB RAM), `linux/arm64`

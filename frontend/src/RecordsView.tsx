@@ -1,16 +1,13 @@
 import { useEffect, useState } from 'react'
 import { api, Course, PlaySession, RaceRecord, RaceUpdateBody, Route, SessionStatus, SourceType, WARNING_LABELS } from './api'
 import { RouteDetail } from './RouteDetail'
+import { fmtTime as formatTime } from './format'
 
 type SourceFilter = SourceType | 'all'
 type StatusFilter = SessionStatus | 'all'
 
 function fmtTime(iso: string | null): string {
-  if (!iso) return '—'
-  const d = new Date(iso)
-  return d.toLocaleString('ja-JP', {
-    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false,
-  })
+  return formatTime(iso, 'record')
 }
 
 function resolveCourse(id: string, courses: Course[]): string {

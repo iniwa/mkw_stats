@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fmtTime, fmtValue } from './format'
 import { api, ApiError, Course, MmrSyncResponse, PlaySession, RaceRecord, Route, Settings } from './api'
 
 interface LoungeData {
@@ -27,15 +28,6 @@ function resolveName(
   return r ? (r.short_name ?? r.name_ja ?? id) : id
 }
 
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString('ja-JP', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
-}
-
 function toFromISO(d: string): string {
   const [y, m, day] = d.split('-').map(Number)
   return new Date(y, m - 1, day).toISOString()
@@ -44,10 +36,6 @@ function toFromISO(d: string): string {
 function toToISO(d: string): string {
   const [y, m, day] = d.split('-').map(Number)
   return new Date(y, m - 1, day + 1).toISOString()
-}
-
-function fmtValue(v: number | null): string {
-  return v == null ? '—' : v.toLocaleString()
 }
 
 const MMR_TREND_LIMIT = 20

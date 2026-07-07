@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { fmtTime, fmtValue } from './format'
 import { api, PlaySession, RaceRecord, Settings, VrAccount } from './api'
 
 interface VrData {
@@ -11,16 +12,6 @@ interface VrData {
 function fmtDelta(v: number | null): string {
   if (v == null) return '—'
   return v >= 0 ? `+${v}` : String(v)
-}
-
-function fmtValue(v: number | null): string {
-  return v == null ? '—' : v.toLocaleString()
-}
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString('ja-JP', {
-    month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit',
-  })
 }
 
 function toFromISO(d: string): string {

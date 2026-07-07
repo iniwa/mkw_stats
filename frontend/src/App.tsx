@@ -7,7 +7,7 @@ import LoungeHostGuideView from './LoungeHostGuideView'
 import LoungeView from './LoungeView'
 import NotesView from './NotesView'
 import PlayingView from './PlayingView'
-import RateOverlayView, { type OverlayMode } from './RateOverlayView'
+import RateOverlayView, { normalizeOverlayPollMs, type OverlayMode } from './RateOverlayView'
 import RecordsView from './RecordsView'
 import SettingsView from './SettingsView'
 import StyleguideView from './StyleguideView'
@@ -26,6 +26,7 @@ const _rawMode = _qp.get('mode')
 const _overlayMode: OverlayMode = (_rawMode === 'vr' || _rawMode === 'mmr' || _rawMode === 'auto' || _rawMode === 'mmr12' || _rawMode === 'mmr24') ? _rawMode : 'vr'
 const _compact = _qp.get('compact') === '1'
 const _solidBg = _qp.get('bg') === 'solid'
+const _overlayPollMs = normalizeOverlayPollMs(_qp.get('pollMs') ?? _qp.get('poll'))
 
 export default function App() {
   const [active, setActive] = useState('Dashboard')
@@ -39,7 +40,7 @@ export default function App() {
   }, [])
 
   if (_isOverlay) {
-    return <RateOverlayView initialMode={_overlayMode} compact={_compact} solidBg={_solidBg} />
+    return <RateOverlayView initialMode={_overlayMode} compact={_compact} solidBg={_solidBg} pollMs={_overlayPollMs} />
   }
 
   if (_isStyleguide) {

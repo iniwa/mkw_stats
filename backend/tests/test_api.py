@@ -2368,3 +2368,60 @@ def test_ta_db_contains_exactly_one_row_after_repeated_put(seeded_client, db_ses
         ).all()
     )
     assert count == 1
+
+# ---------------------------------------------------------------------------
+# Low-coverage error paths
+# ---------------------------------------------------------------------------
+
+def test_create_duplicate_vr_account_returns_409(seeded_client):
+    resp = seeded_client.post(
+        "/api/v1/vr-accounts",
+        json={"name": "main", "display_name": "Duplicate Main"},
+    )
+    assert resp.status_code == 409
+    assert "already exists" in resp.json()["detail"]
+
+
+def test_vr_account_unknown_id_returns_404(client):
+    account_id = uuid.uuid4()
+    responses = [
+        client.patch(f"/api/v1/vr-accounts/{account_id}", json={"display_name": "Missing"}),
+        client.post(f"/api/v1/vr-accounts/{account_id}/activate"),
+        client.delete(f"/api/v1/vr-accounts/{account_id}"),
+    ]
+    for resp in responses:
+        assert resp.status_code == 404
+        assert "vr account not found" in resp.json()["detail"]
+
+
+def test_complete_ranked_rejects_placement_over_player_count(seeded_client):
+    session = seeded_client.post("/api/v1/play-sessions", json={"source": "ranked"}).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]
+
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{draft['id']}/complete-ranked",
+        json={"player_count": 12, "placement": 13, "rating_after": 100},
+    )
+    assert resp.status_code == 400
+    assert "exceeds player_count" in resp.json()["detail"]
+
+
+def test_complete_lounge_rejects_placement_over_session_player_count(seeded_client):
+    session = seeded_client.post(
+        "/api/v1/play-sessions",
+        json={"source": "lounge", "player_count": 12},
+    ).json()
+    draft = seeded_client.post(
+        f"/api/v1/play-sessions/{session['id']}/races/draft",
+        json={"course_id": "dk_pass"},
+    ).json()["race"]
+
+    resp = seeded_client.patch(
+        f"/api/v1/race-records/{draft['id']}/complete-lounge",
+        json={"placement": 13, "score": 1},
+    )
+    assert resp.status_code == 400
+    assert "exceeds player_count" in resp.json()["detail"]

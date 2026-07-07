@@ -139,6 +139,13 @@ npm run dev
 
 Frontendは通常、同一オリジンの `/api/` を通してBackendへアクセスします。Docker構成ではnginxが `backend:8000` にプロキシします。
 
+### 開発ワークフロー
+
+- 設計判断と作業指示（handoff）はCodexが担当し、`docs/handoffs/` に保存します。Claude Codeはhandoffに従って実装・検証・報告を行います（詳細は `AGENTS.md` / `CLAUDE.md`）。
+- 既存コードの改善候補（保守性・安定性）は [`docs/improvements.md`](docs/improvements.md) のチェックリストで管理します。
+- 機能追加の要望・アイデアはルートの [`issues.md`](issues.md) で管理します。
+- 検証は上記のBackend / Frontendのコマンド（`python -m pytest` / `npm run typecheck` / `npm run build`）を実行します。
+
 ## OBSオーバーレイ
 
 Frontend URLにクエリを付けると、ブラウザソース用のレート表示を利用できます。

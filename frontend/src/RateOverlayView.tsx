@@ -3,7 +3,7 @@ import { api, type PlaySession, type Settings, type VrAccount } from './api'
 
 export type OverlayMode = 'vr' | 'mmr' | 'auto' | 'mmr12' | 'mmr24'
 
-function resolveDisplay(
+export function resolveDisplay(
   mode: OverlayMode,
   activeSessions: PlaySession[],
   idleAutoDisplay: 'vr' | 'mmr',
@@ -18,7 +18,7 @@ function resolveDisplay(
 }
 
 /** Resolve which MMR format to show based on mode + active lounge session. */
-function resolveMmrFormat(
+export function resolveMmrFormat(
   mode: OverlayMode,
   activeSessions: PlaySession[],
   settings: Settings | null,
@@ -52,9 +52,18 @@ interface Props {
   initialMode: OverlayMode
   compact: boolean
   solidBg: boolean
+  pollMs?: number
 }
 
-export default function RateOverlayView({ initialMode, compact, solidBg }: Props) {
+export function normalizeOverlayPollMs(value: string | number | null | undefined): number {
+  if (value == null || value === '') return 2000
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isFinite(parsed)) return 2000
+  return Math.min(60000, Math.max(1000, Math.round(parsed)))
+}
+
+export default function RateOverlayView({ initialMode, compact, solidBg, pollMs = 2000 }: Props) {
+  const effectivePollMs = normalizeOverlayPollMs(pollMs)
   const [mode, setMode] = useState<OverlayMode>(initialMode)
   const [vrAccounts, setVrAccounts] = useState<VrAccount[]>([])
   const [settings, setSettings] = useState<Settings | null>(null)
@@ -89,12 +98,12 @@ export default function RateOverlayView({ initialMode, compact, solidBg }: Props
       }
     }
     poll()
-    const id = setInterval(poll, 2000)
+    const id = setInterval(poll, effectivePollMs)
     return () => {
       active = false
       clearInterval(id)
     }
-  }, [mode])
+  }, [mode, effectivePollMs])
 
   const hasLoungeSession = activeSessions.some(s => s.source === 'lounge' && s.status === 'active')
   const hasRankedSession = activeSessions.some(s => s.source === 'ranked' && s.status === 'active')

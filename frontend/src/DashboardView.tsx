@@ -9,6 +9,7 @@ import {
   type Settings,
   type VrAccount,
 } from './api'
+import { fmtTime } from './format'
 
 interface DashboardData {
   vrAccounts: VrAccount[]
@@ -24,15 +25,6 @@ interface DashboardData {
 
 interface Props {
   onNavigate: (view: string) => void
-}
-
-function fmtTime(iso: string): string {
-  return new Date(iso).toLocaleString('ja-JP', {
-    month: 'numeric',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  })
 }
 
 function sessionLabel(s: PlaySession): string {
