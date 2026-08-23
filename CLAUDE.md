@@ -2,8 +2,7 @@
 
 ## Purpose
 
-This file defines Claude Code execution rules for `mkw_stats`. `AGENTS.md`
-owns design intent, model selection, handoff policy, and Codex review.
+This file defines compatibility boundaries for Claude-oriented tooling in `mkw_stats`. `AGENTS.md` owns design intent, runtime-selected role policy, handoff policy, and review gates.
 
 ## Project Context
 
@@ -14,8 +13,9 @@ owns design intent, model selection, handoff policy, and Codex review.
   Portainer stack in `deploy/portainer-stack.yml`.
 - Local development uses the root `docker-compose.yml`.
 
-## Execution Rules
+## Compatibility Boundary
 
+- If a Claude-compatible reader is used, preserve the durable project and safety constraints in `AGENTS.md`; do not infer a mandatory Claude, Sonnet, Luna, or fixed-primary route.
 - If the user writes in Japanese, respond in Japanese.
 - Keep delegated Windows command lines ASCII-only. Put non-ASCII instructions
   in the UTF-8 handoff file instead of embedding them in the command line.
