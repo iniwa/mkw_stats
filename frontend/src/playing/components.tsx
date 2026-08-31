@@ -22,6 +22,13 @@ import { RouteDetail } from '../RouteDetail'
 import { TargetImage } from '../TargetImage'
 import { TargetAssist } from '../TargetAssist'
 import { WorldMapPicker } from '../WorldMapPicker'
+import {
+  ITEM_TABLE_PHASES,
+  ITEM_TABLE_SOURCE,
+  ITEM_TABLE_SOURCE_REVISION,
+  ITEM_TABLE_VERSION,
+  type ItemTablePhase,
+} from '../itemTables'
 
 const LOUNGE_FORMATS = ['FFA', '2v2', '3v3', '4v4', '6v6']
 
@@ -640,17 +647,36 @@ export function ItemTablePreview({
 }) {
   const tableType = playerCount >= 13 ? '24p' : '12p'
   const label = tableType === '24p' ? '24人部屋' : '12人部屋'
+  const [phaseKey, setPhaseKey] = useState<ItemTablePhase>('after-26s')
+  const [failed, setFailed] = useState(false)
+  const phase = ITEM_TABLE_PHASES.find(item => item.key === phaseKey) ?? ITEM_TABLE_PHASES[2]
   return (
     <section className="confirm__item-table">
       <div className="confirm__item-head">
         <span className="field__label">アイテムテーブル</span>
         <span className="tag">{source === 'lounge' ? `Lounge ${label}` : `${label}目安`}</span>
       </div>
-      <img
-        className="confirm__item-image"
-        src={`/assets/items/item-table-${tableType}.png`}
-        alt={`${label} アイテムテーブル`}
-      />
+      <label className="field__label" htmlFor="playing-item-phase">表示する時間帯</label>
+      <select
+        id="playing-item-phase"
+        className="input"
+        value={phaseKey}
+        onChange={event => { setPhaseKey(event.target.value as ItemTablePhase); setFailed(false) }}
+      >
+        {ITEM_TABLE_PHASES.map(item => <option key={item.key} value={item.key}>{item.label}</option>)}
+      </select>
+      <p className="hint">{phase.description}</p>
+      {failed ? (
+        <p className="hint">画像を読み込めませんでした。</p>
+      ) : (
+        <img
+          className="confirm__item-image"
+          src={phase.src}
+          alt={`${phase.label} ${label} アイテムテーブル（12人・24人）`}
+          onError={() => setFailed(true)}
+        />
+      )}
+      <p className="hint">{ITEM_TABLE_VERSION} / 出典更新: {ITEM_TABLE_SOURCE_REVISION} / 画像は12人・24人の順位を併記しています。確率・距離条件は未確定です。 <a href={ITEM_TABLE_SOURCE} target="_blank" rel="noopener noreferrer">出典</a></p>
       {source === 'ranked' && (
         <p className="hint">VRでは参加人数に合わせた目安として表示します。</p>
       )}

@@ -552,12 +552,14 @@ The item tables reference view has been implemented.
 Completed behavior:
 
 - A new `Items` nav tab is added after `Analytics` in the navigation bar.
-- `ItemTablesView` renders three sections: `24人部屋`, `12人部屋`, `追加出現アイテム`.
+- `ItemTablesView` renders the v1.7.0 reference tables (source revision 2026-07-04) in four sections: `開始〜約21秒`, `約21〜26秒`, `約26秒以降`, and `追加出現アイテム`. Each phase table includes both 12-player and 24-player rank rows.
 - Each section loads the corresponding local PNG from `/assets/items/`.
 - A source note with a link to `https://japan-mk.blog.jp/mkworld.item-1` is shown under the page title.
 - Images use `max-width: 100%; height: auto` and do not cause horizontal overflow at 375px.
 - If an image fails to load, a concise fallback text `画像を読み込めませんでした。` is shown instead of a broken image.
-- Image files are stored at `frontend/public/assets/items/item-table-{24p,12p,extra}.png` (downloaded from approved source: `livedoor.blogimg.jp/nim_2525/imgs/`).
+- The three phase images use versioned `item-table-v1.7.0-*.png` paths under `frontend/public/assets/items/`; the unchanged extra image remains `item-table-extra.png`. The old `item-table-{24p,12p}.png` files are retained as historical assets and are not referenced by the live UI. Provenance is recorded in that directory's `README.md`.
+- Playing's compact preview uses the same phase images, defaulting to `約26秒以降`, with manual phase selection. It preserves the participant/source context and the ranked participant-count approximation warning; it does not track live race time or affect recording state.
+- The source is community observation, not an official probability dataset. The UI identifies approximate transition times, unconfirmed probabilities/distance conditions, and the later Golden Dash Mushroom/Lightning unlocks; the late table does not imply every item unlocks at 26 seconds.
 - No external hotlinks at runtime; all images served locally.
 - No backend changes, no npm dependencies.
 - Typecheck and build pass clean.

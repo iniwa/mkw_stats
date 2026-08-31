@@ -1,10 +1,11 @@
 import { useState } from 'react'
-
-const TABLES = [
-  { key: '24p', label: '24人部屋', src: '/assets/items/item-table-24p.png' },
-  { key: '12p', label: '12人部屋', src: '/assets/items/item-table-12p.png' },
-  { key: 'extra', label: '追加出現アイテム', src: '/assets/items/item-table-extra.png' },
-] as const
+import {
+  ITEM_TABLE_EXTRA,
+  ITEM_TABLE_PHASES,
+  ITEM_TABLE_SOURCE,
+  ITEM_TABLE_SOURCE_REVISION,
+  ITEM_TABLE_VERSION,
+} from './itemTables'
 
 function ItemImage({ src, alt }: { src: string; alt: string }) {
   const [failed, setFailed] = useState(false)
@@ -25,22 +26,26 @@ export default function ItemTablesView() {
       <div>
         <h2 className="panel__title">アイテムテーブル</h2>
         <p className="items-view__source">
-          v1.6.0以降の順位別アイテム表 &mdash;{' '}
-          <a
-            href="https://japan-mk.blog.jp/mkworld.item-1"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            出典
-          </a>
+          {ITEM_TABLE_VERSION}（出典更新: {ITEM_TABLE_SOURCE_REVISION}） / 12人・24人の順位を併記 /{' '}
+          <a href={ITEM_TABLE_SOURCE} target="_blank" rel="noopener noreferrer">出典</a>
+        </p>
+        <p className="hint">
+          コミュニティ調査に基づく目安です。確率・距離条件は未確定で、時刻は概算です。
+          約26秒以降もアイテムごとに解禁条件があります。
         </p>
       </div>
-      {TABLES.map(t => (
-        <section key={t.key} className="items-view__section panel">
-          <h3 className="panel__title">{t.label}</h3>
-          <ItemImage src={t.src} alt={`${t.label} アイテムテーブル`} />
+      {ITEM_TABLE_PHASES.map(phase => (
+        <section key={phase.key} className="items-view__section panel">
+          <h3 className="panel__title">{phase.label}</h3>
+          <p className="hint">{phase.description}</p>
+          <ItemImage src={phase.src} alt={`${phase.label} アイテムテーブル（12人・24人）`} />
         </section>
       ))}
+      <section className="items-view__section panel">
+        <h3 className="panel__title">{ITEM_TABLE_EXTRA.label}</h3>
+        <p className="hint">条件付きで追加出現するアイテム（確率表ではありません）。</p>
+        <ItemImage src={ITEM_TABLE_EXTRA.src} alt="追加出現アイテム" />
+      </section>
     </div>
   )
 }
