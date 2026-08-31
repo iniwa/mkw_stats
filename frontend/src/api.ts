@@ -18,6 +18,19 @@ export interface Settings {
   lounge_mmr_synced_at: string | null
 }
 
+export interface ServiceVersion {
+  commit: string | null
+  built_at: string | null
+}
+
+export interface ReadinessStatus {
+  status: 'ok' | 'error'
+  service: string
+  database: 'ok' | 'error'
+}
+
+export type ReadinessResult = 'ready' | 'database-error'
+
 export interface VrAccount {
   id: string
   name: string
@@ -218,6 +231,33 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   return (await resp.json()) as T
 }
 
+function isReadinessStatus(value: unknown, status: 'ok' | 'error', database: 'ok' | 'error'): value is ReadinessStatus {
+  return typeof value === 'object' && value !== null
+    && (value as ReadinessStatus).status === status
+    && (value as ReadinessStatus).service === 'mkw-stats-backend'
+    && (value as ReadinessStatus).database === database
+}
+
+async function getReadiness(signal?: AbortSignal): Promise<ReadinessResult> {
+  let response: Response
+  try {
+    response = await fetch('/api/v1/ready', { cache: 'no-store', signal })
+  } catch {
+    throw new ApiError(0, 'バックエンドに接続できませんでした')
+  }
+
+  let body: unknown
+  try {
+    body = await response.json()
+  } catch {
+    throw new ApiError(response.status, 'readiness response was not valid JSON')
+  }
+
+  if (response.status === 200 && isReadinessStatus(body, 'ok', 'ok')) return 'ready'
+  if (response.status === 503 && isReadinessStatus(body, 'error', 'error')) return 'database-error'
+  throw new ApiError(response.status, 'unexpected readiness response')
+}
+
 export type TimeAttackCategory = 'nita' | 'item'
 
 export interface TimeAttackRecord {
@@ -245,6 +285,9 @@ export interface TimeAttackRecordUpdateBody {
 
 export const api = {
   health: () => request<{ status: string; service: string }>('/health'),
+  getReadiness,
+  getVersion: (signal?: AbortSignal) =>
+    request<ServiceVersion>('/version', { cache: 'no-store', signal }),
   getSettings: () => request<Settings>('/settings'),
   updateSettings: (body: SettingsUpdateBody) =>
     request<Settings>('/settings', { method: 'PATCH', body: JSON.stringify(body) }),

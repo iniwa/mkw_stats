@@ -47,6 +47,21 @@ docker exec mkw-backend alembic current
 
 After a **frontend** redeploy, do a hard reload in the browser (`Ctrl+Shift+R` / `Cmd+Shift+R`) if the old JS bundle is still served.
 
+### Runtime status and build identity
+
+The existing `/api/v1/health` response is process liveness only and remains unchanged. It does not establish database connectivity.
+
+| Endpoint | Purpose | Expected result |
+|----------|---------|-----------------|
+| `/api/v1/ready` | Read-only database connectivity (`SELECT 1`) | HTTP 200 with `database: "ok"`; HTTP 503 with `database: "error"` on a database failure |
+| `/api/v1/version` | Backend image identity, independent of the database | `commit` and `built_at`; unavailable build values are `null` |
+
+The main app header checks readiness at startup and every 30 seconds, and provides a manual recheck. Each frontend check times out after 5 seconds; a failed or timed-out check must not continue showing a healthy state. Overlay and styleguide views do not poll readiness. This is a connectivity check, not a schema/migration or application-data integrity check. Neither new endpoint returns database connection details or changes records, and both disable response caching.
+
+Settings shows frontend and backend build information separately, with build dates displayed in Japan time (including year and timezone). The frontend value identifies the JavaScript bundle loaded by that browser; the backend value comes from `/api/v1/version`. Different known commits indicate that the browser bundle and backend belong to different revisions. Check the existing Portainer image-pull update and hard reload the browser as needed. Backend information can still load when database-backed settings are unavailable.
+
+Build metadata is public commit/time information only. Local builds without supplied metadata display an explicit unknown state; no runtime Git lookup, registry lookup, or credentials are required.
+
 ## Migration and Seed
 
 Run from within the Portainer-managed backend container via SSH:

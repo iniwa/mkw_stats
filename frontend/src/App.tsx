@@ -13,11 +13,12 @@ import SettingsView from './SettingsView'
 import StyleguideView from './StyleguideView'
 import TimeAttackView from './TimeAttackView'
 import VrView from './VrView'
+import { api } from './api'
 
 // スタイルガイドは ?view=styleguide で確認可能（NAV からは非表示）。
 const NAV_ITEMS = ['Dashboard', 'Playing', 'VR', 'Lounge', 'Host', 'Analytics', 'Items', 'Courses', 'TA', 'Records', 'Settings']
 
-type HealthStatus = 'checking' | 'ok' | 'error'
+type ReadinessState = 'checking' | 'ready' | 'database-error' | 'error'
 
 const _qp = new URLSearchParams(window.location.search)
 const _isOverlay = _qp.get('view') === 'overlay'
@@ -30,14 +31,65 @@ const _overlayPollMs = normalizeOverlayPollMs(_qp.get('pollMs') ?? _qp.get('poll
 
 export default function App() {
   const [active, setActive] = useState('Dashboard')
-  const [health, setHealth] = useState<HealthStatus>('checking')
+  const [readiness, setReadiness] = useState<ReadinessState>('checking')
+  const [checking, setChecking] = useState(false)
+  const [readinessCheck, setReadinessCheck] = useState(0)
 
   useEffect(() => {
-    if (_isOverlay) return
-    fetch('/api/v1/health')
-      .then(r => (r.ok ? setHealth('ok') : setHealth('error')))
-      .catch(() => setHealth('error'))
-  }, [])
+    if (_isOverlay || _isStyleguide) return
+
+    let mounted = true
+    let inFlight = false
+    let requestId = 0
+    let controller: AbortController | null = null
+    let timeout: number | null = null
+
+    const checkReadiness = () => {
+      if (inFlight) return
+      inFlight = true
+      const currentRequest = ++requestId
+      const requestController = new AbortController()
+      controller = requestController
+      timeout = window.setTimeout(() => requestController.abort(), 5000)
+      if (mounted) {
+        setChecking(true)
+        setReadiness('checking')
+      }
+
+      api.getReadiness(requestController.signal)
+        .then(status => {
+          if (mounted && currentRequest === requestId) setReadiness(status)
+        })
+        .catch(() => {
+          if (!mounted || currentRequest !== requestId) return
+          setReadiness('error')
+        })
+        .finally(() => {
+          if (timeout !== null) {
+            window.clearTimeout(timeout)
+            timeout = null
+          }
+          if (currentRequest === requestId) {
+            inFlight = false
+            controller = null
+            if (mounted) setChecking(false)
+          }
+        })
+    }
+
+    checkReadiness()
+    const interval = window.setInterval(checkReadiness, 30_000)
+    return () => {
+      mounted = false
+      requestId += 1
+      window.clearInterval(interval)
+      if (timeout !== null) {
+        window.clearTimeout(timeout)
+        timeout = null
+      }
+      controller?.abort()
+    }
+  }, [readinessCheck])
 
   if (_isOverlay) {
     return <RateOverlayView initialMode={_overlayMode} compact={_compact} solidBg={_solidBg} pollMs={_overlayPollMs} />
@@ -51,9 +103,14 @@ export default function App() {
     <div className="app">
       <header className="header">
         <span className="title">MKWorld Stats Manager</span>
-        <span className={`health health--${health}`}>
-          Backend: {health === 'checking' ? '…' : health}
-        </span>
+        <div className="header__status">
+          <span className={`health health--${readiness}`}>
+            {readiness === 'checking' ? 'Backend を確認中…' : readiness === 'ready' ? 'Backend・DB 正常' : readiness === 'database-error' ? 'DB を利用できません' : 'Backend の状態を確認できません'}
+          </span>
+          <button className="health__retry" type="button" onClick={() => setReadinessCheck(check => check + 1)} disabled={checking} title="状態を再確認">
+            再確認
+          </button>
+        </div>
       </header>
       <nav className="nav">
         {NAV_ITEMS.map(item => (

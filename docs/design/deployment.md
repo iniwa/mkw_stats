@@ -62,6 +62,14 @@ Gitea main -> GitHub mirror/main -> GitHub Actions -> GHCR
 
 Portainer verification is blocked until both GHCR images exist and are pullable.
 
+### Build identity
+
+The existing Docker publish job passes the full source commit and the metadata action's UTC build timestamp to both image builds using `APP_COMMIT_SHA` and `APP_BUILD_TIMESTAMP`. It also applies the generated OCI labels. Image names, `latest`/SHA tags, action versions, and the `linux/arm64` publication route remain unchanged.
+
+The backend image retains these two public values for `/api/v1/version`. The frontend build passes them to Vite as `VITE_APP_COMMIT_SHA` and `VITE_APP_BUILD_TIMESTAMP`, so the displayed frontend identity belongs to the loaded bundle. Only these public values are embedded; no secrets are passed to the frontend. Portainer stack environment variables do not need changes.
+
+Do not set metadata to the current runtime date or guess a commit when it is missing. A local image built without these optional build arguments reports unknown build information. See the runtime checks in `operations.md` for interpreting the Settings display.
+
 ## Migration And Seed
 
 After first deployment or after schema changes, run these commands against the Portainer-managed backend container:

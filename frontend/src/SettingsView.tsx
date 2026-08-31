@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { OverlayMode } from './RateOverlayView'
-import { api, ApiError, Settings, VrAccount, VrAccountCreateBody, VrAccountUpdateBody } from './api'
+import { api, ApiError, Settings, ServiceVersion, VrAccount, VrAccountCreateBody, VrAccountUpdateBody } from './api'
 
 const OVERLAY_URLS = [
   { label: 'VR / 透過 / compact', path: '/?view=overlay&mode=vr&compact=1' },
@@ -26,6 +26,26 @@ interface CreateDraft {
 }
 
 const EMPTY_CREATE: CreateDraft = { name: '', display_name: '', initial_vr: '0', current_vr: '' }
+
+const FRONTEND_VERSION: ServiceVersion = {
+  commit: publicBuildValue(import.meta.env.VITE_APP_COMMIT_SHA),
+  built_at: publicBuildValue(import.meta.env.VITE_APP_BUILD_TIMESTAMP),
+}
+
+function publicBuildValue(value: string | undefined): string | null {
+  const trimmed = value?.trim()
+  return trimmed && trimmed.toLowerCase() !== 'unknown' ? trimmed : null
+}
+
+function formatBuildTimestamp(value: string | null): string {
+  if (!value) return '不明'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '不明'
+  return new Intl.DateTimeFormat('ja-JP', {
+    year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit',
+    timeZone: 'Asia/Tokyo', timeZoneName: 'short',
+  }).format(date)
+}
 
 function toEditDraft(a: VrAccount): EditDraft {
   return {
@@ -65,6 +85,7 @@ export default function SettingsView() {
     lounge_season: '2',
   })
   const [loungeSuccess, setLoungeSuccess] = useState(false)
+  const [backendVersion, setBackendVersion] = useState<ServiceVersion | 'unavailable' | null>(null)
 
   const isBusy = (key: string) => busy.has(key)
   const mark = (key: string, on: boolean) =>
@@ -100,6 +121,12 @@ export default function SettingsView() {
   }
 
   useEffect(() => { load() }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+    api.getVersion(controller.signal).then(setBackendVersion).catch(() => setBackendVersion('unavailable'))
+    return () => controller.abort()
+  }, [])
 
   function startEdit(a: VrAccount) {
     setEditingId(a.id)
@@ -223,6 +250,24 @@ export default function SettingsView() {
       </div>
 
       {error && <div className="notice notice--error">{error}</div>}
+
+      <div className="panel build-info">
+        <div className="panel__title">実行中のバージョン</div>
+        <p className="build-info__guidance">画面を読み込んだフロントエンドと、接続先バックエンドのビルド情報です。</p>
+        <div className="build-info__services">
+          <BuildInfoRow label="Frontend" version={FRONTEND_VERSION} />
+          {backendVersion === null ? (
+            <div className="build-info__row"><span className="build-info__name">Backend</span><span className="build-info__value">読み込み中…</span></div>
+          ) : backendVersion === 'unavailable' ? (
+            <div className="build-info__row"><span className="build-info__name">Backend</span><span className="build-info__value">取得できません</span></div>
+          ) : (
+            <BuildInfoRow label="Backend" version={backendVersion} />
+          )}
+        </div>
+        {backendVersion !== null && backendVersion !== 'unavailable' && FRONTEND_VERSION.commit && backendVersion.commit && FRONTEND_VERSION.commit !== backendVersion.commit && (
+          <p className="build-info__mismatch">Frontend と Backend は別々に更新されるため、現在は異なるコミットを実行しています。</p>
+        )}
+      </div>
 
       <div className="panel">
         <div className="panel__title">VR アカウント</div>
@@ -460,6 +505,18 @@ export default function SettingsView() {
           })}
         </ul>
       </div>
+    </div>
+  )
+}
+
+function BuildInfoRow({ label, version }: { label: string; version: ServiceVersion }) {
+  return (
+    <div className="build-info__row">
+      <span className="build-info__name">{label}</span>
+      <span className="build-info__details">
+        <span title={version.commit ?? undefined}>Commit: {version.commit ?? '不明'}</span>
+        <span>Build: {formatBuildTimestamp(version.built_at)}</span>
+      </span>
     </div>
   )
 }
