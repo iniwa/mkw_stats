@@ -141,10 +141,11 @@ Frontendは通常、同一オリジンの `/api/` を通してBackendへアク�
 
 ### 開発ワークフロー
 
-- 設計判断と作業指示（handoff）はCodexが担当し、`docs/handoffs/` に保存します。Claude Codeはhandoffに従って実装・検証・報告を行います（詳細は `AGENTS.md` / `CLAUDE.md`）。
+- 設計判断と作業指示（handoff）はruntimeで選択されたprimaryが担当し、`docs/handoffs/` に保存します。実装・検証・報告は `AGENTS.md` のnative Codex role policyと互換境界に従います（詳細は `AGENTS.md` / `CLAUDE.md`）。
 - 既存コードの改善候補（保守性・安定性）は [`docs/improvements.md`](docs/improvements.md) のチェックリストで管理します。
 - 機能追加の要望・アイデアはルートの [`issues.md`](issues.md) で管理します。
-- 検証は上記のBackend / Frontendのコマンド（`python -m pytest` / `npm run typecheck` / `npm run build`）を実行します。
+- 検証は上記のBackend / Frontendのコマンド（`python -m pytest` /
+  `npm run typecheck` / `npm run build`）を実行します。
 
 ## OBSオーバーレイ
 
