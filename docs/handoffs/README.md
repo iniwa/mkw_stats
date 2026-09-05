@@ -1,6 +1,6 @@
 # Active Handoffs
 
-Use this directory for Claude Code handoff files that are waiting for implementation or Codex review.
+Use this directory for active persisted handoffs that are waiting for implementation or review.
 
 File name format:
 
@@ -8,11 +8,11 @@ File name format:
 YYYY-MM-DD-<short-task>.md
 ```
 
-After Claude Code reports back and Codex review is complete, move the handoff to `archive/`.
+After implementation and review are complete, move the handoff to `archive/`.
 
 ## Queued UI Redesign Handoffs
 
-Large redesign work may be split into several active handoff files ahead of implementation. When doing this, Codex must still re-check the next handoff after each Claude Code report before handing it over.
+Large redesign work may be split into several active handoff files ahead of implementation. The primary must re-check the next handoff after each writer report before handing it over.
 
 ## Active Verification Handoffs
 
@@ -30,7 +30,7 @@ Next queued verification handoff:
 
 None.
 
-Only hand the next file to Claude Code after Codex has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
+Only hand the next file to a native Codex writer after the primary has reviewed the previous implementation and confirmed the queued handoff still matches the current code.
 
 Each handoff should include:
 

@@ -2,9 +2,9 @@
 
 コードベースを調査して洗い出した改善候補の一覧（初回調査: 2026-07-07）。
 
-**運用方法**: 着手したい項目にチェック `[x]` を入れる → Codex が handoff
-（`docs/handoffs/`）を作成し、Claude Code（auto モード）が実装する。
-handoff を挟むまでもない小粒な項目は Claude Code に直接依頼してもよい。
+**運用方法**: 着手したい項目にチェック `[x]` を入れる → Codex の primary が
+要件・承認境界・検証条件を確定し、必要な場合だけ native Codex の
+`bounded_implementer` 1名へ委譲する。小粒な項目は primary で完結させる。
 実装完了した項目は「完了アーカイブ」へ移動する。
 
 - 機能追加・未検証項目はこのファイルの対象外（ルートの `issues.md` で管理）。
@@ -50,11 +50,12 @@ frontend/backend を独立して読み取り調査し、Records の2件はロー
   - 改善案: 変更対象の既存テストを公開前に実行し、失敗時に公開しない。新しいテスト基盤や無関係な全件検証は前提にしない。CI/CD変更なので、実装する場合は別途その範囲を承認する。
   - 検証: リポジトリ内のworkflow/Dockerfileを静的確認。GitHub側の設定や実行結果は未確認。
 
-- [ ] **【低 / C-02】作業案内に残っている旧Claude Code経路の説明を現行方針へそろえる**
+- [x] **【低 / C-02】作業案内に残っている旧Claude Code経路の説明を現行方針へそろえる**
   - 根拠: [docs/README.md](README.md) のhandoff lifecycle、[docs/handoffs/README.md](handoffs/README.md)、および本書冒頭にはClaude Codeへの委任を前提にした案内が残る。現行 `AGENTS.md` はnative Codex roleを使い、Claude Code経路は未承認としている。
   - 影響: 次回の実装依頼で、現在の作業ルールと矛盾する案内を参照する可能性がある。
   - 改善案: 作業案内だけを現在の `AGENTS.md` と整合させ、当時の作業履歴・完了済みhandoffは書き換えない。新しい委任ルールは追加しない。
-  - 検証: 現行文書間の比較のみ。ポリシー自体の変更は行っていない。
+  - 対応: `AGENTS.md`、`docs/README.md`、`docs/handoffs/README.md`、本書冒頭を native Codex の現行案内へ更新し、履歴・完了済みhandoffは保持した。
+  - 検証: 現行文書間の比較と `git diff --check`。
 
 ---
 
