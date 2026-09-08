@@ -32,3 +32,6 @@ frontend/*.webp
 
 # Local test databases
 backend/test_browser.db
+
+# Local agent metadata
+.codex/
