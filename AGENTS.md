@@ -1,5 +1,15 @@
 # mkw_stats
 
+<!-- iniwa-codex-migration-notice:v2:start -->
+> **ドキュメント更新予定（2026-09-19）**
+>
+> 次回このプロジェクトで作業する際は、実体の現行文書・固有仕様・承認境界を確認し、合意済みの共通設計v3に沿ってドキュメントを更新すること。今回はこの通知の追記のみで、本文の全面移行は未実施です。
+>
+> 以前ユーザーが追加した独自のトークン・効率収集、集計、比較、未回収分の後追い義務は撤回済みです。旧本文・参照先に残っていても実施条件に戻しません。標準ログ、既存データ、通知・復旧は保持します。検証結果・再発知見・再利用可能な環境情報は有効な個人共通入口が案内する私的知識領域へ必要時に短く保存し、保存不可でも独立作業を進めます。
+>
+> この通知は固有仕様、データ保護、必要な検証・必須承認・独立レビューを解除しません。自律進行・委託を含む旧本文の他の規則まで更新済みとは扱わないでください。
+<!-- iniwa-codex-migration-notice:v2:end -->
+
 Private single-user MKWorld Stats Manager: React/TypeScript/Vite frontend, FastAPI/SQLAlchemy/Alembic/PostgreSQL backend, Docker Compose, Raspberry Pi 4 `linux/arm64`, GHCR and existing Portainer deployment. Read `README.md`, `docs/README.md`, living `docs/design/`, active decisions/handoffs, and affected service manifests. `mkworld_stats_manager_docs_v0_1/` is a planning snapshot.
 
 Preserve ranked VR manual ownership, Lounge table/player synchronization, 12-race/session semantics, map-point/course ownership and calibration, seed idempotency, separate backend/frontend images, arm64, LAN-only exposure, GHCR/Portainer identity, and existing schema/migrations/data. Keep `.env`, credentials, `data/`, local settings, hosted data, deployment, publication, CI, and external exposure gated.
